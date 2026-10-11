@@ -33,19 +33,15 @@ test('VS Code target HOME publication is isolated, idempotent, and retention-bou
     const preview = publishDryRun(context);
 
     assert.equal(preview.scope, 'home');
-    assert.deepEqual(preview.phases[0].selectedTargets, []);
-    assert.deepEqual(preview.phases[0].bindingOrder, ['.evcrate/bin']);
-    assert.deepEqual(preview.phases[1].selectedTargets, ['vscode']);
-    assert.deepEqual(preview.phases[1].bindingOrder, ['.evcrate-vscode']);
+    assert.deepEqual(preview.phases[0].selectedTargets, ['vscode']);
+    assert.deepEqual(preview.phases[0].bindingOrder, ['.evcrate-vscode']);
     assert.equal(existsSync(state), false);
 
     const first = publishApply(context);
     const firstRelease = first.phases[0].releaseId;
 
-    assert.equal(first.phases[1].selectedTargets[0], 'vscode');
-    assert.equal(first.phases[1].releaseId, firstRelease);
+    assert.equal(first.phases[0].selectedTargets[0], 'vscode');
     assert.equal(first.phases[0].retainedReleaseId, null);
-    assert.equal(first.phases[1].retainedReleaseId, null);
 
     const vscodeRoot = join(home, '.evcrate-vscode');
     assert.equal(existsSync(vscodeRoot), true);
@@ -64,18 +60,17 @@ test('VS Code target HOME publication is isolated, idempotent, and retention-bou
     assert.equal(existsSync(join(home, '.copilot')), false);
     assert.equal(existsSync(join(home, '.claude')), false);
     assert.equal(existsSync(join(home, '.vscode')), false);
-    assert.equal(existsSync(join(home, '.evcrate', 'bin', 'evcrate-advisor')), true);
+    assert.equal(existsSync(join(home, '.evcrate', 'bin')), false);
 
     const marker = JSON.parse(readFileSync(join(state, 'release-marker.json'), 'utf8'));
-    assert.equal(marker.schema_version, 2);
+    assert.equal(marker.schema_version, 3);
     assert.equal(marker.scope, 'home');
-    assert.equal(marker.records.shared.status, 'complete');
+    assert.deepEqual(Object.keys(marker.records), ['harness']);
     assert.equal(marker.records.harness.status, 'complete');
-    assert.equal(marker.records.shared.retained_release_id, null);
     assert.equal(marker.records.harness.retained_release_id, null);
 
     const second = publishApply(context);
-    assert.equal(second.phases[1].selectedTargets[0], 'vscode');
+    assert.equal(second.phases[0].selectedTargets[0], 'vscode');
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
@@ -92,7 +87,7 @@ test('VS Code publication rejects unmanaged collision when reject_unmanaged_coll
     writeFileSync(collidingFile, '{"unmanagedCollision": true}\n', { mode: 0o600 });
 
     const preview = publishDryRun(context);
-    const harnessPhase = preview.phases[1];
+    const harnessPhase = preview.phases[0];
     const collisionOp = harnessPhase.changes.find((c) => c.path === '.evcrate-vscode/plugin.json');
     assert.ok(collisionOp, 'must plan an operation for .evcrate-vscode/plugin.json');
     assert.equal(collisionOp.action, 'conflict');

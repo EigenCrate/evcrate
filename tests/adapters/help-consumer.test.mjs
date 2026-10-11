@@ -41,7 +41,7 @@ function invoke(script, args, cwd, home) {
 }
 
 for (const target of targets) {
-  test(`${target}: installed help uses its own catalog and relay identity from foreign CWD`, (t) => {
+  test(`${target}: installed help uses its own command catalog from foreign CWD`, (t) => {
     const root = mkdtempSync(join(tmpdir(), `evcrate-help-${target}-`));
     t.after(() => rmSync(root, { recursive: true, force: true }));
     const stage = createStagedRoot(root, '.projection-');
@@ -100,14 +100,7 @@ for (const target of targets) {
       assert.ok(!detail.stdout.includes('Foreign catalog'), detail.stdout);
       const advice = invoke(script, ['advise'], foreign, install);
       assert.equal(advice.status, 0, advice.stderr + advice.stdout);
-      if (target === 'claude') {
-        assert.match(advice.stdout, /Claude-only relay/u);
-        assert.doesNotMatch(advice.stdout, /ADVISE_AGENT_RELAY_UNSUPPORTED_/u);
-      } else {
-        assert.ok(advice.stdout.includes(`ADVISE_AGENT_RELAY_UNSUPPORTED_${target.toUpperCase()}`), advice.stdout);
-        assert.doesNotMatch(advice.stdout, /Claude-only relay/u);
-      }
-      assert.doesNotMatch(advice.stdout, /gemini/iu);
+      assert.match(advice.stdout, /evc-cmd-advise/u);
 
       renameSync(commands, `${commands}.unavailable`);
       for (const args of [[], ['advise']]) {
@@ -121,7 +114,6 @@ for (const target of targets) {
       writeFileSync(layoutPath, JSON.stringify({ ...layout, target: 'gemini' }));
       const retired = invoke(script, ['advise'], foreign, install);
       assert.notEqual(retired.status, 0, 'A retired target ID must not become a selectable help host');
-      assert.doesNotMatch(retired.stdout, /ADVISE_AGENT_RELAY_UNSUPPORTED_GEMINI/u);
       writeFileSync(layoutPath, JSON.stringify(layout));
     }
 

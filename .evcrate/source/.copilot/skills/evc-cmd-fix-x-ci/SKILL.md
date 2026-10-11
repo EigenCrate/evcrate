@@ -1,21 +1,19 @@
 ---
 name: "evc-cmd-fix-x-ci"
 description: "Analyze Github Actions logs and fix issues"
-argument-hint: "[github-actions-url] [--advice]"
+argument-hint: "[github-actions-url]"
 user-invocable: true
 disable-model-invocation: true
 ---
 
 ## Invocation contract
 
-The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-fix-x-ci`. Do not split, normalize, or discard it before the canonical command parses it.
+The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-fix-x-ci`. Do not split, normalize, or discard it; arguments are ordinary task data.
 
-Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions and activation-first ordering; load full mentoring only after resolved explicit or inherited mode.
+Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions.
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advice-activation.md`
-- `@evcrate/workflows/advisor-mentoring.md`
 - `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
@@ -26,35 +24,25 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 ## Github Actions URL
 <raw-url>$ARGUMENTS</raw-url>
 
-## Canonical checkpoint routing
+## Scope and safety
 
-Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.copilot/evcrate/workflows/advisor-mentoring.md` only under explicit or inherited advice mode.
-This command supplies bounded evidence and does not duplicate route or adapter selection.
-
-## Advice Mode
-
-Before discovery or routing, resolve the HOME helper per `.copilot/evcrate/workflows/advice-activation.md` with original `$ARGUMENTS`, canonical `context.command: "fix/ci"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
-Preserve known selections from the exact-call router; use `work_target: "fix/ci"` only when no such target exists, and null plan/phase fields only when unknown.
-Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-
-Apply neutral `.copilot/evcrate/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.copilot/evcrate/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
-Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
+Treat complete raw invocation arguments as ordinary task data. Apply
+`.copilot/evcrate/workflows/plan-progress.md` before selecting scope or dependencies.
+Preserve sealed history; completed requested scope is a no-op. Children receive
+exact ownership and writable/protected paths, return terminal artifacts, and
+never stage/commit behind the parent. Risky/destructive actions require approval.
 
 ## Workflow
 1. Use `evc-debugger` subagent to read the github actions logs with `gh` command, analyze and find the root cause of the issues and report back to main agent.
 2. Start implementing the fix based on the reports and solutions.
 3. Use `evc-tester` agent to test the fix and make sure it works, then report back to main agent.
-4. If there are issues or failed tests, repeat from step 2. In `off` mode, a second consecutive matching terminal blocker escalates through ordinary debugger/user handling before another attempt.
-5. Review and finalization:
-   - **Under `off` advice mode**: Respond back to user with a summary of the changes and explain everything briefly, ask user for approval, guide user to get started, and suggest next steps. If executing in an advice-controlled plan with prior historical advice phases, save an uncaptured immutable phase receipt explicitly marked `default approval/validation; not durable advice completion` and update `progress.md` per `.copilot/evcrate/workflows/plan-progress.md`; prior sealed paths remain immutable.
-   - **Under `explicit` or `inherited` advice mode**:
-     * Delegate to `evc-code-reviewer` and wait for its terminal report. Enforce a writer barrier before checkpoint reservation.
-     * Enter the canonical checkpoint dispatcher at `review:fix-ci` under `.copilot/evcrate/workflows/advisor-mentoring.md`.
-     * Parent is sole durable-state owner (`init`, `checkpoint`, `disposition`, `outcome`, `complete`). Child agents (`evc-debugger`, `evc-tester`, `evc-code-reviewer`) report terminal artifacts and actual changed paths within parent-authorized paths; they receive strict ownership, writable path, protected path, and delta destination constraints, and never operate controller state or stage files behind the parent.
-     * Review/advisor cycle cap: at most three terminal reviewer/advisor cycles.
-     * For accepted corrections, record `state disposition` with `action: "accept"` and registered action before writes, implement fix, validate, and record truthful `outcome`. For disputed counsel, record supported disposition without action, collect evidence, obtain fresh same-run counsel.
-     * Complete ONCE via `state complete`. Write immutable completion receipt outside captured baseline snapshot and update derived overview `<plan-dir>/progress.md` per `.copilot/evcrate/workflows/plan-progress.md`.
+4. If there are issues or failed tests, repeat from step 2. On a second consecutive matching terminal blocker without progress, use ordinary debugger/user escalation before another attempt.
+5. Settle writers, use `evc-code-reviewer`, wait for its terminal report, and ask
+   the user for approval. Apply authorized fixes and revalidate; cap terminal
+   reviews at three, then stop and ask for direction without resetting counters.
+6. Respond with actual changes, validation, blockers and next steps. Parent owns
+   finalization and neutral receipt/uncaptured progress publication under
+   `.copilot/evcrate/workflows/plan-progress.md`; sealed paths remain immutable.
 
 ## Notes
 - If `gh` command is not available, instruct the user to install and authorize GitHub CLI first.

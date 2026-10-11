@@ -1,7 +1,7 @@
 import type { ProjectionBuildContext } from '../types.js';
 import { filesUnder, fieldString, parseFrontmatter, sourcePath, invalid, writeJson, copyText, decode } from './common.js';
 import { commandBody, firstProseLine, serializeSkill } from './prompts.js';
-import { advisoryCommand, advisoryWorkflow, mentoringWorkflow } from './text.js';
+import { advisoryCommand, advisoryWorkflow } from './text.js';
 import type { NameMap } from './prompts.js';
 import { assertUniqueNames, commandNameFromSourcePath } from '../resource-naming.js';
 
@@ -30,7 +30,7 @@ export function convertWorkflows(context: ProjectionBuildContext, transform: (va
   const copied: string[] = [];
   for (const file of filesUnder(context, 'workflows')) {
     const relative = sourcePath('workflows', file);
-    copyText(context, file.path, `evcrate/workflows/${relative}`, (value) => transform(relative === 'advisory-interview.md' ? advisoryWorkflow(value) : (relative === 'advisor-mentoring.md' ? mentoringWorkflow(value) : value)));
+    copyText(context, file.path, `evcrate/workflows/${relative}`, (value) => transform(relative === 'advisory-interview.md' ? advisoryWorkflow(value) : value));
     copied.push(relative);
   }
   return copied.sort();
@@ -47,7 +47,7 @@ export function convertCommands(context: ProjectionBuildContext, map: NameMap, t
     if (!description) { description = firstProseLine(parsed.body); kind = 'first-prose-line'; }
     if (!description || description.length > 1024) invalid();
     let body = parsed.body;
-    if (entry.sourceName === 'advise') { body = advisoryCommand(body); description = 'Interview-first technical advice; advisor relay is unsupported by Copilot CLI.'; }
+    if (entry.sourceName === 'advise') { body = advisoryCommand(body); description = 'Interview-first technical advice in the main session.'; }
     body = transform(body);
     description = transform(description).trim();
     if (!description || description.length > 1024) invalid();

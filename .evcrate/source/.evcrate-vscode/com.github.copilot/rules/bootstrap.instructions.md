@@ -16,11 +16,10 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - Primary workflow: `./.evcrate-vscode/evcrate/workflows/primary-workflow.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/primary-workflow.md` (the published install)
 - Development rules: `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install)
 - Orchestration protocols: `./.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` (the published install)
-- Advisor mentoring: `./.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install)
 - Documentation management: `./.evcrate-vscode/evcrate/workflows/documentation-management.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/documentation-management.md` (the published install)
 - And other workflows: `./.evcrate-vscode/evcrate/workflows/*`
 
-Resolve required workflow resources from `./.evcrate-vscode/evcrate/workflows/<name>` when present; otherwise use the published `~/.evcrate-vscode/evcrate/workflows/<name>`. This shared lookup includes `advice-activation.md` and `plan-progress.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read full `advisor-mentoring.md` only after resolved explicit/inherited activation.
+Resolve required workflow resources from `./.evcrate-vscode/evcrate/workflows/<name>` when present; otherwise use the published `~/.evcrate-vscode/evcrate/workflows/<name>`. This shared lookup includes `plan-progress.md` and `advisory-interview.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read only workflows required by the current task.
 
 ## Subagent Completion Contract
 

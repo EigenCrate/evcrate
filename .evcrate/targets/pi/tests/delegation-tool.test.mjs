@@ -141,16 +141,16 @@ test("explicit invalid model is rejected while role routing preserves valid over
   assert.equal(routed.results[0].request.model, "openai-codex/gpt-5.6-sol");
 });
 
-test("advisor delegation uses the generic validated model path", async () => {
+test("reviewer delegation uses the generic validated model path", async () => {
   const events = eventBus();
   const requests = [];
   events.on(DELEGATION_EVENTS.request, (request) => {
     requests.push(request);
-    complete(events, request, "advice");
+    complete(events, request, "review");
   });
   const delegate = createDelegationRunner({ events });
   const result = await delegate({
-    agent: "advisor",
+    agent: "evc-code-reviewer",
     task: "review",
     provider: "anthropic",
     model: "anthropic/claude-sonnet",

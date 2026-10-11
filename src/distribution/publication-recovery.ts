@@ -53,7 +53,7 @@ export interface PublicationStateRecord {
   readonly retention: 'bounded-one-home-release' | 'none';
 }
 export interface PublicationJournal {
-  readonly schema_version: 1 | 2 | 3; readonly transaction_type: 'target-publication';
+  readonly schema_version: 1 | 2 | 3 | 4; readonly transaction_type: 'target-publication';
   readonly status: 'staged' | 'promoting' | 'committed'; readonly release_id: string; readonly home_root: string;
   readonly transaction_dir: string; readonly selected_targets: readonly PublicationStateTarget[]; readonly binding_order: readonly string[];
   readonly previous_managed_paths: Record<string, unknown>; readonly managed_paths: Record<string, unknown>;
@@ -142,15 +142,15 @@ function mutation(action: PublicationChangeAction): boolean {
   return action !== 'noop' && action !== 'preserve';
 }
 function journalRecords(
-  value: unknown, scope: PublicationScope, release: string, manifestDigest: string
+  value: unknown, scope: PublicationScope, release: string, manifestDigest: string, harnessOnly = false
 ): Readonly<Record<string, PublicationStateRecord | null>> {
   if (!isPlainObject(value)) fail();
-  const expectedKeys = scope === 'home' ? ['shared', 'harness'] : ['harness'];
+  const expectedKeys = scope === 'home' && !harnessOnly ? ['shared', 'harness'] : ['harness'];
   if (Object.keys(value).length !== expectedKeys.length
     || Object.keys(value).some((key) => !expectedKeys.includes(key))) fail();
   const result: Record<string, PublicationStateRecord | null> = {};
   const shared = value.shared;
-  if (scope === 'home') {
+  if (scope === 'home' && !harnessOnly) {
     if (shared === null || !isPlainObject(shared)) fail();
     validatePublicationStateRecord(shared, 'shared', 'home');
     result.shared = shared as unknown as PublicationStateRecord;
@@ -160,7 +160,7 @@ function journalRecords(
       result.harness = value.harness as unknown as PublicationStateRecord;
     }
   } else {
-    validatePublicationStateRecord(value.harness, 'harness', 'project');
+    validatePublicationStateRecord(value.harness, 'harness', scope, harnessOnly ? 'current' : undefined);
     result.harness = value.harness as unknown as PublicationStateRecord;
   }
   for (const record of Object.values(result)) {
@@ -168,7 +168,7 @@ function journalRecords(
     if (record.status !== 'promoting'
       || record.release_id !== release || record.build_manifest_digest !== manifestDigest) fail();
   }
-  if (scope === 'home' && result.harness !== null) {
+  if (scope === 'home' && !harnessOnly && result.harness !== null) {
     const left = result.shared as PublicationStateRecord;
     const right = result.harness;
     for (const key of ['status', 'destination_root', 'durable_state_root', 'workspace_root', 'workspace_name',
@@ -240,11 +240,15 @@ function readJournal(path: string): PublicationJournal {
       'workspace_device', 'workspace_inode', 'workspace_parent_device', 'workspace_parent_inode',
       'project_identity', 'retention', 'lock_paths', 'lock_order'];
     const isV2OrV3 = schemaVersion === 2 || schemaVersion === 3;
-    const allowed = isV2OrV3 ? [...legacyAllowed, 'logical_phase', 'records'] : legacyAllowed;
+    const isV4 = schemaVersion === 4;
+    const hasRecords = isV2OrV3 || isV4;
+    const allowed = hasRecords ? [...legacyAllowed, 'logical_phase', 'records'] : legacyAllowed;
     if (Object.keys(parsed).some((key) => !allowed.includes(key))
-      || (schemaVersion !== 1 && schemaVersion !== 2 && schemaVersion !== 3) || parsed.transaction_type !== 'target-publication'
+      || (!hasRecords && schemaVersion !== 1) || parsed.transaction_type !== 'target-publication'
       || (parsed.status !== 'staged' && parsed.status !== 'promoting' && parsed.status !== 'committed')) fail();
-    if (isV2OrV3
+    if (isV4 && (Object.keys(parsed).length !== allowed.length
+      || allowed.some((key) => !Object.hasOwn(parsed, key)))) fail();
+    if (hasRecords
       && (parsed.scope !== 'home' && parsed.scope !== 'project')) fail('PATH_UNSAFE');
     const scope: PublicationScope = parsed.scope === undefined ? 'home'
       : parsed.scope === 'home' || parsed.scope === 'project' ? parsed.scope : fail();
@@ -267,7 +271,7 @@ function readJournal(path: string): PublicationJournal {
       'workspace_parent_device', 'workspace_parent_inode'];
     const workspaceIdentityPresent = workspaceIdentityKeys.map((key) => Object.hasOwn(parsed, key));
     if (workspaceIdentityPresent.some(Boolean) && !workspaceIdentityPresent.every(Boolean)) fail('PATH_UNSAFE');
-    if (isV2OrV3 && !workspaceIdentityPresent.every(Boolean)) fail('PATH_UNSAFE');
+    if (hasRecords && !workspaceIdentityPresent.every(Boolean)) fail('PATH_UNSAFE');
     const legacyWithoutWorkspaceIdentity = !workspaceIdentityPresent.some(Boolean);
     const workspaceDevice = nullableSafeInteger(parsed.workspace_device, Number.MAX_SAFE_INTEGER);
     const workspaceInode = nullableSafeInteger(parsed.workspace_inode, Number.MAX_SAFE_INTEGER);
@@ -277,12 +281,15 @@ function readJournal(path: string): PublicationJournal {
     if (workspaceIdentity.some((value) => value === null) && workspaceIdentity.some((value) => value !== null)) {
       fail('PATH_UNSAFE');
     }
-    const selectedTargets = targets(parsed.selected_targets, scope === 'home');
-    const layout = publicationStateLayout(parsed.binding_order, selectedTargets, scope, scope === 'home');
+    if (isV4 && workspaceIdentity.some((value) => value === null)) fail('PATH_UNSAFE');
+    const selectedTargets = targets(parsed.selected_targets, scope === 'home' && !isV4);
+    if (isV4 && selectedTargets.includes('gemini')) fail();
+    const layout = publicationStateLayout(parsed.binding_order, selectedTargets, scope, scope === 'home' && !isV4);
+    if (isV4 && layout.generation !== 'current') fail();
     const bindingOrder = layout.bindingOrder;
     let previousManagedPaths: Record<string, unknown>;
     let managedPaths: Record<string, unknown>;
-    if (isV2OrV3) {
+    if (hasRecords) {
       const ownership = publicationStateOwnership(
         parsed.managed_paths, parsed.previous_managed_paths, selectedTargets, scope, layout.generation
       );
@@ -303,10 +310,9 @@ function readJournal(path: string): PublicationJournal {
     if (typeof parsed.retain_transaction !== 'boolean'
       || (parsed.retained_release_id !== null && typeof parsed.retained_release_id !== 'string')) fail();
     const retainedRelease = parsed.retained_release_id === null ? null : releaseId(parsed.retained_release_id);
-    const records = isV2OrV3
-      ? journalRecords(parsed.records, scope, release, manifestDigest) : undefined;
-    const logicalPhase = isV2OrV3
-      ? parsed.logical_phase : undefined;
+    const records = hasRecords
+      ? journalRecords(parsed.records, scope, release, manifestDigest, isV4) : undefined;
+    const logicalPhase = hasRecords ? parsed.logical_phase : undefined;
     const retention = parsed.retention === undefined
       ? 'bounded-one-home-release' : parsed.retention;
     if (retention !== 'bounded-one-home-release' && retention !== 'none') fail();
@@ -324,6 +330,11 @@ function readJournal(path: string): PublicationJournal {
     const lockOrder = parsed.lock_order === undefined
       ? Object.freeze(['home', scope === 'project' ? 'project' : 'home'])
       : stringArray(parsed.lock_order, PUBLICATION_BINDING_ORDER.length + 16, false);
+    if (isV4 && (parsed.home_root !== destinationRoot
+      || !sameStringArray(lockPaths, [join(durableStateRoot, 'publish.lock')])
+      || !sameStringArray(lockOrder, [scope])
+      || (scope === 'home' && (durableStateRoot !== join(destinationRoot, '.evcrate', 'publication')
+        || retention !== 'bounded-one-home-release')))) fail('PATH_UNSAFE');
     const operations = parsed.operations;
     if (!Array.isArray(operations) || operations.length > MAX_PUBLICATION_CHANGES || operations.length !== operationCount
       || hashBytes(canonicalJsonBytes(operations)) !== operationsDigest) fail();
@@ -341,11 +352,11 @@ function readJournal(path: string): PublicationJournal {
       if (Object.hasOwn(value, 'mode')) {
         safeInteger(value.mode, 0o7777);
       }
-      // Only schema 3 can carry cleanup intent. Ordinary and historical
-      // operations still require an active target/binding below.
+      // Cleanup remains file-only, ownership-gated predecessor binding data.
       const cleanup = Object.hasOwn(value, 'cleanup');
       if (cleanup && value.cleanup !== 'retired-binding') fail();
       const target = value.target === 'advisor-controller' ? value.target : publicationStateTarget(value.target);
+      if (isV4 && target === 'advisor-controller') fail();
       if (!cleanup && target !== 'advisor-controller' && !selectedTargets.includes(target)) fail();
       const binding = relativePath(value.binding);
       const localRoot = relativePath(value.local_root);
@@ -397,11 +408,19 @@ function readJournal(path: string): PublicationJournal {
         action, destination, backup, before, intendedHash, intended, promoted: value.promoted
       });
     });
-    if (isV2OrV3) {
-      assertSchema2JournalPhase(
-        scope, logicalPhase, records as Readonly<Record<string, PublicationStateRecord | null>>,
-        selectedTargets, bindingOrder, parsedOperations
-      );
+    if (hasRecords) {
+      if (isV4) {
+        const harness = records?.harness;
+        if (!harness || logicalPhase !== 'harness'
+          || !sameTargetArray(selectedTargets, harness.selected_targets)
+          || !sameStringArray(bindingOrder, harness.binding_order)
+          || parsedOperations.some((operation) => operation.kind !== 'file')) fail('PATH_UNSAFE');
+      } else {
+        assertSchema2JournalPhase(
+          scope, logicalPhase, records as Readonly<Record<string, PublicationStateRecord | null>>,
+          selectedTargets, bindingOrder, parsedOperations
+        );
+      }
       for (const record of Object.values(records ?? {})) {
         if (record === null) continue;
         if (record.destination_root !== destinationRoot || record.durable_state_root !== durableStateRoot
@@ -414,7 +433,7 @@ function readJournal(path: string): PublicationJournal {
       }
     }
     if (parsed.status === 'committed' && parsedOperations.some((operation) => mutation(operation.action) && !operation.promoted)) fail();
-    return Object.freeze({ schema_version: schemaVersion as 1 | 2 | 3, transaction_type: 'target-publication', status: parsed.status,
+    return Object.freeze({ schema_version: schemaVersion as 1 | 2 | 3 | 4, transaction_type: 'target-publication', status: parsed.status,
       release_id: release, home_root: parsed.home_root, transaction_dir: transaction,
       selected_targets: selectedTargets, binding_order: bindingOrder, previous_managed_paths: previousManagedPaths,
       managed_paths: managedPaths, build_manifest_path: manifestPath, build_manifest_digest: manifestDigest,
@@ -427,7 +446,7 @@ function readJournal(path: string): PublicationJournal {
       legacy_without_workspace_identity: legacyWithoutWorkspaceIdentity,
       project_identity: projectIdentity, retention,
       lock_paths: Object.freeze([...lockPaths]), lock_order: Object.freeze([...lockOrder]),
-      ...(isV2OrV3 ? {
+      ...(hasRecords ? {
         logical_phase: logicalPhase as 'shared' | 'harness' | 'combined',
         records
       } : {}) });
@@ -501,7 +520,7 @@ function assertWorkspaceIdentity(journal: PublicationJournal, transactionRoot: s
     journal.workspace_parent_device, journal.workspace_parent_inode
   ];
   if (identity.every((value) => value === null)) {
-    if (journal.scope === 'project') fail('PATH_UNSAFE');
+    if (journal.scope === 'project' || journal.schema_version === 4) fail('PATH_UNSAFE');
     return;
   }
   if (identity.some((value) => value === null)) fail('PATH_UNSAFE');
@@ -1042,14 +1061,14 @@ function v2Marker(
     };
   }
   return {
-    schema_version: 2, transaction_type: 'target-publication', scope: journal.scope,
+    schema_version: journal.schema_version === 4 ? 3 : 2, transaction_type: 'target-publication', scope: journal.scope,
     records
   };
 }
 function committedMarker(
   journal: PublicationJournal, preservedHarness: Record<string, unknown> | null = null
 ): Record<string, unknown> {
-  if (journal.schema_version === 2 || journal.schema_version === 3) return v2Marker(journal, 'complete', preservedHarness);
+  if (journal.schema_version >= 2) return v2Marker(journal, 'complete', preservedHarness);
   return {
     schema_version: 1, status: 'complete', transaction_type: 'target-publication', release_id: journal.release_id,
     selected_targets: [...journal.selected_targets], binding_order: [...journal.binding_order],
@@ -1066,7 +1085,7 @@ function committedMarker(
 function recoveredMarker(
   journal: PublicationJournal, preservedHarness: Record<string, unknown> | null = null
 ): Record<string, unknown> {
-  if (journal.schema_version === 2 || journal.schema_version === 3) return v2Marker(journal, 'recovered', preservedHarness);
+  if (journal.schema_version >= 2) return v2Marker(journal, 'recovered', preservedHarness);
   return {
     schema_version: 1, status: 'recovered', transaction_type: 'target-publication', release_id: journal.release_id,
     selected_targets: [...journal.selected_targets], binding_order: [...journal.binding_order],
@@ -1107,8 +1126,15 @@ function assertMarkerMatches(
     if (stagedWithoutPromotion) return;
     fail();
   }
-  if (journal.schema_version === 2 || journal.schema_version === 3) {
-    if (marker.schema_version !== 2 || marker.scope !== journal.scope || journal.records === undefined) fail();
+  if (journal.schema_version >= 2) {
+    if (stagedWithoutPromotion && (marker.schema_version === 2 || marker.schema_version === 3)) {
+      assertMarkerRecordRoots(marker, journal.destination_root, stateRoot);
+      if (marker.scope !== journal.scope) fail('PATH_UNSAFE');
+      const previous = publicationMarkerRecord(marker, 'harness');
+      if (previous && (previous.status === 'complete' || previous.status === 'recovered')) return;
+    }
+    if (marker.schema_version !== (journal.schema_version === 4 ? 3 : 2)
+      || marker.scope !== journal.scope || journal.records === undefined) fail();
     const markerRecords = marker.records;
     if (!isPlainObject(markerRecords)) fail();
     if (stagedWithoutPromotion
@@ -1166,10 +1192,10 @@ export function recoverPublicationUnlocked(
   const journal = readPublicationJournal(stateRoot);
   if (!journal) {
     const marker = readOptionalPublicationMarker(join(resolve(stateRoot), RELEASE_MARKER_NAME));
-    const markerRecord = marker?.schema_version === 2
+    const markerRecord = marker?.schema_version === 2 || marker?.schema_version === 3
       ? publicationMarkerRecord(marker, 'shared') ?? publicationMarkerRecord(marker, 'harness') : marker;
     if (expectedReleaseId !== null && markerRecord?.release_id !== expectedReleaseId) fail();
-    if (marker?.schema_version === 2) {
+    if (marker?.schema_version === 2 || marker?.schema_version === 3) {
       const harness = publicationMarkerRecord(marker, 'harness');
       const markerIdentity = harness?.project_identity ?? null;
       if ((expectedProjectIdentity === null && marker.scope !== 'home')
@@ -1242,7 +1268,7 @@ export function recoverPublicationUnlocked(
     assertPromotionEvidence(journal, transactionRoot);
   }
   if (!transactionPresent) {
-    if (journal.status === 'staged' && journal.operations.every((operation) => !operation.promoted)) {
+    if (journal.schema_version !== 4 && journal.status === 'staged' && journal.operations.every((operation) => !operation.promoted)) {
       cleanup(stateRoot, transactionRoot, false);
       return {
         action: 'rolled-back', releaseId: journal.release_id,

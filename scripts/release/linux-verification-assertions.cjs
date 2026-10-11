@@ -34,7 +34,7 @@ function verifyReleaseAssetTree(assetsDir) {
   }
 
   const metadata = JSON.parse(fs.readFileSync(path.join(assetsDir, metaFile), 'utf8'));
-  if (metadata.schema !== 'evcrate-private-release/v1') {
+  if (metadata.schema !== 'evcrate-private-release/v2') {
     throw new Error(`Invalid metadata schema: ${metadata.schema}`);
   }
   if (!metadata.platforms || !metadata.platforms['linux-x64']) {

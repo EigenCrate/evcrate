@@ -18,10 +18,10 @@ Read the plan directory:
 - `phase-*.md` - 20 first lines of each phase file to understand the progress and status
 
 Before interpreting completion, apply `Plan progress and phase reconciliation`
-in `.claude/workflows/advisor-mentoring.md` regardless of the current mode flag.
-For advice-controlled plans, read `progress.md` and reconcile receipts/run scope;
-do not infer completion from frozen phase headers. Do not move, delete, rewrite
-or stage captured plans/evidence or their immutable receipts: exclude those
+in `.claude/workflows/plan-progress.md`.
+For protected historical plans, read uncaptured `progress.md` and immutable
+receipts to reconcile exact scope; do not infer completion from frozen headers.
+Do not move, delete, rewrite or stage captured plans/evidence or their immutable receipts: exclude those
 plans from the archive candidates and provide read-only links instead. Ordinary
 uncaptured plans retain the confirmation and archive behavior below.
 

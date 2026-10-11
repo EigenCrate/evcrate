@@ -79,13 +79,13 @@ function verifyMaterializedRuntimes(homeDir, workspaceDir, sandboxEnv) {
 }
 
 
-function verifyInstalledPartialRecovery(snapshotDir, homeDir, projectDir, workspaceDir, stateDir) {
+function verifyInstalledFailureRecovery(snapshotDir, homeDir, projectDir, workspaceDir, stateDir) {
   const api = require(path.join(snapshotDir, 'package', 'dist', 'index.js'));
-  const partialProject = path.join(projectDir, 'partial project');
-  fs.mkdirSync(partialProject, { recursive: true });
+  const failureProject = path.join(projectDir, 'failure project');
+  fs.mkdirSync(failureProject, { recursive: true });
   const context = api.resolveInvocationContext({
     packageRoot: path.join(snapshotDir, 'package'), cwd: workspaceDir, home: homeDir,
-    stateHome: path.join(stateDir, 'evcrate'), projectRoot: partialProject, targets: ['omp']
+    stateHome: path.join(stateDir, 'evcrate'), projectRoot: failureProject, targets: ['omp']
   });
   const request = { scope: 'project', selectedTargets: ['omp'] };
   const homeState = api.publicationStateRoot(homeDir);
@@ -101,15 +101,13 @@ function verifyInstalledPartialRecovery(snapshotDir, homeDir, projectDir, worksp
         }
       }
     }, request);
-    throw new Error('Installed partial publication fixture unexpectedly succeeded');
+    throw new Error('Installed publication failure fixture unexpectedly succeeded');
   } catch (error) {
-    if (!api.isPublicationPartialError(error) || error.code !== 'PUBLICATION_FAILED') throw error;
-    if (error.payload.phases[0]?.status !== 'committed' || error.payload.phases[1]?.status !== 'failed') {
-      throw new Error('Installed partial result did not preserve shared/project phase states');
-    }
+    if (!(error instanceof api.ControlPlaneError) || error.code !== 'PUBLICATION_FAILED') throw error;
+    if (Object.hasOwn(error, 'payload')) throw new Error('Failed publication fabricated a success payload');
   }
-  if (!injected || fs.existsSync(path.join(partialProject, '.omp'))) {
-    throw new Error('Installed partial fixture did not roll back project-only materialization');
+  if (!injected || fs.existsSync(path.join(failureProject, '.omp'))) {
+    throw new Error('Installed failure fixture did not roll back project-only materialization');
   }
   const homeStateAfterFailure = computeDirectoryHash(homeState);
   const identity = api.resolvePublicationProjectContext(context).projectIdentity;
@@ -128,8 +126,6 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, workspa
   };
   const versionJson = JSON.parse(runLauncher(launcherPath, ['version', '--json'], defaultOpts, 'evcrate version'));
   if (versionJson.status !== 'ok') throw new Error(`evcrate version returned unexpected status: ${versionJson.status}`);
-  const healthRes = spawnSync(launcherPath, ['health', '--json'], { ...defaultOpts, timeout: 60000 });
-  const healthStatus = healthRes.status === 0 ? 'ok' : 'diagnostic-flagged';
   const packageHashBefore = computeDirectoryHash(snapshotDir);
 
   runLauncher(launcherPath, ['publish', '--dry-run', '--json'], defaultOpts, 'HOME publish dry-run');
@@ -143,8 +139,7 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, workspa
   if (!fs.existsSync(path.join(homeDir, '.gemini', 'config'))) {
     throw new Error('Missing Antigravity HOME remap beneath .gemini/config');
   }
-  const controllerBin = path.join(homeDir, '.evcrate', 'bin', 'evcrate-advisor');
-  if (!fs.existsSync(controllerBin)) throw new Error('Advisor controller binary missing in published HOME');
+  if (fs.existsSync(path.join(homeDir, '.evcrate', 'bin'))) throw new Error('HOME publication created an unrelated runtime root');
 
   const selectedTargets = ['claude', 'codex', 'pi', 'copilot', 'vscode'];
   const projectStateRoot = path.join(stateDir, 'evcrate', 'project-publication');
@@ -179,12 +174,12 @@ function verifyInstalledLauncherAndInvariance(launcherPath, snapshotDir, workspa
 
   verifyMaterializedRuntimes(homeDir, workspaceDir, sandboxEnv);
   assertPackageHash(snapshotDir, packageHashBefore, 'materialized runtime invocation');
-  verifyInstalledPartialRecovery(snapshotDir, homeDir, projectDir, workspaceDir, stateDir);
-  assertPackageHash(snapshotDir, packageHashBefore, 'partial recovery');
+  verifyInstalledFailureRecovery(snapshotDir, homeDir, projectDir, workspaceDir, stateDir);
+  assertPackageHash(snapshotDir, packageHashBefore, 'failure recovery');
 
   return {
-    healthStatus, packageHashBefore, packageHashAfter: computeDirectoryHash(snapshotDir),
-    projectProjectionsVerified: true, runtimeEntrypointsVerified: true, partialRecoveryVerified: true
+    packageHashBefore, packageHashAfter: computeDirectoryHash(snapshotDir),
+    projectProjectionsVerified: true, runtimeEntrypointsVerified: true, failureRecoveryVerified: true
   };
 }
 

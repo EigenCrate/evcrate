@@ -7,8 +7,6 @@ export const MAX_CLI_TIMEOUT_MS = 900_000;
 
 export type CliCommand =
   | { readonly kind: 'version' }
-  | { readonly kind: 'health' }
-  | { readonly kind: 'advisor-settings'; readonly operation: 'get' | 'preview' | 'apply' }
   | { readonly kind: 'distribute'; readonly action: 'build' | 'check' | 'publish' | 'all' | 'recover' }
   | { readonly kind: 'publish'; readonly action: 'dry-run' | 'apply' }
   | { readonly kind: 'recover' }
@@ -93,21 +91,12 @@ function commandFromPositionals(
 ): CliCommand {
   if (hasRequestFile) {
     if (positionals.length === 0 && !dryRun && !apply) return { kind: 'request-file' };
-    if (positionals.length === 3 && !dryRun && !apply && positionals[0] === 'advisor' && positionals[1] === 'settings'
-      && ['get', 'preview', 'apply'].includes(positionals[2])) {
-      return { kind: 'advisor-settings', operation: positionals[2] as 'get' | 'preview' | 'apply' };
-    }
     fail('USAGE_INVALID');
   }
   if (positionals.length === 1 && positionals[0] === 'version' && !dryRun && !apply) return { kind: 'version' };
-  if (positionals.length === 1 && positionals[0] === 'health' && !dryRun && !apply) return { kind: 'health' };
   if (positionals.length === 1 && positionals[0] === 'recover' && !dryRun && !apply) return { kind: 'recover' };
   if (positionals.length === 1 && positionals[0] === 'publish' && dryRun !== apply) {
     return { kind: 'publish', action: dryRun ? 'dry-run' : 'apply' };
-  }
-  if (positionals.length === 3 && !dryRun && !apply && positionals[0] === 'advisor' && positionals[1] === 'settings'
-    && ['get', 'preview', 'apply'].includes(positionals[2])) {
-    return { kind: 'advisor-settings', operation: positionals[2] as 'get' | 'preview' | 'apply' };
   }
   if (positionals.length === 2 && !dryRun && !apply && positionals[0] === 'distribute'
     && ['build', 'check', 'publish', 'all', 'recover'].includes(positionals[1])) {

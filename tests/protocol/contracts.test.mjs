@@ -3,19 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   canonicalJson, decodeUtf8, parseJsonDocument, normalizeTarget, PERSISTED_TARGETS,
-  RESOURCE_OPERATIONS, ADVISOR_BACKENDS, safePath, validateResourceRequest, validateResourceResult,
-  validateAdvisorPolicy, validateAdvisorSettingsRequest, validateAdvisorSettingsResult,
-  canonicalAdvisorPolicyDigest, bindPreviewMetadata,
-  createSettingsGetResult, createSettingsApplyResult, createSettingsConflictResult,
-  createSettingsRecoveryResult, validateDiagnosticRequest, validateDiagnosticResult, createResourceRequest,
+  RESOURCE_OPERATIONS, safePath, validateResourceRequest, validateResourceResult, createResourceRequest,
   validateResourceRequestPayload, validateResourceResultPayload, validateScopeRequestPayload,
   validateScopeResultPayload, validateScopeRevisionVector, validatePublishRequestPayload,
   validatePublishDryRunResultPayload, validatePublishApplyResultPayload, validateRecoverRequestPayload,
-  validateRecoverResultPayload, PUBLICATION_BINDING_ORDER,
-  CHECKPOINT_PROTOCOL_V2, CHECKPOINT_VERSION_V2, RESULT_PROTOCOL_V2, RESULT_VERSION_V2,
-  CONTROLLER_PROTOCOL_V2, CONTROLLER_VERSION_V2, HISTORY_PROTOCOL_V1, HISTORY_VERSION_V1,
-  validateCheckpointV2, validateResultV2, validateEnvelopeV2, validateHistoryExecutionV1,
-  validateHistoryOutcomeV1, AdvisorContractError
+  validateRecoverResultPayload
 } from '../../dist/protocol/index.js';
 import { ControlPlaneError, exitCodeForError, serializeControlPlaneError } from '../../dist/errors/index.js';
 
@@ -63,9 +55,9 @@ test('bounded UTF-8, strict whitespace, duplicate, and depth checks fail closed'
   for (const whitespace of ['\u00a0', '\u000b', '\u000c', '\ufeff']) {
     assert.throws(() => parseJsonDocument(`${whitespace}{"a":1}`));
   }
-  const parsed = parseJsonDocument('{"protocol":"evcrate-advisor-diagnostic","protocolVersion":1,"requestId":"r","operation":"qualify","__proto__":"x"}');
+  const parsed = parseJsonDocument('{"protocol":"evcrate-resource-control","protocolVersion":1,"requestId":"r","operation":"version","__proto__":"x"}');
   assert.equal(Object.hasOwn(parsed, '__proto__'), true);
-  assert.throws(() => validateDiagnosticRequest(parsed));
+  assert.throws(() => validateResourceRequest(parsed));
 });
 
 test('target alias normalizes only at input boundary', () => {
@@ -81,15 +73,9 @@ test('contract fixtures cover all persisted targets and result states', () => {
     assert.equal(request.context.target, target);
   }
   assert.deepEqual(validateResourceRequest(contractFixtures.resource), contractFixtures.resource);
-  assert.deepEqual(validateAdvisorSettingsRequest(contractFixtures.settings), contractFixtures.settings);
-  assert.deepEqual(validateDiagnosticRequest(contractFixtures.diagnostic), contractFixtures.diagnostic);
   for (const result of contractFixtures.resourceResults) {
     assert.deepEqual(validateResourceResult(result), result);
   }
-  for (const result of contractFixtures.settingsResults) {
-    assert.deepEqual(validateAdvisorSettingsResult(result), result);
-  }
-  assert.deepEqual(validateDiagnosticResult(contractFixtures.diagnosticResult), contractFixtures.diagnosticResult);
 });
 test('Phase 6 payload fixtures preserve exact request and token contracts', () => {
   for (const [operation, payload] of [
@@ -124,8 +110,6 @@ test('scope revisions are explicit and mutable model operations stay unsupported
 
 test('proxy fixture matrix rejects counsel fields in every control-plane family', () => {
   for (const request of negativeProxyFixtures.resource) assert.throws(() => validateResourceRequest(request));
-  for (const request of negativeProxyFixtures.settings) assert.throws(() => validateAdvisorSettingsRequest(request));
-  for (const request of negativeProxyFixtures.diagnostic) assert.throws(() => validateDiagnosticRequest(request));
 });
 
 test('stable exit bands and mutation boundaries stay explicit', () => {
@@ -135,28 +119,6 @@ test('stable exit bands and mutation boundaries stay explicit', () => {
   ]) {
     assert.equal(exitCodeForError(new ControlPlaneError(code)), exitCode);
   }
-  const minimum = {
-    version: 2,
-    advisor: {
-      primary: { backend: 'codex', model: 'm', effort: 'low' },
-      backup: { backend: 'omp', model: 'm', effort: 'low' }
-    },
-    wait: { mode: 'until_terminal', warn_after_ms: 1000, warn_every_ms: 1000 },
-    history: { retention_days: 1, max_bytes: 1048576 }
-  };
-  const maximum = {
-    version: 2,
-    advisor: {
-      primary: { backend: 'codex', model: 'm', effort: 'low' },
-      backup: { backend: 'omp', model: 'm', effort: 'low' }
-    },
-    wait: { mode: 'until_terminal', warn_after_ms: 3600000, warn_every_ms: 3600000 },
-    history: { retention_days: 365, max_bytes: 1073741824 }
-  };
-  assert.doesNotThrow(() => validateAdvisorPolicy(minimum));
-  assert.doesNotThrow(() => validateAdvisorPolicy(maximum));
-  assert.throws(() => validateAdvisorPolicy({ ...minimum, wait: { ...minimum.wait, warn_after_ms: 999 } }));
-  assert.throws(() => validateAdvisorPolicy({ ...maximum, wait: { ...maximum.wait, warn_after_ms: 3600001 } }));
   assert.throws(() => createResourceRequest('oversized', 'version', context, { value: 'x'.repeat(65536) }));
 });
 
@@ -167,45 +129,6 @@ test('resource context and exact envelope reject counsel proxy fields', () => {
   assert.throws(() => validateResourceRequest({ ...request, payload: { backend: 'codex' } }));
 });
 
-test('settings validates complete policy and diagnostic stays distinct', () => {
-  const policy = {
-    version: 2,
-    advisor: {
-      primary: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
-      backup: { backend: 'omp', model: 'openai-codex/gpt-5.6-sol', effort: 'high' }
-    },
-    wait: { mode: 'until_terminal', warn_after_ms: 120000, warn_every_ms: 300000 },
-    history: { retention_days: 30, max_bytes: 104857600 }
-  };
-  assert.deepEqual(validateAdvisorPolicy(policy), policy);
-  assert.throws(() => validateAdvisorPolicy({ version: 2, advisor: { primary: { backend: 'codex' } } }));
-  assert.throws(() => validateAdvisorPolicy({ ...policy, credential: 'secret' }));
-  assert.throws(() => validateAdvisorSettingsRequest({ protocol: 'evcrate-advisor-settings', protocolVersion: 1, requestId: 'r3', operation: 'preview', payload: { policy: { ...policy, recommendation: 'x' }, currentRevision: { kind: 'present', identity: 'x' }, destination: '/x' } }));
-  assert.deepEqual(validateDiagnosticRequest({ protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: 'r4', operation: 'qualify' }).operation, 'qualify');
-  assert.throws(() => validateDiagnosticRequest({ protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: 'r4', operation: 'qualify', question: 'x' }));
-});
-
-test('diagnostic result exposes only correlated qualification data', () => {
-  const result = validateDiagnosticResult({
-    protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: 'r5', status: 'QUALIFIED',
-    target: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
-    probes: { version: { status: 'passed', value: '1.0.0' }, auth: { status: 'passed' }, capabilities: { status: 'passed', model: 'gpt-5.6-sol', effort: 'high', noninteractive: true, session: 'isolated', tools: 'none', output: 'json' } }
-  });
-  assert.equal(result.status, 'QUALIFIED');
-  assert.throws(() => validateDiagnosticResult({ ...result, recommendation: 'use codex' }));
-  assert.throws(() => validateDiagnosticResult({
-    ...result, target: { ...result.target, model: 'other-model' }
-  }));
-  assert.throws(() => validateDiagnosticResult({
-    ...result, probes: {
-      ...result.probes,
-      capabilities: { ...result.probes.capabilities, effort: 'low' }
-    }
-  }));
-  assert.throws(() => validateDiagnosticResult({
-    ...result, target: { ...result.target, backend: 'copilot' }
-  }));
-});
 
 test('stable error mapping has no path or secret fields', () => {
   const error = new ControlPlaneError('CAS_CONFLICT');
@@ -236,100 +159,11 @@ test('safe paths and resource results reject traversal, metadata, protocol, and 
   assert.throws(() => validateResourceResult({ ...result, payload: { token: 'opaque' } }));
 });
 
-test('settings previews enforce revision correlation and bounded lifetime', () => {
-  const preview = contractFixtures.settingsResults.find(({ status }) => status === 'PREVIEW');
-  assert.ok(preview);
-  assert.throws(() => validateAdvisorSettingsResult({
-    ...preview, currentRevision: { kind: 'present', identity: 'absent' }
-  }));
-  assert.throws(() => validateAdvisorSettingsResult({
-    ...preview, expiresAt: preview.issuedAt + 900001
-  }));
-  const get = contractFixtures.settingsResults.find(({ status, operation, policy }) =>
-    status === 'OK' && operation === 'get' && policy !== null);
-  assert.ok(get);
-  assert.throws(() => validateAdvisorSettingsResult({
-    ...get, mode: { kind: 'create', mode: 0o600 }
-  }));
-});
-
-test('settings request size and preview binder stay document-bound', () => {
-  const request = validateAdvisorSettingsRequest(contractFixtures.settings);
-  const preview = contractFixtures.settingsResults.find(({ status }) => status === 'PREVIEW');
-  assert.ok(preview);
-  const digest = canonicalAdvisorPolicyDigest(request.payload.policy);
-  assert.equal(digest, preview.intendedDigest);
-  assert.deepEqual(bindPreviewMetadata(
-    request, preview.token, preview.expiresAt, preview.currentRevision, digest,
-    preview.destination, preview.issuedAt
-  ), preview);
-  assert.throws(() => bindPreviewMetadata(
-    request, preview.token, preview.expiresAt,
-    { kind: 'present', identity: 'sha256:other' }, digest, preview.destination, preview.issuedAt
-  ));
-  assert.throws(() => bindPreviewMetadata(
-    request, preview.token, preview.expiresAt, preview.currentRevision, 'a'.repeat(64),
-    preview.destination, preview.issuedAt
-  ));
-  assert.throws(() => validateAdvisorSettingsRequest({
-    ...contractFixtures.settings,
-    payload: { ...contractFixtures.settings.payload, destination: `/${'x'.repeat(70_000)}` }
-  }), (error) => error.code === 'PROTOCOL_INVALID');
-});
-
-test('settings result factories require matching request operations', () => {
-  const getRequest = validateAdvisorSettingsRequest({
-    protocol: 'evcrate-advisor-settings', protocolVersion: 1, requestId: 'factory-get',
-    operation: 'get', payload: {}
-  });
-  const previewRequest = validateAdvisorSettingsRequest(contractFixtures.settings);
-  const absent = { kind: 'absent', identity: 'absent' };
-  const present = { kind: 'present', identity: 'sha256:factory' };
-  const recovery = { kind: 'none', identity: 'none' };
-  assert.doesNotThrow(() => createSettingsGetResult(getRequest, null, absent));
-  assert.throws(() => createSettingsGetResult(previewRequest, null, absent));
-  assert.throws(() => createSettingsApplyResult(getRequest, present, recovery));
-  assert.throws(() => createSettingsConflictResult(getRequest, present, present));
-  assert.throws(() => createSettingsRecoveryResult(getRequest, present, recovery));
+test('public protocol target and operation inventories are immutable', () => {
   assert.equal(Object.isFrozen(PERSISTED_TARGETS), true);
   assert.equal(Object.isFrozen(RESOURCE_OPERATIONS), true);
-  assert.equal(Object.isFrozen(ADVISOR_BACKENDS), true);
 });
 
-test('diagnostic failures use the stable routing error catalog', () => {
-  const failure = {
-    protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1, requestId: null,
-    status: 'FAILED', target: null,
-    probes: {
-      version: { status: 'not-run' }, auth: { status: 'not-run' },
-      capabilities: { status: 'not-run' }
-    },
-    error: {
-      code: 'ROUTE_POLICY_REQUIRED', category: 'config',
-      action: 'Create ~/.evcrate/advisor-routing.json with one version 1 advisor target.',
-      message: 'Global advisor policy is required'
-    }
-  };
-  assert.deepEqual(validateDiagnosticResult(failure), failure);
-  assert.throws(() => validateDiagnosticResult({
-    ...failure, error: { ...failure.error, action: 'unsafe action' }
-  }));
-  assert.throws(() => validateDiagnosticResult({
-    ...failure, probes: {
-      version: { status: 'not-run' }, auth: { status: 'passed' },
-      capabilities: { status: 'not-run' }
-    }
-  }));
-  assert.throws(() => validateDiagnosticResult({
-    ...failure, probes: {
-      version: { status: 'passed', value: '1.0.0' }, auth: { status: 'passed' },
-      capabilities: { status: 'passed' }
-    }
-  }));
-  assert.throws(() => validateDiagnosticResult({
-    ...failure, question: 'not counsel'
-  }), (error) => error.code === 'DIAGNOSTIC_INVALID');
-});
 test('Phase 8 publication payloads enforce scope, phase order, identity, and empty recovery', () => {
   assert.deepEqual(validatePublishRequestPayload({
     scope: 'home', selectedTargets: ['agy']
@@ -348,7 +182,6 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
     scope: 'home', projectIdentity: null,
     buildManifestPath: '.evcrate/build-manifest-omp.json', buildManifestDigest: 'b'.repeat(64),
     phases: [
-      { phase: 'shared', scope: 'home', selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
       { phase: 'harness', scope: 'home', selectedTargets: ['omp'], bindingOrder: ['.omp'], changes: [change] }
     ]
   };
@@ -360,7 +193,7 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
   assert.deepEqual(validatePublishDryRunResultPayload(dryRunWithLeftovers), dryRunWithLeftovers);
   const nativeCopilotProject = {
     ...dryRun, scope: 'project', projectIdentity: 'c'.repeat(64),
-    phases: [dryRun.phases[0], {
+    phases: [{
       phase: 'harness', scope: 'project', selectedTargets: ['copilot'],
       bindingOrder: ['.copilot', '.github/copilot-instructions.md'],
       changes: [{ ...change, target: 'copilot', path: '.github/copilot-instructions.md' }]
@@ -369,8 +202,8 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
   assert.deepEqual(validatePublishDryRunResultPayload(nativeCopilotProject), nativeCopilotProject);
   assert.throws(() => validatePublishDryRunResultPayload({
     ...nativeCopilotProject,
-    phases: [dryRun.phases[0], {
-      ...nativeCopilotProject.phases[1],
+    phases: [{
+      ...nativeCopilotProject.phases[0],
       changes: [{ ...change, target: 'copilot', path: '.github/workflows/execute.yml' }]
     }]
   }));
@@ -383,42 +216,20 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
   assert.deepEqual(validatePublishApplyResultPayload(applied), applied);
   const incompleteApply = {
     ...dryRun,
-    phases: [
-      { ...dryRun.phases[0], status: 'failed', releaseId: null, retainedReleaseId: null },
-      { ...dryRun.phases[1], status: 'not-started', releaseId: null, retainedReleaseId: null }
-    ]
+    phases: [{ ...dryRun.phases[0], status: 'failed', releaseId: null, retainedReleaseId: null }]
   };
   assert.throws(() => validatePublishApplyResultPayload(incompleteApply));
-  const partialPayload = {
-    scope: 'project', projectIdentity: 'c'.repeat(64),
-    buildManifestPath: '.evcrate/build-manifest-omp.json', buildManifestDigest: 'd'.repeat(64),
-    phases: [
-      { ...dryRun.phases[0], status: 'committed', releaseId: 'shared-release', retainedReleaseId: null },
-      { ...dryRun.phases[1], scope: 'project', status: 'failed', releaseId: null, retainedReleaseId: null }
-    ]
-  };
-  assert.throws(() => validatePublishApplyResultPayload(partialPayload));
-  const partialResult = validateResourceResult({
-    protocol: 'evcrate-resource-control', protocolVersion: 1, requestId: 'partial-1',
-    operation: 'publish.apply', status: 'partial', payload: partialPayload,
-    error: {
-      code: 'PUBLICATION_FAILED', category: 'publication',
-      action: 'Repair the publication state before retrying.', message: 'Publication failed'
-    }
-  });
-  assert.equal(partialResult.status, 'partial');
-  assert.deepEqual(partialResult.payload, partialPayload);
   const generatedDotfile = {
     ...dryRun,
-    phases: [dryRun.phases[0], {
-      ...dryRun.phases[1], changes: [{ ...change, path: '.omp/agent/skills/example/.gitignore' }]
+    phases: [{
+      ...dryRun.phases[0], changes: [{ ...change, path: '.omp/agent/skills/example/.gitignore' }]
     }]
   };
   assert.doesNotThrow(() => validatePublishDryRunResultPayload(generatedDotfile));
   assert.throws(() => validatePublishDryRunResultPayload({
     ...dryRun,
-    phases: [dryRun.phases[0], {
-      ...dryRun.phases[1], changes: [{ ...change, path: '.omp/.env.production' }]
+    phases: [{
+      ...dryRun.phases[0], changes: [{ ...change, path: '.omp/.env.production' }]
     }]
   }));
   const none = { scope: 'home', projectIdentity: null, action: 'none', phases: [] };
@@ -441,7 +252,7 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
   }));
   assert.throws(() => validatePublishDryRunResultPayload({
     ...dryRun,
-    phases: [dryRun.phases[0], { ...dryRun.phases[1], bindingOrder: ['.omp', '.evcrate/bin'] }]
+    phases: [{ ...dryRun.phases[0], bindingOrder: ['.omp', '.evcrate/bin'] }]
   }));
   assert.throws(() => validateRecoverResultPayload({
     ...none, phases: [rolledBack.phases[0]]
@@ -454,19 +265,3 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
   }));
 });
 
-test('Phase 1 portable advisor contract runtime exports and public shapes', () => {
-  assert.equal(CHECKPOINT_PROTOCOL_V2, 'evcrate-advisor-checkpoint');
-  assert.equal(CHECKPOINT_VERSION_V2, 2);
-  assert.equal(RESULT_PROTOCOL_V2, 'evcrate-advisor-result');
-  assert.equal(RESULT_VERSION_V2, 2);
-  assert.equal(CONTROLLER_PROTOCOL_V2, 'evcrate-advisor-controller');
-  assert.equal(CONTROLLER_VERSION_V2, 2);
-  assert.equal(HISTORY_PROTOCOL_V1, 'evcrate-advisor-history');
-  assert.equal(HISTORY_VERSION_V1, 1);
-  assert.equal(typeof validateCheckpointV2, 'function');
-  assert.equal(typeof validateResultV2, 'function');
-  assert.equal(typeof validateEnvelopeV2, 'function');
-  assert.equal(typeof validateHistoryExecutionV1, 'function');
-  assert.equal(typeof validateHistoryOutcomeV1, 'function');
-  assert.equal(typeof AdvisorContractError, 'function');
-});

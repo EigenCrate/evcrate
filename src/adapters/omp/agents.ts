@@ -41,7 +41,6 @@ export function convertAgents(context: ProjectionBuildContext, thinkingLevel: st
       const target = TOOL_MAP[source.toLowerCase()];
       if (!target) dropped.push(source); else if (!mapped.includes(target)) mapped.push(target);
     }
-    if (name === 'evc-advisor' && (!parsed.body.includes('## Required checkpoint method') || !parsed.body.includes('## Checkpoint terminal report'))) invalid();
     const fields: Record<string, string | string[]> = { name, description };
     if (mapped.length) fields.tools = mapped;
     if (rawModel && rawModel !== 'inherit') fields.model = MODEL_MAP[rawModel];

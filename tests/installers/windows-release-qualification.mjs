@@ -21,7 +21,7 @@ import { pathToFileURL } from 'node:url';
 // ---------------------------------------------------------------------------
 // Schemas and Constants
 // ---------------------------------------------------------------------------
-export const SCHEMA_RELEASE = 'evcrate-private-release/v1';
+export const SCHEMA_RELEASE = 'evcrate-private-release/v2';
 export const SCHEMA_RECEIPT = 'evcrate-installer-receipt/v1';
 export const SCHEMA_POINTER = 'evcrate-current-pointer/v1';
 export const SCHEMA_CANDIDATE = 'evcrate-release-candidate/v1';
@@ -1547,6 +1547,142 @@ export async function runNegativeScenarios(options, baseSandboxRoot) {
     if (fs.existsSync(path.join(dataDir, 'current.json'))) {
       throw new Error('Negative 9 failed: current.json remains after successful uninstall retry');
     }
+  }
+
+  // Receipt recovery is schema-conditioned; filesystem safety is not optional.
+  {
+    const subSandbox = path.join(negRoot, 'receipt-repair');
+    const dataDir = path.join(subSandbox, 'data');
+    const stateDir = path.join(subSandbox, 'state');
+    const binDir = path.join(subSandbox, 'bin');
+    const rootArgs = ['-DataDir', dataDir, '-StateDir', stateDir, '-BinDir', binDir];
+    const assetArgs = ['-Archive', candArchive, '-Checksum', candChecksum];
+    const args = [...assetArgs, '-Metadata', candMeta, ...rootArgs];
+    const installed = await runPowerShell(options.powershell, candInstallPs1, 'install', args);
+    if (installed.exitCode !== 0) throw new Error(`Receipt regression setup failed: ${installed.stderr}`);
+    const sentinels = [path.join(dataDir, 'user-state.txt'), path.join(stateDir, 'user-state.txt')];
+    for (const file of sentinels) fs.writeFileSync(file, 'preserve user state');
+    for (const receiptState of ['missing', 'corrupt']) {
+      const previous = observePointer(dataDir).version_dir;
+      const previousDir = path.join(dataDir, 'versions', previous);
+      const receiptPath = path.join(previousDir, 'installer-receipt.json');
+      const userFile = path.join(previousDir, 'package', '.evcrate', 'registry.json');
+      fs.writeFileSync(userFile, 'preserve mutable user state');
+      if (receiptState === 'missing') fs.unlinkSync(receiptPath);
+      else fs.writeFileSync(receiptPath, '{invalid receipt');
+      const repaired = await runPowerShell(options.powershell, candInstallPs1, 'repair', args);
+      if (repaired.exitCode !== 0) throw new Error(`Current repair with ${receiptState} receipt failed: ${repaired.stderr}`);
+      const current = observePointer(dataDir).version_dir;
+      if (current === previous) throw new Error('Receipt repair did not create a new generation');
+      observeReceipt(dataDir, current);
+      if (fs.readFileSync(userFile, 'utf8') !== 'preserve mutable user state') {
+        throw new Error('Receipt repair changed user state in the preserved backup');
+      }
+      for (const file of sentinels) {
+        if (fs.readFileSync(file, 'utf8') !== 'preserve user state') throw new Error('Receipt repair changed user state');
+      }
+      await runCmdVersionSmoke(binDir, options.version);
+    }
+
+    const previous = observePointer(dataDir).version_dir;
+    const receiptPath = path.join(dataDir, 'versions', previous, 'installer-receipt.json');
+    const receiptBytes = fs.readFileSync(receiptPath, 'utf8');
+    const receipt = JSON.parse(receiptBytes);
+    const historicalMeta = path.join(subSandbox, 'historical.release.json');
+    const metadata = JSON.parse(fs.readFileSync(candMeta, 'utf8'));
+    fs.writeFileSync(historicalMeta, JSON.stringify({
+      ...metadata, schema: 'evcrate-private-release/v1', controller_closure_digest: 'c'.repeat(64)
+    }));
+    const pointerBytes = fs.readFileSync(path.join(dataDir, 'current.json'), 'utf8');
+    const journalPath = path.join(stateDir, 'install-journal.json');
+    const journalBytes = fs.readFileSync(journalPath, 'utf8');
+    const externalDir = path.join(subSandbox, 'external-receipt');
+    fs.mkdirSync(externalDir);
+    const externalFile = path.join(externalDir, 'sentinel.txt');
+    fs.writeFileSync(externalFile, 'untouched');
+    for (const receiptState of ['missing', 'corrupt', 'mismatched', 'wrong-snapshot', 'directory', 'junction']) {
+      fs.unlinkSync(receiptPath);
+      if (receiptState === 'corrupt') fs.writeFileSync(receiptPath, '{invalid receipt');
+      if (receiptState === 'mismatched') fs.writeFileSync(receiptPath, JSON.stringify({ ...receipt, archive_sha256: '0'.repeat(64) }));
+      if (receiptState === 'wrong-snapshot') fs.writeFileSync(receiptPath, JSON.stringify({ ...receipt, snapshot_id: 'another-snapshot' }));
+      if (receiptState === 'directory') fs.mkdirSync(receiptPath);
+      if (receiptState === 'junction') fs.symlinkSync(externalDir, receiptPath, 'junction');
+      try {
+        const rejected = await runPowerShell(options.powershell, candInstallPs1, 'repair', [
+          ...assetArgs, '-Metadata', historicalMeta, ...rootArgs
+        ]);
+        const expected = {
+          missing: /Predecessor receipt must be a regular non-reparse file/u,
+          corrupt: /Failed to parse JSON/u,
+          mismatched: /Old release assets require repair of a recorded matching predecessor snapshot/u,
+          'wrong-snapshot': /Predecessor receipt snapshot mismatch/u,
+          directory: /Predecessor receipt must be a regular non-reparse file/u,
+          junction: /[Rr]eparse|[Jj]unction/u
+        }[receiptState];
+        if (rejected.exitCode === 0 || !expected.test(`${rejected.stdout}\n${rejected.stderr}`)) {
+          throw new Error(`Historical repair did not reject ${receiptState} receipt at admission: ${rejected.stderr}`);
+        }
+        if (fs.readFileSync(path.join(dataDir, 'current.json'), 'utf8') !== pointerBytes ||
+            fs.readFileSync(journalPath, 'utf8') !== journalBytes ||
+            fs.readFileSync(externalFile, 'utf8') !== 'untouched') {
+          throw new Error(`Historical ${receiptState} receipt rejection changed installed or external state`);
+        }
+      } finally {
+        if (receiptState === 'directory') fs.rmdirSync(receiptPath);
+        else if (receiptState !== 'missing') fs.unlinkSync(receiptPath);
+        fs.writeFileSync(receiptPath, receiptBytes);
+      }
+    }
+  }
+
+  // Mutate only package.bin in disposable archive copies. The exact bin check
+  // must reject before the intentionally stale package inventory is consulted.
+  for (const [name, bin] of [
+    ['alias', { evcrate: 'dist/cli/evcrate.js', extra: 'dist/cli/evcrate.js' }],
+    ['wrong-path', { evcrate: 'dist/index.js' }],
+    ['wrong-key-case', { EVCrate: 'dist/cli/evcrate.js' }],
+    ['wrong-path-case', { evcrate: 'dist/cli/EVCrate.js' }],
+    ['string', 'dist/cli/evcrate.js'],
+    ['missing', null]
+  ]) {
+    const subSandbox = path.join(negRoot, `package-bin-${name}`);
+    fs.mkdirSync(subSandbox, { recursive: true });
+    const archive = path.join(subSandbox, path.basename(candArchive));
+    fs.copyFileSync(candArchive, archive);
+    const mutation = await runProcess(options.powershell, [
+      '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', `
+        $ErrorActionPreference = 'Stop'
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zip = [System.IO.Compression.ZipFile]::Open($env:EVCRATE_TEST_ARCHIVE, [System.IO.Compression.ZipArchiveMode]::Update)
+        try {
+          $entry = $zip.GetEntry('package/package.json')
+          $reader = [System.IO.StreamReader]::new($entry.Open())
+          try { $pkg = ConvertFrom-Json -InputObject $reader.ReadToEnd() } finally { $reader.Dispose() }
+          $pkg.bin = ConvertFrom-Json -InputObject $env:EVCRATE_TEST_BIN
+          $entry.Delete()
+          $writer = [System.IO.StreamWriter]::new($zip.CreateEntry('package/package.json').Open(), [System.Text.UTF8Encoding]::new($false))
+          try { $writer.Write((ConvertTo-Json -InputObject $pkg -Depth 30)) } finally { $writer.Dispose() }
+        } finally { $zip.Dispose() }
+      `
+    ], { env: { ...process.env, EVCRATE_TEST_ARCHIVE: archive, EVCRATE_TEST_BIN: JSON.stringify(bin) } });
+    if (mutation.exitCode !== 0) throw new Error(`Package bin mutation failed: ${mutation.stderr}`);
+    const checksum = `${archive}.sha256`;
+    const digest = sha256File(archive);
+    fs.writeFileSync(checksum, `${digest}  ${path.basename(archive)}\n`);
+    const metadata = JSON.parse(fs.readFileSync(candMeta, 'utf8'));
+    metadata.platforms['windows-x64'].sha256 = digest;
+    metadata.platforms['windows-x64'].size = fs.statSync(archive).size;
+    const metadataPath = path.join(subSandbox, path.basename(candMeta));
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata));
+    const dataDir = path.join(subSandbox, 'data');
+    const rejected = await runPowerShell(options.powershell, candInstallPs1, 'install', [
+      '-Archive', archive, '-Checksum', checksum, '-Metadata', metadataPath,
+      '-DataDir', dataDir, '-StateDir', path.join(subSandbox, 'state'), '-BinDir', path.join(subSandbox, 'bin')
+    ]);
+    if (rejected.exitCode === 0 || !`${rejected.stdout}\n${rejected.stderr}`.includes('Current package must expose only evcrate')) {
+      throw new Error(`Current package.bin ${name} was not rejected at bin admission: ${rejected.stderr}`);
+    }
+    if (fs.existsSync(path.join(dataDir, 'current.json'))) throw new Error('Invalid package.bin changed current pointer');
   }
 } finally {
   await setUserPath(options.powershell, originalUserPath);

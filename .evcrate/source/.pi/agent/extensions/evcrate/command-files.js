@@ -69,7 +69,7 @@ const MAX_NAME_LENGTH = 64;
 const KEBAB_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
- * Advisor semantic id (`evc-cmd-code-x-auto` -> `code/auto`), or undefined when `name` is not a valid
+ * Canonical semantic id (`evc-cmd-code-x-auto` -> `code/auto`), or undefined when `name` is not a valid
  * flat command name. Twin of `parseCommandName` in src/adapters/resource-naming.ts (the installed
  * runtime cannot import src/); tests/adapters/pi-command-name-parity.test.mjs keeps them identical.
  */

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { createStagedRoot, type StagedRoot } from '../filesystem/atomic.js';
 import { hashFile, treeHash } from '../filesystem/hashing.js';
-import { controllerHashes, loadTargetManifestRegistry } from '../manifests/registry.js';
+import { loadTargetManifestRegistry } from '../manifests/registry.js';
 import type { SharedBuildInputs } from './manifest-view-derivation.js';
 import { copyStagedTree } from './local-staging-fs.js';
 import {
@@ -19,7 +19,6 @@ export interface InputSnapshotHashes {
   readonly compiledRuntimeHash: string;
   readonly agentsMdHash: string;
   readonly targetsRegistryHash?: string | undefined;
-  readonly controllerHashes: Readonly<Record<string, string>>;
 }
 
 export interface InputSnapshotResult {
@@ -31,7 +30,6 @@ export interface InputSnapshotResult {
 export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
   const sourceRoot = join(packageRoot, '.evcrate', 'source');
   const canonicalHarnessRoot = join(sourceRoot, '.claude');
-  const controllerBinSource = join(sourceRoot, '.evcrate', 'bin');
   const targetsRegistryPath = join(packageRoot, '.evcrate', 'targets');
   const runtimeRoot = join(packageRoot, 'dist');
   const runtimeHash = compiledRuntimeHash(runtimeRoot);
@@ -44,15 +42,13 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
   const canonicalClaudeHash = treeHash(canonicalHarnessRoot);
   const agentsMdHash = hashFile(join(canonicalHarnessRoot, 'AGENTS.md'));
   const targetsRegistryHash = existsSync(targetsRegistryPath) ? treeHash(targetsRegistryPath) : undefined;
-  const cHashes = controllerHashes(controllerBinSource);
 
   const snapshotHashes: InputSnapshotHashes = {
     canonicalClaudeHash,
     canonicalInputHash: canonicalIdentity,
     compiledRuntimeHash: runtimeHash,
     agentsMdHash,
-    targetsRegistryHash,
-    controllerHashes: cHashes
+    targetsRegistryHash
   };
 
   // 2. Create isolated snapshot stage
@@ -61,14 +57,12 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
     const snapSource = join(snapshotStage.path, '.evcrate', 'source');
     const snapClaude = join(snapSource, '.claude');
     const snapTargets = join(snapshotStage.path, '.evcrate', 'targets');
-    const snapBin = join(snapSource, '.evcrate', 'bin');
     const snapRuntime = join(snapshotStage.path, 'dist');
 
     copyCanonicalInputs(canonicalHarnessRoot, snapClaude);
     if (existsSync(targetsRegistryPath)) {
       copyStagedTree(targetsRegistryPath, snapTargets);
     }
-    copyStagedTree(controllerBinSource, snapBin);
     copyCompiledRuntime(runtimeRoot, snapRuntime);
 
     // 3. Verify snapshot copy identity matches pre-copy hashes
@@ -87,12 +81,6 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
     if (targetsRegistryHash !== undefined && treeHash(snapTargets) !== targetsRegistryHash) {
       throw new ControlPlaneError('VALIDATION_INVALID', 'Snapshot targets registry hash mismatch');
     }
-    const snapControllerHashes = controllerHashes(snapBin);
-    for (const [key, hash] of Object.entries(cHashes)) {
-      if (snapControllerHashes[key] !== hash) {
-        throw new ControlPlaneError('VALIDATION_INVALID', `Snapshot controller hash mismatch for ${key}`);
-      }
-    }
 
     const snapRegistryPath = join(snapTargets, 'manifest.json');
     const registry = loadTargetManifestRegistry(snapRegistryPath);
@@ -105,8 +93,6 @@ export function prepareInputSnapshot(packageRoot: string): InputSnapshotResult {
       agentsMdHash,
       registryPath: snapRegistryPath,
       registry,
-      controllerBinSource: snapBin,
-      controllerHashes: cHashes,
       targetsRegistryHash,
       runtimeRoot: snapRuntime
     };
@@ -145,11 +131,4 @@ export function assertLiveInputsUnchanged(packageRoot: string, expected: InputSn
     }
   }
 
-  const controllerBinSource = join(sourceRoot, '.evcrate', 'bin');
-  const currentControllerHashes = controllerHashes(controllerBinSource);
-  for (const [key, hash] of Object.entries(expected.controllerHashes)) {
-    if (currentControllerHashes[key] !== hash) {
-      throw new ControlPlaneError('PUBLICATION_FAILED', `Advisor controller source modified during build for ${key}`);
-    }
-  }
 }

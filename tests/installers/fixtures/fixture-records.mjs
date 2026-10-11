@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import { ADVISOR_CONTROLLER_FILES } from '../../../dist/index.js';
 
 export const FIXTURE_BUILD_TIMESTAMP = '2026-01-01T00:00:00.000Z';
 
@@ -7,6 +6,7 @@ export function createMinimalValidRecords(version = '1.0.0') {
   const pkgJson = Buffer.from(JSON.stringify({
     name: 'evcrate',
     version,
+    bin: { evcrate: 'dist/cli/evcrate.js' },
     engines: { node: '>=22.19.0' }
   }, null, 2) + '\n');
 
@@ -20,7 +20,6 @@ export function createMinimalValidRecords(version = '1.0.0') {
     'process.stdout.write("evcrate cli\\n");\n'
   );
 
-  const advisorEntry = Buffer.from('#!/usr/bin/env node\nconsole.log("evcrate-advisor");\n');
   const dummyJs = Buffer.from('"use strict";\nmodule.exports = {};\n');
   const dummyJson = Buffer.from('{}\n');
 
@@ -29,49 +28,26 @@ export function createMinimalValidRecords(version = '1.0.0') {
     { path: 'dist/cli/evcrate.js', mode: 0o755, data: cliScript },
     { path: 'dist/index.js', mode: 0o644, data: dummyJs },
     { path: 'dist/distribution/manifest.js', mode: 0o644, data: dummyJs },
-    { path: 'dist/manifests/controller.js', mode: 0o644, data: dummyJs },
     { path: '.evcrate/registry.json', mode: 0o644, data: dummyJson },
     { path: '.evcrate/source/.claude/settings.json', mode: 0o644, data: dummyJson },
     { path: '.evcrate/scopes/global.json', mode: 0o644, data: dummyJson }
   ];
 
-  for (const file of ADVISOR_CONTROLLER_FILES) {
-    const isExecutable = file === 'evcrate-advisor';
-    let data;
-    if (isExecutable) {
-      data = advisorEntry;
-    } else if (file.endsWith('.node')) {
-      const nodeBuf = Buffer.alloc(1024);
-      nodeBuf.writeUInt32LE(0xfeedfacf, 0);
-      data = nodeBuf;
-    } else if (file.endsWith('.json')) {
-      data = dummyJson;
-    } else if (file.endsWith('.c') || file.endsWith('.h') || file.endsWith('.cs') || file.endsWith('.ps1')) {
-      data = Buffer.from('/* native text asset */\n');
-    } else {
-      data = dummyJs;
-    }
-    records.push({
-      path: `.evcrate/source/.evcrate/bin/${file}`,
-      mode: isExecutable ? 0o755 : 0o644,
-      data
-    });
-  }
 
   const buildManifestData = Buffer.from(JSON.stringify({
-    schema: 'evcrate-build-manifest/v2',
-    generator: 'test',
-    target: 'all',
-    build_timestamp: FIXTURE_BUILD_TIMESTAMP,
+    schema_version: 3,
+    source_hashes: {}, adapter_hashes: {}, owners: {},
+    validation: { complete: true, symlinks: 'rejected', target_registry: 'validated' },
+    home_policy: {},
     output_hashes: {
       '.claude': crypto.createHash('sha256').update(dummyJson).digest('hex')
-    },
-    controller_hashes: {
-      '.evcrate/bin/evcrate-advisor': crypto.createHash('sha256').update(advisorEntry).digest('hex')
     }
   }, null, 2) + '\n');
 
-  records.push({ path: '.evcrate/build-manifest.json', mode: 0o644, data: buildManifestData });
+  for (const target of ['all', 'antigravity', 'claude', 'codex', 'copilot', 'omp', 'pi', 'vscode']) {
+    const path = target === 'all' ? '.evcrate/build-manifest.json' : `.evcrate/build-manifest-${target}.json`;
+    records.push({ path, mode: 0o644, data: buildManifestData });
+  }
 
   return records.map((r) => {
     const size = r.data.length;

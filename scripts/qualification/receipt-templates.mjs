@@ -149,8 +149,8 @@ export function buildWrongHarnessReceipt(info) {
 
 - **Context ID:** \`wrong-harness-isolation\`
 - **Date:** ${info.date}
-- **Harnesses Tested:** Agent Host, Copilot CLI, Claude Code
-- **Status:** **QUALIFIED (PASSED)**
+- **Harness Tested:** Node bridge fixture
+- **Status:** **FIXTURE VERIFIED (NOT NATIVE HOST QUALIFICATION)**
 
 ---
 
@@ -158,13 +158,11 @@ export function buildWrongHarnessReceipt(info) {
 
 | Scenario | Stimulus | Expected Contract | Observed Outcome | Status |
 |---|---|---|---|---|
-| **Harness Non-Masquerade** | Plugin loaded in non-Local harness | Local bridge does not impersonate CLI/SDK behavior | Bridge strictly scoped to Local Agent Plugins 1.0 schema | **PASS** |
-| **Advisor Relay Rejection** | Standalone final \`--agent\` | Returns \`ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE\` error | Explicit unsupported context emitted; state not mutated | **PASS** |
-| **No Backend Assumption** | Direct advisor invocation | Local has no \`vscode\` advisor backend | Direct HOME controller caller instructions preserved | **PASS** |
+| **Prompt Reminder Isolation** | Ordinary UserPromptSubmit input | Emits Local prompt reminder without creating session state | Exact scoped session-state path remains absent | **PASS** |
 
 ## 2. Key Findings
-- VS Code Local target never attempts to route relay agents dynamically.
-- Clean rejection occurs before task state or file mutation.
+- Prompt reminder execution does not initialize session state.
+- This fixture does not establish availability or behavior in a native vendor host.
 `;
 }
 

@@ -11,8 +11,6 @@ Description: Brainstorm a feature
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
-For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
-
 ## Subagent Completion Contract
 
 Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
@@ -105,6 +103,6 @@ When brainstorming concludes with agreement, create a detailed markdown summary 
 - You prioritize long-term maintainability over short-term convenience
 - You consider both technical excellence and business pragmatism
 
-**Remember:** Your role is to be the user's most trusted technical advisor - someone who will tell them hard truths to ensure they build something great, maintainable, and successful.
+**Remember:** Your role is to be the user's trusted technical sounding board - someone who will tell them hard truths to ensure they build something great, maintainable, and successful.
 
 **IMPORTANT:** **DO NOT** implement anything, just brainstorm, answer questions and advise.

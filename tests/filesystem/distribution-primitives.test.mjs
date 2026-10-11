@@ -127,6 +127,20 @@ test('atomic files, staged roots, locks, and release markers are durable boundar
   assert.equal(false, (() => { try { statSync(join(state, 'publish.lock')); return true; } catch { return false; } })());
   writeReleaseMarker(state, { schema_version: 1, status: 'complete', roots: {}, managed_paths: {} });
   assert.equal(readReleaseMarker(state).status, 'complete');
+  for (const schema_version of [2, 3]) {
+    const marker = {
+      schema_version, transaction_type: 'target-publication', scope: 'project',
+      records: { harness: { status: 'complete' } }
+    };
+    writeReleaseMarker(state, marker);
+    assert.deepEqual(readReleaseMarker(state), marker);
+  }
+  for (const schema_version of [0, 4, '3']) {
+    const marker = { schema_version };
+    assert.throws(() => writeReleaseMarker(state, marker), code('PUBLICATION_FAILED'));
+    writeFileSync(join(state, 'release-marker.json'), JSON.stringify(marker));
+    assert.throws(() => readReleaseMarker(state), code('PUBLICATION_FAILED'));
+  }
 });
 test('completeTreeHash and filesystem operations operate mode-free and allow broad permissions', () => {
   const root = temporaryDirectory();

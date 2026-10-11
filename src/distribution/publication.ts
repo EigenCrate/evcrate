@@ -1,5 +1,5 @@
 import { lstatSync, mkdirSync, readdirSync, renameSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import type { InvocationContext } from '../context/invocation-context.js';
@@ -10,25 +10,25 @@ import {
   type PublicationRecoveryOutcome
 } from './publication-recovery.js';
 import {
-  MAX_PUBLICATION_FILE_BYTES, PUBLICATION_TRAVERSAL_LIMITS, publicationNode, publicationSnapshot,
+  MAX_PUBLICATION_FILE_BYTES, PUBLICATION_TRAVERSAL_LIMITS, publicationSnapshot,
   readOptionalPublicationMarker, publicationMarkerRecord, type PublicationNodeSnapshot
 } from './publication-inventory.js';
 import {
-  MAX_PUBLICATION_CHANGES, MAX_PUBLICATION_RESULT_BYTES, MAX_PUBLICATION_STATE_BYTES,
+  MAX_PUBLICATION_RESULT_BYTES, MAX_PUBLICATION_STATE_BYTES,
   validatePublishApplyResultPayload, publicationStateTargets, publicationStateLayout, publicationFlatOwnership,
   type ApplyPhaseRecord, type DryRunPhaseRecord, type PublishApplyResultPayload,
   type PublishDryRunResultPayload, type PublicationScope, type PublishRequestPayload,
   type RecoverRequestPayload, type RecoverResultPayload, type RecoveryPhaseRecord
 } from '../protocol/publication-payloads.js';
 import { canonicalBytes } from '../protocol/json.js';
-import { canonicalJsonBytes, hashBytes, readBoundedFile } from '../filesystem/hashing.js';
+import { canonicalJsonBytes, hashBytes } from '../filesystem/hashing.js';
 import { assertNoSymlinkAncestors, assertRealDirectory } from '../filesystem/paths.js';
 import { removePath, sameVolume, syncDirectory, writeAtomicFile, writeAtomicProjectionFile } from '../filesystem/atomic.js';
-import { RELEASE_MARKER_NAME, withLock, withPublishLock } from '../filesystem/locking.js';
+import { RELEASE_MARKER_NAME, withPublishLock } from '../filesystem/locking.js';
 import { isPlainObject } from '../protocol/json.js';
 import {
   createPublicationPlan, createPublicationPlanSet, type PlannedPublicationOperation,
-  type PriorManagedOwnership, type PublicationPhasePlan, type PublicationPlan, type PublicationPlanSet
+  type PriorManagedOwnership, type PublicationPhasePlan, type PublicationPlan
 } from './publication-plan.js';
 import { detectLegacyLeftovers } from './legacy-leftovers.js';
 
@@ -44,7 +44,7 @@ export interface PublicationHooks {
 export interface PublicationOptions { readonly now?: () => number; readonly hooks?: PublicationHooks; readonly abortSignal?: AbortSignal; }
 export type TransactionRetention = 'bounded-one-home-release' | 'none';
 export interface TransactionDescriptor {
-  readonly logicalPhase: 'shared' | 'harness';
+  readonly logicalPhase: 'harness';
   readonly scope: PublicationScope;
   readonly releaseId: string;
   readonly destinationRoot: string;
@@ -64,7 +64,7 @@ export interface TransactionDescriptor {
 type EnginePlan = Pick<PublicationPlan, 'bindings' | 'selectedTargets' | 'buildManifestPath' | 'buildManifestDigest'>
   & { readonly bindingOrder?: readonly string[]; readonly managedOwnership?: PriorManagedOwnership };
 function createTransactionDescriptor(
-  plan: EnginePlan, logicalPhase: 'shared' | 'harness', scope: PublicationScope, releaseId: string,
+  plan: EnginePlan, logicalPhase: 'harness', scope: PublicationScope, releaseId: string,
   destinationRoot: string, durableStateRoot: string, projectIdentity: string | null
 ): TransactionDescriptor {
   const transactionWorkspaceRoot = scope === 'project'
@@ -80,24 +80,10 @@ function createTransactionDescriptor(
     markerPath: markerPath(durableStateRoot), backupRoot: join(transactionWorkspaceRoot, 'backups'),
     selectedTargets: Object.freeze([...plan.selectedTargets]), projectIdentity,
     lockPaths: Object.freeze([join(resolve(durableStateRoot), 'publish.lock')]),
-    lockOrder: Object.freeze(scope === 'project' ? ['home', 'project'] : ['home']),
+    lockOrder: Object.freeze([scope]),
     retention: scope === 'project' ? 'none' : 'bounded-one-home-release',
     bindings, operations
   });
-}
-export class PublicationPartialError extends Error {
-  readonly code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED';
-  readonly payload: PublishApplyResultPayload;
-  constructor(payload: PublishApplyResultPayload, code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED') {
-    super(code);
-    this.name = 'PublicationPartialError';
-    this.code = code;
-    this.payload = payload;
-    Object.freeze(this);
-  }
-}
-export function isPublicationPartialError(value: unknown): value is PublicationPartialError {
-  return value instanceof PublicationPartialError;
 }
 export function publicationStateRoot(homeRoot: string): string { return join(resolve(homeRoot), PUBLICATION_STATE_DIRECTORY); }
 function fail(code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' | 'RECOVERY_FAILED' | 'CAS_CONFLICT' | 'PATH_UNSAFE' = 'PUBLICATION_FAILED', detail?: string): never { throw new ControlPlaneError(code, detail); }
@@ -108,17 +94,15 @@ function sameSnapshot(left: PublicationNodeSnapshot, right: PublicationNodeSnaps
   return keys.every((key) => left[key as keyof PublicationNodeSnapshot] === right[key as keyof PublicationNodeSnapshot]);
 }
 function assertBefore(operation: PlannedPublicationOperation): void {
-  const controller = operation.target === 'advisor-controller';
-  if (!sameSnapshot(publicationSnapshot(operation.destination, controller), operation.beforeSnapshot)) fail('CAS_CONFLICT');
+  if (!sameSnapshot(publicationSnapshot(operation.destination), operation.beforeSnapshot)) fail('CAS_CONFLICT');
 }
 function assertIntended(operation: PlannedPublicationOperation): PublicationNodeSnapshot {
-  const controller = operation.target === 'advisor-controller';
-  const current = publicationSnapshot(operation.destination, controller);
+  const current = publicationSnapshot(operation.destination);
   if (operation.intendedHash === null) {
     if (current.present) fail('PUBLICATION_FAILED');
     return current;
   }
-  if (!current.present || current.kind !== (controller ? 'directory' : 'file')
+  if (!current.present || current.kind !== 'file'
     || current.hash !== operation.intendedHash) {
     fail('PUBLICATION_FAILED');
   }
@@ -146,25 +130,15 @@ function refreshJournal(journal: Record<string, unknown>): void {
   journal.operation_count = operations.length;
   journal.operations_digest = hashBytes(canonicalJsonBytes(operations));
 }
-function ownershipWithoutController(ownership: PriorManagedOwnership): PriorManagedOwnership {
-  const result: Record<string, Record<string, readonly string[]>> = {};
-  for (const [target, bindings] of Object.entries(ownership)) {
-    if (target === 'advisor-controller') continue;
-    result[target] = {};
-    for (const [binding, paths] of Object.entries(bindings)) result[target][binding] = [...paths];
-  }
-  return Object.freeze(result);
-}
 function stateRecord(
-  plan: EnginePlan, descriptor: TransactionDescriptor, phase: 'shared' | 'harness',
+  plan: EnginePlan, descriptor: TransactionDescriptor, phase: 'harness',
   managedPaths: PriorManagedOwnership, previousManagedPaths: PriorManagedOwnership
 ): Record<string, unknown> {
   return {
     phase, scope: descriptor.scope, status: 'promoting',
     release_id: descriptor.releaseId,
-    selected_targets: phase === 'shared' ? [] : [...plan.selectedTargets],
-    binding_order: phase === 'shared'
-      ? ['.evcrate/bin'] : descriptor.bindings.filter((binding) => binding !== '.evcrate/bin'),
+    selected_targets: [...plan.selectedTargets],
+    binding_order: [...descriptor.bindings],
     managed_paths: managedPaths, previous_managed_paths: previousManagedPaths,
     build_manifest_path: plan.buildManifestPath,
     build_manifest_digest: plan.buildManifestDigest,
@@ -185,28 +159,19 @@ function journalFor(
       target: operation.target, binding: operation.binding, local_root: operation.localRoot,
       ...(operation.cleanup === undefined ? {} : { cleanup: operation.cleanup }),
       relative_path: operation.relativePath,
-      kind: operation.target === 'advisor-controller' ? 'directory' : 'file',
-      action: operation.action, destination: operation.target === 'advisor-controller'
-        ? operation.binding
-        : operation.relativePath === operation.binding
-          ? operation.binding : `${operation.binding}/${operation.relativePath}`,
+      kind: 'file',
+      action: operation.action, destination: operation.relativePath === operation.binding
+        ? operation.binding : `${operation.binding}/${operation.relativePath}`,
       before, backup: mutates && before.present ? `backups/${index}` : null,
       intendedHash: operation.intendedHash,
       intended: !mutates && before.present ? before : null, promoted: false
     };
   });
-  const sharedOnlyHome = descriptor.scope === 'home'
-    && plan.bindings.length === 1 && plan.bindings[0]?.controller === true;
-  const harnessOwnership = ownershipWithoutController(plan.managedOwnership ?? {});
-  const sharedRecord = stateRecord(plan, descriptor, 'shared', {}, {});
-  const harnessRecord = sharedOnlyHome ? null
-    : stateRecord(plan, descriptor, 'harness', harnessOwnership, previous);
-  const records = descriptor.scope === 'project'
-    ? { harness: harnessRecord } : { shared: sharedRecord, harness: harnessRecord };
-  const managedPaths = descriptor.scope === 'project' || !sharedOnlyHome ? harnessOwnership : {};
+  const managedPaths = plan.managedOwnership ?? {};
+  const records = { harness: stateRecord(plan, descriptor, 'harness', managedPaths, previous) };
   return {
-    schema_version: 3, transaction_type: 'target-publication', status: 'staged',
-    logical_phase: descriptor.scope === 'project' ? 'harness' : sharedOnlyHome ? 'shared' : 'combined',
+    schema_version: 4, transaction_type: 'target-publication', status: 'staged',
+    logical_phase: 'harness',
     records, release_id: descriptor.releaseId, home_root: descriptor.destinationRoot,
     transaction_dir: `release-${descriptor.releaseId}`,
     selected_targets: [...plan.selectedTargets], binding_order: [...descriptor.bindings],
@@ -223,42 +188,8 @@ function journalFor(
     lock_paths: [...descriptor.lockPaths], lock_order: [...descriptor.lockOrder]
   };
 }
-interface StageCounts { files: number; directories: number; bytes: number; }
-function stageController(
-  source: string,
-  destination: string,
-  root = source,
-  depth = 0,
-  counts: StageCounts = { files: 0, directories: 0, bytes: 0 }
-): void {
-  if (depth > PUBLICATION_TRAVERSAL_LIMITS.maxDepth || ++counts.directories > PUBLICATION_TRAVERSAL_LIMITS.maxDirectories) fail();
-  mkdirSync(destination, { recursive: true });
-  for (const entry of readdirSync(source, { withFileTypes: true })) {
-    const sourcePath = join(source, entry.name); const destinationPath = join(destination, entry.name);
-    if (Buffer.byteLength(relative(root, sourcePath).split('\\').join('/'), 'utf8') > PUBLICATION_TRAVERSAL_LIMITS.maxPathBytes) fail();
-    const stat = lstatSync(sourcePath);
-    if (stat.isSymbolicLink() || (!stat.isFile() && !stat.isDirectory())) fail('PATH_UNSAFE');
-    if (stat.isDirectory()) stageController(sourcePath, destinationPath, root, depth + 1, counts);
-    else {
-      const size = Number(stat.size);
-      if (!Number.isSafeInteger(size) || ++counts.files > PUBLICATION_TRAVERSAL_LIMITS.maxFiles
-        || size > PUBLICATION_TRAVERSAL_LIMITS.maxFileBytes
-        || counts.bytes > PUBLICATION_TRAVERSAL_LIMITS.maxBytes - size) fail();
-      counts.bytes += size;
-      const relativePath = relative(root, sourcePath).split('\\').join('/');
-      const content = readBoundedFile(sourcePath, MAX_PUBLICATION_FILE_BYTES);
-      const isExecutable = relativePath === 'evcrate-advisor'
-        || relativePath.endsWith('/evcrate-advisor')
-        || relativePath.endsWith('.sh')
-        || (content.length > 1 && content[0] === 0x23 && content[1] === 0x21)
-        || (Number(stat.mode) & 0o111) !== 0;
-      writeAtomicProjectionFile(destinationPath, content, isExecutable);
-    }
-  }
-}
-function stageOperation(transaction: string, sourceRoot: string, operation: PlannedPublicationOperation, index: number): void {
+function stageOperation(transaction: string, operation: PlannedPublicationOperation, index: number): void {
   const stage = join(transaction, 'stage');
-  if (operation.target === 'advisor-controller') return stageController(sourceRoot, join(stage, 'controller'));
   if (operation.content !== null) writeAtomicProjectionFile(
     join(stage, String(index)), operation.content, operation.executable ?? false
   );
@@ -270,7 +201,7 @@ function backupDestination(transaction: string, operation: PlannedPublicationOpe
   assertRealDirectory(dirname(backup));
   renameSync(operation.destination, backup);
   try {
-    if (!sameSnapshot(publicationSnapshot(backup, operation.target === 'advisor-controller'), operation.beforeSnapshot)) {
+    if (!sameSnapshot(publicationSnapshot(backup), operation.beforeSnapshot)) {
       ensureDestinationParent(operation.destination);
       renameSync(backup, operation.destination);
       fail('CAS_CONFLICT');
@@ -293,10 +224,7 @@ function promoteOperation(
 ): PublicationNodeSnapshot {
   assertBefore(operation);
   const backup = backupDestination(transaction, operation, index);
-  if (operation.target === 'advisor-controller') {
-    ensureDestinationParent(operation.destination);
-    renameSync(join(transaction, 'stage', 'controller'), operation.destination);
-  } else if (operation.content !== null) {
+  if (operation.content !== null) {
     ensureDestinationParent(operation.destination);
     renameSync(join(transaction, 'stage', String(index)), operation.destination);
   } else if (operation.action === 'delete') {
@@ -348,15 +276,15 @@ function hasBackups(path: string): boolean {
 function markerManagedOwnership(
   marker: Record<string, unknown> | null, phase: 'shared' | 'harness'
 ): PriorManagedOwnership {
-  const record = marker?.schema_version === 2 ? publicationMarkerRecord(marker, phase) : marker;
+  const record = marker?.schema_version === 2 || marker?.schema_version === 3 ? publicationMarkerRecord(marker, phase) : marker;
   const value = record?.managed_paths;
   if (value === undefined) return Object.freeze({});
   if (!isPlainObject(value)) fail('RECOVERY_FAILED');
-  if (marker?.schema_version === 2) return value as PriorManagedOwnership;
+  if (marker?.schema_version === 2 || marker?.schema_version === 3) return value as PriorManagedOwnership;
   return Object.freeze({});
 }
 function homePriorOwnership(marker: Record<string, unknown> | null): PriorManagedOwnership {
-  if (marker?.schema_version === 2) return markerManagedOwnership(marker, 'harness');
+  if (marker?.schema_version === 2 || marker?.schema_version === 3) return markerManagedOwnership(marker, 'harness');
   if (marker?.transaction_type === 'target-publication') {
     if (marker.status !== 'complete' && marker.status !== 'recovered') fail('RECOVERY_FAILED');
     const selected = publicationStateTargets(marker.selected_targets, true);
@@ -366,15 +294,15 @@ function homePriorOwnership(marker: Record<string, unknown> | null): PriorManage
   return Object.freeze({});
 }
 function projectPriorOwnership(marker: Record<string, unknown> | null): PriorManagedOwnership {
-  if (marker?.schema_version === 2) return markerManagedOwnership(marker, 'harness');
+  if (marker?.schema_version === 2 || marker?.schema_version === 3) return markerManagedOwnership(marker, 'harness');
   if (marker === null || marker.managed_paths === undefined) return Object.freeze({});
   const selected = publicationStateTargets(marker.selected_targets);
   const layout = publicationStateLayout(marker.binding_order, selected, 'project');
   return publicationFlatOwnership(marker.managed_paths, selected, 'project', layout.generation);
 }
 function retainedMarkerId(marker: Record<string, unknown> | null): string | null {
-  const record = marker?.schema_version === 2
-    ? publicationMarkerRecord(marker, 'shared') ?? publicationMarkerRecord(marker, 'harness') : marker;
+  const record = marker?.schema_version === 2 || marker?.schema_version === 3
+    ? publicationMarkerRecord(marker, 'harness') : marker;
   const value = record?.retained_release_id;
   if (value === undefined || value === null) return null;
   if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(value)) fail('RECOVERY_FAILED');
@@ -437,20 +365,10 @@ function assertRecoverRequest(context: InvocationContext, request: RecoverReques
     if (identity !== request.projectIdentity) throw new ControlPlaneError('PROTOCOL_INVALID');
   }
 }
-function phaseChanges(plan: PublicationPlan, phase: 'shared' | 'harness') {
-  return Object.freeze(plan.changes.filter(({ target }) =>
-    phase === 'shared' ? target === 'advisor-controller' : target !== 'advisor-controller'));
-}
-function phaseBindings(plan: PublicationPlan, phase: 'shared' | 'harness'): readonly string[] {
-  if (phase === 'shared') return Object.freeze(['.evcrate/bin']);
-  return Object.freeze(plan.bindingOrder.filter((binding) => binding !== '.evcrate/bin'));
-}
-function dryRunPhase(plan: PublicationPlan, phase: 'shared' | 'harness'): DryRunPhaseRecord {
+function dryRunPhase(plan: PublicationPlan, phase: 'harness'): DryRunPhaseRecord {
   return Object.freeze({
-    phase, scope: 'home',
-    selectedTargets: phase === 'shared' ? Object.freeze([]) : plan.selectedTargets,
-    bindingOrder: phaseBindings(plan, phase),
-    changes: phaseChanges(plan, phase)
+    phase, scope: 'home', selectedTargets: plan.selectedTargets,
+    bindingOrder: plan.bindingOrder, changes: plan.changes
   });
 }
 function dryRunPayload(
@@ -474,12 +392,12 @@ function dryRunPayload(
   return Object.freeze({
     scope: 'home', projectIdentity: null,
     buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
-    phases: [dryRunPhase(plan, 'shared'), dryRunPhase(plan, 'harness')] as const,
+    phases: [dryRunPhase(plan, 'harness')] as const,
     legacyLeftovers
   });
 }
 function applyPhase(
-  plan: PublicationPlan, phase: 'shared' | 'harness', releaseId: string, retainedReleaseId: string | null
+  plan: PublicationPlan, phase: 'harness', releaseId: string, retainedReleaseId: string | null
 ): ApplyPhaseRecord {
   return Object.freeze({
     ...dryRunPhase(plan, phase), status: 'committed' as const, releaseId, retainedReleaseId
@@ -506,8 +424,7 @@ function applyPayload(
   return Object.freeze({
     scope: 'home', projectIdentity: null,
     buildManifestPath: plan.buildManifestPath, buildManifestDigest: plan.buildManifestDigest,
-    phases: [applyPhase(plan, 'shared', releaseId, retainedReleaseId),
-      applyPhase(plan, 'harness', releaseId, retainedReleaseId)] as const,
+    phases: [applyPhase(plan, 'harness', releaseId, retainedReleaseId)] as const,
     legacyLeftovers
   });
 }
@@ -519,10 +436,11 @@ function recoveryPayload(result: PublicationRecoveryOutcome, request: RecoverReq
   const harnessBindings = result.bindingOrder.filter((binding) => binding !== '.evcrate/bin');
   if ((result.selectedTargets.length === 0) !== (harnessBindings.length === 0)) fail('RECOVERY_FAILED');
   const action = result.action === 'rolled-back' ? 'rolled-back' : 'finalized';
-  const phases: RecoveryPhaseRecord[] = [{
+  const phases: RecoveryPhaseRecord[] = [];
+  if (result.bindingOrder.includes('.evcrate/bin')) phases.push({
     phase: 'shared', scope: 'home', releaseId: result.releaseId, action,
     selectedTargets: Object.freeze([]), bindingOrder: Object.freeze(['.evcrate/bin'])
-  }];
+  });
   if (harnessBindings.length > 0) {
     phases.push({
       phase: 'harness', scope: 'home', releaseId: result.releaseId, action,
@@ -542,12 +460,10 @@ function assertApplyResultBudget(plan: PublicationPlan, releaseId: string): void
   }
 }
 function assertProjectApplyResultBudget(
-  shared: PublicationPhasePlan, harness: PublicationPhasePlan
+  harness: PublicationPhasePlan
 ): void {
   const candidate = projectApplyPayload(
-    shared, harness,
-    { releaseId: 'shared-budget', retainedReleaseId: null },
-    { releaseId: 'harness-budget', retainedReleaseId: null }
+    harness, { releaseId: 'harness-budget', retainedReleaseId: null }
   );
   try {
     validatePublishApplyResultPayload(candidate);
@@ -633,9 +549,6 @@ function applyTransaction(
   options: PublicationOptions
 ): { readonly releaseId: string; readonly retainedReleaseId: string | null } {
   preflightTransaction(descriptor, plan);
-  const preservedHarness = descriptor.scope === 'home'
-    && plan.bindings.length === 1 && plan.bindings[0]?.controller === true
-    ? publicationMarkerRecord(previousMarker, 'harness') : null;
   const previous = descriptor.scope === 'project'
     ? projectPriorOwnership(previousMarker) : homePriorOwnership(previousMarker);
   const journal = journalFor(plan, descriptor, previous);
@@ -647,8 +560,6 @@ function applyTransaction(
   };
   let promotionStarted = false;
   try {
-    // Persist staged intent before creating the workspace.
-    writeJournal(descriptor.durableStateRoot, journal);
     mkdirSync(join(descriptor.transactionWorkspaceRoot, 'stage'), { recursive: true });
     const workspace = lstatSync(descriptor.transactionWorkspaceRoot);
     const workspaceParent = lstatSync(dirname(descriptor.transactionWorkspaceRoot));
@@ -675,17 +586,20 @@ function applyTransaction(
     mutable.workspace_inode = workspaceInode;
     mutable.workspace_parent_device = workspaceParentDevice;
     mutable.workspace_parent_inode = workspaceParentInode;
+    // A v4 journal identifies the real scoped workspace before marker or
+    // harness destination mutation.
+    writeJournal(descriptor.durableStateRoot, mutable);
+    writeRelease(descriptor.durableStateRoot, mutable);
     mutable.status = 'promoting';
     refreshJournal(mutable);
     writeJournal(descriptor.durableStateRoot, mutable);
-    writeRelease(descriptor.durableStateRoot, mutable, preservedHarness);
-    const work: Array<{ operation: PlannedPublicationOperation; sourceRoot: string; journalIndex: number }> = [];
+    const work: Array<{ operation: PlannedPublicationOperation; journalIndex: number }> = [];
     let journalIndex = 0;
     for (const [bindingIndex, binding] of plan.bindings.entries()) {
       options.hooks?.beforeBinding?.(binding.binding, bindingIndex);
       for (const operation of binding.operations) {
         if (operation.action !== 'noop' && operation.action !== 'preserve') {
-          work.push({ operation, sourceRoot: binding.sourceRoot, journalIndex });
+          work.push({ operation, journalIndex });
         }
         journalIndex += 1;
       }
@@ -696,7 +610,7 @@ function applyTransaction(
       checkAbort(options.abortSignal);
       options.hooks?.beforeOperation?.(item.operation, workIndex);
       assertBefore(item.operation);
-      stageOperation(descriptor.transactionWorkspaceRoot, item.sourceRoot, item.operation, item.journalIndex);
+      stageOperation(descriptor.transactionWorkspaceRoot, item.operation, item.journalIndex);
       promotionStarted = true;
       const intended = promoteOperation(
         descriptor.transactionWorkspaceRoot, item.operation, item.journalIndex, touchedDirs
@@ -722,7 +636,7 @@ function applyTransaction(
     writeRelease(descriptor.durableStateRoot, {
       ...journal, status: 'complete', retained_release_id: retain ? descriptor.releaseId : null,
       retain_transaction: retain
-    }, preservedHarness);
+    });
     removePath(join(descriptor.transactionWorkspaceRoot, 'progress'));
     if (!retain) {
       removePath(descriptor.transactionWorkspaceRoot);
@@ -739,7 +653,7 @@ function applyTransaction(
         writeRelease(descriptor.durableStateRoot, {
           ...journal, status: 'complete', retained_release_id: retainedReleaseId,
           retain_transaction: retainedReleaseId !== null
-        }, preservedHarness);
+        });
       }
     }
     syncDirectory(descriptor.durableStateRoot);
@@ -765,20 +679,13 @@ function applyTransaction(
     fail();
   }
 }
-function writeRelease(
-  stateRoot: string, value: Record<string, unknown>,
-  preservedHarness: Record<string, unknown> | null = null
-): void {
+function writeRelease(stateRoot: string, value: Record<string, unknown>): void {
   if (!isPlainObject(value.records) || (value.scope !== 'home' && value.scope !== 'project')) {
     fail('PUBLICATION_FAILED');
   }
   const records: Record<string, unknown> = {};
   for (const [phase, record] of Object.entries(value.records)) {
-    if (record === null) {
-      records[phase] = phase === 'harness' && value.scope === 'home' && preservedHarness !== null
-        ? preservedHarness : null;
-      continue;
-    }
+    if (phase !== 'harness' || record === null) fail('PUBLICATION_FAILED');
     if (!isPlainObject(record)) fail('PUBLICATION_FAILED');
     records[phase] = {
       ...record,
@@ -787,7 +694,7 @@ function writeRelease(
     };
   }
   const marker = {
-    schema_version: 2, transaction_type: 'target-publication', scope: value.scope, records
+    schema_version: 3, transaction_type: 'target-publication', scope: value.scope, records
   };
   writeAtomicFile(markerPath(stateRoot), stateBytes(marker));
 }
@@ -804,7 +711,7 @@ function assertProjectMarkerBinding(
   marker: Record<string, unknown> | null, projectRoot: string, stateRoot: string, identity: string
 ): void {
   if (marker === null) return;
-  if (marker.schema_version === 2) {
+  if (marker.schema_version === 2 || marker.schema_version === 3) {
     if (marker.scope !== 'project') fail('PATH_UNSAFE');
     const record = publicationMarkerRecord(marker, 'harness');
     if (record === null
@@ -825,7 +732,7 @@ function assertProjectMarkerBinding(
 }
 
 function projectDryRunPayload(
-  shared: PublicationPhasePlan, harness: PublicationPhasePlan,
+  harness: PublicationPhasePlan,
   previousMarker: Record<string, unknown> | null = null
 ): PublishDryRunResultPayload {
   const previousOwnership = projectPriorOwnership(previousMarker);
@@ -838,14 +745,13 @@ function projectDryRunPayload(
   });
   return Object.freeze({
     scope: 'project', projectIdentity: harness.projectIdentity,
-    buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
-    phases: [scopedDryRunPhase(shared), scopedDryRunPhase(harness)] as const,
+    buildManifestPath: harness.buildManifestPath, buildManifestDigest: harness.buildManifestDigest,
+    phases: [scopedDryRunPhase(harness)] as const,
     legacyLeftovers
   });
 }
 function projectApplyPayload(
-  shared: PublicationPhasePlan, harness: PublicationPhasePlan,
-  sharedResult: { readonly releaseId: string; readonly retainedReleaseId: string | null },
+  harness: PublicationPhasePlan,
   harnessResult: { readonly releaseId: string; readonly retainedReleaseId: string | null },
   previousMarker: Record<string, unknown> | null = null,
   scanLeftovers = true
@@ -862,51 +768,21 @@ function projectApplyPayload(
     : Object.freeze([]);
   return Object.freeze({
     scope: 'project', projectIdentity: harness.projectIdentity,
-    buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
+    buildManifestPath: harness.buildManifestPath, buildManifestDigest: harness.buildManifestDigest,
     phases: [
-      Object.freeze({ ...scopedDryRunPhase(shared), status: 'committed' as const,
-        releaseId: sharedResult.releaseId, retainedReleaseId: sharedResult.retainedReleaseId }),
       Object.freeze({ ...scopedDryRunPhase(harness), status: 'committed' as const,
         releaseId: harnessResult.releaseId, retainedReleaseId: null })
     ] as const,
     legacyLeftovers
   });
 }
-function projectPartialPayload(
-  shared: PublicationPhasePlan, harness: PublicationPhasePlan,
-  sharedResult: { readonly releaseId: string; readonly retainedReleaseId: string | null }
-): PublishApplyResultPayload {
-  return Object.freeze({
-    scope: 'project', projectIdentity: harness.projectIdentity,
-    buildManifestPath: shared.buildManifestPath, buildManifestDigest: shared.buildManifestDigest,
-    phases: [
-      Object.freeze({ ...scopedDryRunPhase(shared), status: 'committed' as const,
-        releaseId: sharedResult.releaseId, retainedReleaseId: sharedResult.retainedReleaseId }),
-      Object.freeze({ ...scopedDryRunPhase(harness), status: 'failed' as const,
-        releaseId: null, retainedReleaseId: null })
-    ] as const
-  });
-}
-function composeHomePublicationPlan(planSet: PublicationPlanSet): PublicationPlan {
-  const bindings = Object.freeze([...planSet.shared.bindings, ...planSet.harness.bindings]);
-  const changes = Object.freeze([...planSet.shared.changes, ...planSet.harness.changes]);
-  if (changes.length > MAX_PUBLICATION_CHANGES) fail();
-  return Object.freeze({
-    build: planSet.build,
-    buildManifestPath: planSet.buildManifestPath,
-    buildManifestDigest: planSet.buildManifestDigest,
-    selectedTargets: Object.freeze([...planSet.harness.selectedTargets]),
-    bindingOrder: Object.freeze([...planSet.shared.bindingOrder, ...planSet.harness.bindingOrder]),
-    bindings, changes, managedOwnership: planSet.harness.managedOwnership
-  });
-}
 function homePublicationPlan(
   context: InvocationContext, stateRoot: string, marker: Record<string, unknown> | null
 ): PublicationPlan {
-  if (marker?.schema_version === 2) {
-    return composeHomePublicationPlan(createPublicationPlanSet(context, {
+  if (marker?.schema_version === 2 || marker?.schema_version === 3) {
+    return createPublicationPlanSet(context, {
       scope: 'home', priorManagedOwnership: homePriorOwnership(marker)
-    }));
+    }).harness;
   }
   return createPublicationPlan(context, markerPath(stateRoot));
 }
@@ -921,7 +797,7 @@ export function publishDryRun(
     const projectState = projectStateRoot(context, identity);
     if (readPublicationJournal(projectState)) fail('RECOVERY_FAILED');
     const projectMarker = readOptionalPublicationMarker(markerPath(projectState));
-    const projectRecord = projectMarker?.schema_version === 2
+    const projectRecord = projectMarker?.schema_version === 2 || projectMarker?.schema_version === 3
       ? publicationMarkerRecord(projectMarker, 'harness') : projectMarker;
     assertProjectMarkerBinding(projectMarker, projectContext.canonicalRoot, projectState, identity);
     if (projectRecord && projectRecord.status !== 'complete' && projectRecord.status !== 'recovered') {
@@ -930,12 +806,12 @@ export function publishDryRun(
     const plans = createPublicationPlanSet(context, {
       scope: 'project', priorManagedOwnership: projectPriorOwnership(projectMarker)
     });
-    return projectDryRunPayload(plans.shared, plans.harness, projectMarker);
+    return projectDryRunPayload(plans.harness, projectMarker);
   }
   const stateRoot = publicationStateRoot(context.homeRoot); assertNoSymlinkAncestors(context.homeRoot);
   if (readPublicationJournal(stateRoot)) fail('RECOVERY_FAILED');
   const marker = readOptionalPublicationMarker(markerPath(stateRoot));
-  if (marker?.schema_version === 2) {
+  if (marker?.schema_version === 2 || marker?.schema_version === 3) {
     if (marker.scope !== 'home') fail('PATH_UNSAFE');
     for (const phase of ['shared', 'harness'] as const) {
       const record = publicationMarkerRecord(marker, phase);
@@ -959,98 +835,39 @@ export function publishApply(
     const projectContext = resolvePublicationProjectContext(context);
     const identity = projectContext.projectIdentity;
     const projectState = projectStateRoot(context, identity);
-    const homeState = publicationStateRoot(context.homeRoot);
-    ensureHomeDirectory(context.homeRoot);
-    const projectJournal = readPublicationJournal(projectState);
-    const earlyProjectMarker = readOptionalPublicationMarker(markerPath(projectState));
-    const earlyProjectRecord = earlyProjectMarker?.schema_version === 2
-      ? publicationMarkerRecord(earlyProjectMarker, 'harness') : earlyProjectMarker;
-    if (!projectJournal && earlyProjectMarker?.transaction_type === 'target-publication'
-      && earlyProjectRecord !== null
-      && earlyProjectRecord.status !== 'complete' && earlyProjectRecord.status !== 'recovered') {
-      fail('RECOVERY_FAILED');
-    }
-    const earlyPriorOwnership = projectJournal && earlyProjectMarker?.schema_version === 1
-      && earlyProjectMarker.transaction_type === 'target-publication'
-      && earlyProjectMarker.status !== 'complete' && earlyProjectMarker.status !== 'recovered'
-      ? Object.freeze({}) : projectPriorOwnership(earlyProjectMarker);
-    assertProjectMarkerBinding(earlyProjectMarker, projectContext.canonicalRoot, projectState, identity);
+    const earlyMarker = readOptionalPublicationMarker(markerPath(projectState));
     const earlyPlans = createPublicationPlanSet(context, {
-      scope: 'project', priorManagedOwnership: earlyPriorOwnership
+      scope: 'project', priorManagedOwnership: projectPriorOwnership(earlyMarker)
     });
-    const earlyHomeDescriptor = createTransactionDescriptor(
-      earlyPlans.shared, 'shared', 'home', randomUUID().replaceAll('-', ''),
-      context.homeRoot, homeState, null
-    );
-    const earlyProjectDescriptor = createTransactionDescriptor(
+    const earlyDescriptor = createTransactionDescriptor(
       earlyPlans.harness, 'harness', 'project', randomUUID().replaceAll('-', ''),
-      earlyPlans.harness.destinationRoot, projectState, identity
+      projectContext.canonicalRoot, projectState, identity
     );
-    preflightTransaction(earlyHomeDescriptor, earlyPlans.shared);
-    preflightTransaction(earlyProjectDescriptor, earlyPlans.harness);
-    assertProjectApplyResultBudget(earlyPlans.shared, earlyPlans.harness);
-    preflightStateVolume(homeState, context.homeRoot);
-    return withPublishLock(homeState, () => {
-      if (!sameVolume(homeState, context.homeRoot)) fail('PATH_UNSAFE');
-      recoverAndMigrateHomeStateUnlocked(homeState, context.homeRoot);
-      const homeMarker = readOptionalPublicationMarker(markerPath(homeState));
-      const lockedPlans = createPublicationPlanSet(context, {
-        scope: 'project', build: earlyPlans.build,
-        priorManagedOwnership: earlyPriorOwnership
+    preflightTransaction(earlyDescriptor, earlyPlans.harness);
+    return withPublishLock(projectState, () => {
+      recoverAndMigrateProjectStateUnlocked(projectState, projectContext.canonicalRoot, identity);
+      const projectMarker = readOptionalPublicationMarker(markerPath(projectState));
+      assertProjectMarkerBinding(projectMarker, projectContext.canonicalRoot, projectState, identity);
+      const plans = createPublicationPlanSet(context, {
+        scope: 'project', priorManagedOwnership: projectPriorOwnership(projectMarker)
       });
-      const homeDescriptor = createTransactionDescriptor(
-        lockedPlans.shared, 'shared', 'home', randomUUID().replaceAll('-', ''),
-        context.homeRoot, homeState, null
+      const descriptor = createTransactionDescriptor(
+        plans.harness, 'harness', 'project', randomUUID().replaceAll('-', ''),
+        projectContext.canonicalRoot, projectState, identity
       );
-      preflightTransaction(homeDescriptor, lockedPlans.shared);
-      assertProjectApplyResultBudget(lockedPlans.shared, lockedPlans.harness);
-      const sharedResult = applyTransaction(lockedPlans.shared, homeDescriptor, homeMarker, options);
-      let failedHarnessPlan = lockedPlans.harness;
+      assertProjectApplyResultBudget(plans.harness);
       try {
-        return withLock(projectState, 'publish.lock', () => {
-          try {
-            recoverAndMigrateProjectStateUnlocked(projectState, context.projectRoot, identity);
-            const projectMarker = readOptionalPublicationMarker(markerPath(projectState));
-            assertProjectMarkerBinding(projectMarker, projectContext.canonicalRoot, projectState, identity);
-            const plans = createPublicationPlanSet(context, {
-              scope: 'project', build: earlyPlans.build,
-              priorManagedOwnership: projectPriorOwnership(projectMarker)
-            });
-            failedHarnessPlan = plans.harness;
-            const projectDescriptor = createTransactionDescriptor(
-              plans.harness, 'harness', 'project', randomUUID().replaceAll('-', ''),
-              plans.harness.destinationRoot, projectState, identity
-            );
-            preflightTransaction(projectDescriptor, plans.harness);
-            assertProjectApplyResultBudget(lockedPlans.shared, plans.harness);
-            const harnessResult = applyTransaction(plans.harness, projectDescriptor, projectMarker, options);
-            return projectApplyPayload(lockedPlans.shared, plans.harness, sharedResult, harnessResult, projectMarker);
-          } catch (error) {
-            let code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' =
-              error instanceof ControlPlaneError && error.code === 'ROLLBACK_FAILED'
-                ? 'ROLLBACK_FAILED' : 'PUBLICATION_FAILED';
-            if (code === 'PUBLICATION_FAILED') {
-              try {
-                if (readPublicationJournal(projectState)) {
-                  recoverPublicationUnlocked(projectState, context.projectRoot, null, identity);
-                }
-              } catch {
-                code = 'ROLLBACK_FAILED';
-              }
-            }
-            throw new PublicationPartialError(
-              projectPartialPayload(lockedPlans.shared, failedHarnessPlan, sharedResult), code
-            );
-          }
-        });
+        const result = applyTransaction(plans.harness, descriptor, projectMarker, options);
+        return projectApplyPayload(plans.harness, result, projectMarker);
       } catch (error) {
-        if (error instanceof PublicationPartialError) throw error;
-        const code: 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' =
-          error instanceof ControlPlaneError && error.code === 'ROLLBACK_FAILED'
-            ? 'ROLLBACK_FAILED' : 'PUBLICATION_FAILED';
-        throw new PublicationPartialError(
-          projectPartialPayload(lockedPlans.shared, failedHarnessPlan, sharedResult), code
-        );
+        if (readPublicationJournal(projectState)) {
+          try {
+            recoverPublicationUnlocked(projectState, projectContext.canonicalRoot, null, identity);
+          } catch {
+            throw new ControlPlaneError('ROLLBACK_FAILED');
+          }
+        }
+        throw error;
       }
     });
   }
@@ -1067,7 +884,7 @@ export function publishApply(
     const releaseId = randomUUID().replaceAll('-', '');
     assertApplyResultBudget(plan, releaseId);
     const descriptor = createTransactionDescriptor(
-      plan, 'shared', 'home', releaseId, context.homeRoot, stateRoot, null
+      plan, 'harness', 'home', releaseId, context.homeRoot, stateRoot, null
     );
     preflightTransaction(descriptor, plan);
     const result = applyTransaction(plan, descriptor, previousMarker, options);

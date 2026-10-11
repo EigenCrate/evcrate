@@ -45,7 +45,7 @@ To activate EVCrate Local:
      }
    }
    ```
-3. Reload or restart VS Code. The EVCrate agents (e.g. `@advisor`, `@code-reviewer`), skills, and hook rules will now be active in Copilot Chat Local mode.
+3. Reload or restart VS Code. The EVCrate agents (e.g. `@evc-code-reviewer`), skills, and hook rules will now be active in Copilot Chat Local mode.
 
 ---
 

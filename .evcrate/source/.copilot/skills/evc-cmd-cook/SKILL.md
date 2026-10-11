@@ -1,21 +1,19 @@
 ---
 name: "evc-cmd-cook"
 description: "Implement a feature [step by step]"
-argument-hint: "[tasks] [--advice]"
+argument-hint: "[tasks]"
 user-invocable: true
 disable-model-invocation: true
 ---
 
 ## Invocation contract
 
-The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-cook`. Do not split, normalize, or discard it before the canonical command parses it.
+The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-cook`. Do not split, normalize, or discard it; arguments are ordinary task data.
 
-Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions and activation-first ordering; load full mentoring only after resolved explicit or inherited mode.
+Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions.
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advice-activation.md`
-- `@evcrate/workflows/advisor-mentoring.md`
 - `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
@@ -26,19 +24,15 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-tasks>$ARGUMENTS</raw-tasks>
 
-## Canonical checkpoint routing
+## Scope and safety
 
-When advice mode is active (`explicit` or `inherited`), named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in `.copilot/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence and does not duplicate route or adapter selection. In `off` mode, named checkpoints and mentoring lifecycle are never invoked.
-
-## Advice Mode
-
-Before discovery or routing, resolve the HOME helper per `.copilot/evcrate/workflows/advice-activation.md` with original `$ARGUMENTS`, canonical `context.command: "cook"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
-Preserve known selections from the exact-call router; use `work_target: "cook"` only when no such target exists, and null plan/phase fields only when unknown.
-Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-
-Apply neutral `.copilot/evcrate/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.copilot/evcrate/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
-Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
-This command is a stateless router; `/evc-cmd-code` owns implementation and finalization. Delegate structured pre-run/same-run context per the activation contract, never initialize merely to route or append a synthetic flag.
+Treat complete raw invocation arguments as ordinary task data. Apply neutral
+`.copilot/evcrate/workflows/plan-progress.md` before selecting scope or dependencies.
+Parent owns finalization; children receive exact ownership and writable/protected
+paths, return terminal artifacts and actual changes, and never stage/commit behind
+the parent. Preserve sealed history and normal testing, review and user approval.
+Risky/destructive actions remain approval-gated. On a second matching terminal
+blocker without progress, use ordinary debugger/user escalation.
 ---
 
 ## Role Responsibilities
@@ -68,16 +62,13 @@ This command is a stateless router; `/evc-cmd-code` owns implementation and fina
 
 **Boundary:**
 - `/evc-cmd-cook` owns discovery, preflight, research, planning, and handoff.
-- `/evc-cmd-code` is the sole durable-state owner for implementation and substantive
-  finalization per `## Caller lifecycle binding`. It owns file edits,
-  compile/typecheck, tests, code review, approval, docs/project updates, and
-  finalization.
-- Do not edit code directly from `/evc-cmd-cook`. Use `/evc-cmd-code <plan-path>` after the plan is ready.
-- Root `/evc-cmd-cook` delegates ownership to `/evc-cmd-code`; do not mutate captured plan,
-  report, doc files, or Git index state after `/evc-cmd-code` seals the run, and do not
-  duplicate substantive finalization. When advice mode is active, phase-owned
-  configuration, onboarding, and selected Git decisions belong to `/evc-cmd-code`'s
-  pre-outcome finalization and must be passed to `/evc-cmd-code` before delegation/sealing.
+- `/evc-cmd-code` owns implementation and finalization: code edits,
+  compile/typecheck, tests, review, approval and authorized project/docs updates.
+- Do not edit code directly from `/evc-cmd-cook`; execute `/evc-cmd-code <plan-path>`
+  after planning. Pass onboarding, configuration and selected Git preferences
+  before delegation; do not duplicate implementation or finalization.
+- Preserve sealed historical paths/index identities under neutral
+  `.copilot/evcrate/workflows/plan-progress.md`.
 **Subagent synchronization:** Treat every planner, researcher, scout, tester, debugger, reviewer, project-manager, or docs-manager delegation as a blocking call. Wait for the terminal result, verify the requested report/artifact, and do not hand off, continue, or finalize from partial output. For parallel work, wait for every requested agent and require one result per agent.
 
 ## Workflow
@@ -124,7 +115,7 @@ Do not hand off to `/evc-cmd-code` until the preflight contract and plan are cle
 
 * Use `evc-planner` subagent to analyze the preflight contract, research reports, and scout reports to create an implementation plan using the progressive disclosure structure:
   - Create a directory using naming pattern from `## Naming` section.
-  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` per `.copilot/evcrate/workflows/plan-progress.md` before capture; old sealed plans remain untouched.
+  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links. Reconcile scope via `.copilot/evcrate/workflows/plan-progress.md`; old sealed plans remain untouched.
   - For each phase, add `phase-XX-phase-name.md` files containing sections (Context links, Overview with date/priority/statuses, Key Insights, Requirements, Architecture, Related code files, Implementation Steps, Todo list, Success Criteria, Risk Assessment, Security Considerations, Next steps).
   - Include the preflight contract and side-effect review checklist in the plan.
 ### 6. Side-Effect Review Checklist
@@ -141,19 +132,15 @@ Before handoff, verify the plan accounts for:
 
 ### 7. Implementation Handoff
 
-* Use `/evc-cmd-code <plan-path>` Slash Command to implement the plan step by step without appending a synthetic `--advice` flag.
-* Pass direct structured downstream context per `.copilot/evcrate/workflows/advice-activation.md`:
-  - When `ADVICE_MODE` is `off`: pass no activation handoff.
-  - When `ADVICE_MODE` is `explicit` or `inherited`:
-    - If entering without an existing active run: pass pre-run handoff (`kind: "pre-run"`, `context: { project_root, command: "code", work_target: "<plan-path>", plan_path: "<plan-path>", phase_path, phase_id }`, `run: null`), preserving known phase_path and phase_id selections (null only when unknown). No UUID allocation or state init merely to hand off.
-    - If entering with an existing active run: pass same-run handoff (`kind: "same-run"`, exact context and validated `run: { task_run_id, project_id, task_revision, scope_revision, evidence_revision }`), forwarding existing counsel and registered action context.
-* Never append a synthetic `--advice` flag to stand in for inheritance. Pass the plan path, any active run context, and any unresolved questions to `/evc-cmd-code`.
-* In active advice mode, phase-owned configuration, onboarding, and selected Git decisions/execution belong to the implementation owner's pre-outcome finalization. Clarify any onboarding setup or commit preferences with the user and pass such decisions to `/evc-cmd-code` before delegation/sealing.
-* In active advice mode, `/evc-cmd-code` also owns required user approval/rejection and any accepted fix cycles before its final outcome and completion. Pass this requirement in the handoff; never return a sealed run to a corrective caller.
-* If the plan includes frontend work, ensure the `/evc-cmd-code` handoff calls `evc-ui-ux-designer` and follows `./docs/design-guidelines.md`.
-* If the plan needs visual assets, include `evc-ai-multimodal` and `evc-media-processing` requirements in the plan.
+* Execute `/evc-cmd-code <plan-path>` with the actual plan, preflight, scoped
+  findings and unresolved questions. Preserve task data and wait for its terminal
+  result; a route selection or partial delegation is not completion.
+* Pass requirements for testing, code review, user approval/rejection and bounded
+  fixes; onboarding/configuration and Git choices belong to its finalization.
+* Frontend work uses `evc-ui-ux-designer` and `./docs/design-guidelines.md`.
+* Include `evc-ai-multimodal` and `evc-media-processing` for visual assets when needed.
 
-### 8. Quality Gates & Lifecycle Ownership
+### 8. Quality Gates & Finalization Ownership
 
 `/evc-cmd-code` owns and enforces:
 
@@ -164,73 +151,35 @@ Before handoff, verify the plan accounts for:
 * `evc-debugger` subagent investigates failures, then fixes are retested.
 * `evc-code-reviewer` subagent reviews security, performance, architecture, and YAGNI/KISS/DRY.
 * Critical review issues are fixed and retested before completion unless user explicitly approves otherwise.
-* Review checkpoints, terminal artifact barrier, substantive documentation/progress updates, and durable completion per `## Caller lifecycle binding`.
+* Terminal writer/artifact barriers, actual finalized validation, authorized documentation/status updates and neutral historical protection.
 
 ### 9. Project Management & Documentation
 
-Substantive plan progress, documentation, and roadmap updates belong to phase
-execution and are owned and finalized inside `/evc-cmd-code` before sealing durable
-completion under `## Caller lifecycle binding` in `.copilot/evcrate/workflows/advisor-mentoring.md` and neutral reconciliation in `.copilot/evcrate/workflows/plan-progress.md`.
+* `/evc-cmd-code` owns authorized project status, docs, roadmap and finalization.
+  This router does not duplicate publication. Child writers follow exact
+  ownership and writable/protected paths; wait for all terminal artifacts.
+* Protected historical paths/index identities stay immutable. Parent-only
+  ordinary approval/validation receipts and uncaptured overview publication
+  follow `.copilot/evcrate/workflows/plan-progress.md`; captured destinations block writes.
+* If the user rejects implementation, route the actual plan, findings and scope
+  back to `/evc-cmd-code` for bounded fixes and renewed validation/approval,
+  never rerun already-completed historical scope for display repair.
 
-* Root `/evc-cmd-cook` is a delegate router: it delegates this ownership to `/evc-cmd-code` and
-  must not duplicate publication or durable controller operations. Do not mutate
-  captured plan, report, or doc files after `/evc-cmd-code` seals its run, nor duplicate
-  substantive finalization.
-* Preserved historical snapshot protection applies across runs even in `off`
-  mode; prior sealed paths remain immutable, while current-run registered
-  pre-seal writes within parent-authorized paths remain permitted. Never direct edits
-  to sealed plans or metadata/roadmap after seal.
-* For advice-controlled plans or plans with preserved historical snapshots,
-  `<plan-dir>/progress.md` is the derived current overview (uncaptured, outside
-  baseline; never captured or cited as evidence/authorized substantive paths; if
-  already captured, cannot overwrite progress, surface blocker). Old sealed
-  `plan.md` remains untouched; startup and final output identify the overview
-  instead of relying on stale `plan.md` display.
-* Under active advice mode, all phase-owned configuration, onboarding updates, and
-  selected Git transitions belong to `/evc-cmd-code`'s pre-outcome finalization before
-  `state complete` seals the run. Root `/evc-cmd-cook` delegates sealing to `/evc-cmd-code` and
-  performs no captured mutations or Git commands after seal.
-* Do not mark durable phase DONE prematurely or mutate captured evidence after
-  complete. Do NOT prescribe copying DONE into captured files after sealing.
-* Parent plan-owning completion (`/evc-cmd-code`) writes mandatory outside-snapshot
-  immutable phase completion receipts and live `progress.md` per `.copilot/evcrate/workflows/plan-progress.md`; root `/evc-cmd-cook`
-  does not duplicate publication.
-* In default mode, if the user rejects the changes, ask for the issues and route
-  back to `/evc-cmd-code` with the plan and unresolved questions for a bounded fix cycle.
-* Under active advice mode, rejection and fixes are handled inside `/evc-cmd-code` before
-  sealing. After its completion receipt, root output is read-only; do not route
-  a completed run back into checkpoint, disposition, correction, or outcome work.
 ### 10. Onboarding
 
-* Under active advice mode: phase-owned configuration and onboarding setup belong
-  to the implementation owner's pre-outcome finalization and were passed to
-  `/evc-cmd-code` before sealing. After `/evc-cmd-code` seals the run, provide readonly guidance
-  only; perform no mutations to captured workspace paths or configuration files.
-* In default mode: preserve existing default-mode postimplementation behavior:
-  * Instruct the user to get started with the feature if needed (for example: grab
-    the API key, set up the environment variables, etc).
-  * Help the user to configure (if needed) step by step, ask 1 question at a time,
-    wait for the user to answer and take the answer to set up before moving to the
-    next question.
-  * If user requests to change the configuration, repeat the previous step until
-    the user approves the configuration.
+* Guide local API-key/env/config setup step by step, one question at a time and
+  wait for the answer. Never ask the user to disclose secrets in chat.
+* If configuration changes are requested, obtain approval and pass authorized
+  changes to the implementation owner; preserve sealed paths.
 
 ### 11. Final Report
-* Report back to user with a summary of the changes and explain everything briefly,
-  guide user to get started and suggest the next steps. For advice-controlled plans
-  or plans with preserved historical snapshots, point startup and final output to
-  `<plan-dir>/progress.md`. Normal default plans with no history do not require,
-  read, or output nonexistent progress links.
-* Under active advice mode: selected Git decisions and execution belong to the
-  implementation owner's pre-outcome finalization before sealing. After `/evc-cmd-code`
-  seals the run, do not execute git commit or push commands or captured-file/selected-index
-  mutations; emit readonly guidance or an uncaptured administrative receipt strictly
-  outside the captured baseline snapshot only per `.copilot/evcrate/workflows/plan-progress.md`.
-* In default mode: preserve existing default-mode postimplementation behavior:
-  * Ask the user if they want to commit and push to git repository, if yes, use
-    `evc-git-manager` subagent to commit and push to git repository.
-  * Preserve scoped approval and commit behavior; do not execute an automatic
-    commit without explicit user confirmation.
+
+* Summarize actual changes, validation, blockers and next steps. Protected plans
+  link uncaptured `<plan-dir>/progress.md`; ordinary plans use their actual
+  overview and do not require nonexistent progress links.
+* Ask whether the user wants to commit/push. Use `evc-git-manager` only with
+  explicit confirmation for that scoped action. Do not duplicate a commit already
+  performed by the implementation owner or stage protected paths/receipts.
 - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 **REMEMBER**:

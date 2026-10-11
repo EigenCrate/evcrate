@@ -1,7 +1,7 @@
 - source: evc-cmd-advise.md
   name: /evc-cmd-advise
   path: evc-cmd-advise/SKILL.md
-  description: Interview-first technical advice with native inline questioning and explicit relay rejection
+  description: Interview-first technical advice in the main session
   argument_hint: ''
   category: core
 - source: evc-cmd-ask.md

@@ -37,8 +37,8 @@ During publication planning across all active targets (`claude`, `codex`, `antig
 When upgrading an older publication and selecting Antigravity:
 - **Owned Predecessor Sweep**: `reconcileRetiredBindings` plans deletion only for exact recorded Gemini predecessor files: `.gemini` leaves in HOME/project scopes and owned `GEMINI.md` in project scope. Existing active-binding pruning handles obsolete owned leaves such as `.claude/CLAUDE.md`.
 - **Safe Predecessor Retention**: Untracked files and inherited Codex `.agents` residuals are preserved; there is no generic sweep of arbitrary old bindings.
-- **Recoverable Application**: Retired deletions carry `cleanup: "retired-binding"` in schema-3 journals, authorized against exact predecessor ownership without adding Gemini to active targets or binding order. Snapshot, backup, workspace, progress and path checks remain strict; operation faults and process interruptions can restore owned files.
-- **Scope Boundary**: HOME rollback includes its controller transaction. Project harness rollback does not undo the separately committed shared HOME phase.
+- **Recoverable Application**: Retired deletions carry `cleanup: "retired-binding"` in current schema-4 journals (historical schema-3 recovery retains the same file-only authorization). Exact predecessor ownership, snapshot, backup, workspace, progress, and path checks remain strict; operation faults and process interruptions can restore admitted owned files.
+- **Scope Boundary**: HOME and project each have a single scoped harness transaction. Project rollback/recovery cannot compensate or mutate HOME publication state.
 
 ---
 
@@ -60,30 +60,18 @@ The reported records classify leftovers into five canonical kinds:
 
 #### Machine JSON Interface (`--json`)
 Both `PublishApplyResultPayload` and `PublishDryRunResultPayload` include an optional `legacyLeftovers` array sorted deterministically by `target`, `path`, and `kind`:
+The following is the optional payload field excerpt, not a complete result envelope:
 ```json
 {
-  "status": "published",
-  "payload": {
-    "scope": "home",
-    "projectIdentity": null,
-    "buildManifestPath": ".evcrate/build-manifest.json",
-    "buildManifestDigest": "...",
-    "phases": [ ... ],
-    "legacyLeftovers": [
-      {
-        "target": "claude",
-        "path": "agents/planner.md",
-        "kind": "agent"
-      },
-      {
-        "target": "claude",
-        "path": "commands/code.md",
-        "kind": "command"
-      }
-    ]
-  }
+  "legacyLeftovers": [
+    {"target": "claude", "path": "agents/planner.md", "kind": "agent"},
+    {"target": "claude", "path": "commands/code.md", "kind": "command"}
+  ]
 }
 ```
+Ordinary dry-run/success uses the validated resource-control v1 result envelope;
+the publication payload has exactly one harness phase. Failure is the ordinary
+error-only envelope, without a publication payload or fabricated phase record.
 
 #### Human TTY Output
 Standard TTY output prints the `published` (or `preview` on dry-run) status followed by human-readable warnings:

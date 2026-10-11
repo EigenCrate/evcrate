@@ -10,19 +10,19 @@ import {
 
 export const PUBLICATION_SCOPES = Object.freeze(['home', 'project'] as const);
 export type PublicationScope = typeof PUBLICATION_SCOPES[number];
-export const PUBLICATION_PHASES = Object.freeze(['shared', 'harness'] as const);
+export const PUBLICATION_PHASES = Object.freeze(['harness'] as const);
 export type PublicationPhase = typeof PUBLICATION_PHASES[number];
-export const PUBLICATION_APPLY_STATUSES = Object.freeze(['committed', 'failed', 'not-started'] as const);
+export const PUBLICATION_APPLY_STATUSES = Object.freeze(['committed'] as const);
 export type PublicationApplyStatus = typeof PUBLICATION_APPLY_STATUSES[number];
 
 export const PUBLICATION_CHANGE_ACTIONS = Object.freeze([
   'create', 'update', 'delete', 'preserve', 'merge-create', 'merge-update', 'noop', 'conflict'
 ] as const);
 export type PublicationChangeAction = typeof PUBLICATION_CHANGE_ACTIONS[number];
-export type PublicationTarget = PersistedTarget | 'advisor-controller';
+export type PublicationTarget = PersistedTarget;
 
 export const PUBLICATION_BINDING_ORDER = Object.freeze([
-  '.evcrate/bin', '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
+  '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
 ] as const);
 export const PUBLICATION_TARGET_BINDINGS = Object.freeze({
   codex: Object.freeze(['.agents/skills', '.codex']),
@@ -240,7 +240,7 @@ export interface PublishDryRunResultPayload {
   readonly projectIdentity: string | null;
   readonly buildManifestPath: string;
   readonly buildManifestDigest: string;
-  readonly phases: readonly [DryRunPhaseRecord, DryRunPhaseRecord];
+  readonly phases: readonly [DryRunPhaseRecord];
   readonly legacyLeftovers?: readonly LegacyLeftoverRecord[];
 }
 export const LEGACY_LEFTOVER_KINDS = Object.freeze([
@@ -259,11 +259,11 @@ export interface PublishApplyResultPayload {
   readonly projectIdentity: string | null;
   readonly buildManifestPath: string;
   readonly buildManifestDigest: string;
-  readonly phases: readonly [ApplyPhaseRecord, ApplyPhaseRecord];
+  readonly phases: readonly [ApplyPhaseRecord];
   readonly legacyLeftovers?: readonly LegacyLeftoverRecord[];
 }
 export interface RecoveryPhaseRecord {
-  readonly phase: PublicationPhase;
+  readonly phase: 'shared' | 'harness';
   readonly scope: PublicationScope;
   readonly releaseId: string;
   readonly action: 'rolled-back' | 'finalized';
@@ -307,7 +307,7 @@ function targetList(value: unknown, allowEmpty = false): readonly PersistedTarge
   return validateTargetList(value);
 }
 function target(value: unknown): PublicationTarget {
-  return value === 'advisor-controller' ? value : normalizeTarget(value);
+  return normalizeTarget(value);
 }
 function targetBindings(scope: PublicationScope, targetId: PersistedTarget): readonly string[] {
   return scope === 'home' ? PUBLICATION_TARGET_BINDINGS[targetId] : PUBLICATION_PROJECT_TARGET_BINDINGS[targetId];
@@ -315,7 +315,7 @@ function targetBindings(scope: PublicationScope, targetId: PersistedTarget): rea
 function expectedHarnessBindings(scope: PublicationScope, selectedTargets: readonly PersistedTarget[]): readonly string[] {
   if (scope === 'home') {
     const wanted = new Set(selectedTargets.flatMap((targetId) => targetBindings(scope, targetId)));
-    return PUBLICATION_BINDING_ORDER.filter((binding) => binding !== '.evcrate/bin' && wanted.has(binding));
+    return PUBLICATION_BINDING_ORDER.filter((binding) => wanted.has(binding));
   }
   return selectedTargets.flatMap((targetId) => targetBindings(scope, targetId));
 }
@@ -325,10 +325,6 @@ function bindingOrder(
   if (!Array.isArray(value) || value.length === 0 || value.length > MAX_PUBLICATION_BINDINGS) invalidResourcePayload();
   const result = value.map(relativeMetadataPath);
   if (new Set(result).size !== result.length) invalidResourcePayload();
-  if (phase === 'shared') {
-    if (result.length !== 1 || result[0] !== '.evcrate/bin') invalidResourcePayload();
-    return Object.freeze(result);
-  }
   const expected = expectedHarnessBindings(scope, selectedTargets);
   if (result.length !== expected.length || result.some((binding, index) => binding !== expected[index])) invalidResourcePayload();
   return Object.freeze(result);
@@ -344,14 +340,10 @@ function changes(
     if (typeof raw.action !== 'string' || !PUBLICATION_CHANGE_ACTIONS.includes(raw.action as PublicationChangeAction)) invalidResourcePayload();
     const changeTarget = target(raw.target);
     const path = relativeMetadataPath(raw.path);
-    if (phase === 'shared') {
-      if (changeTarget !== 'advisor-controller' || path !== '.evcrate/bin') invalidResourcePayload();
-    } else {
-      if (changeTarget === 'advisor-controller' || !selectedTargets.includes(changeTarget)) invalidResourcePayload();
-      const matches = targetBindings(scope, changeTarget).filter((binding) =>
-        bindings.includes(binding) && (path === binding || path.startsWith(`${binding}/`)));
-      if (matches.length !== 1) invalidResourcePayload();
-    }
+    if (!selectedTargets.includes(changeTarget)) invalidResourcePayload();
+    const matches = targetBindings(scope, changeTarget).filter((binding) =>
+      bindings.includes(binding) && (path === binding || path.startsWith(`${binding}/`)));
+    if (matches.length !== 1) invalidResourcePayload();
     return Object.freeze({
       target: changeTarget, path, action: raw.action as PublicationChangeAction,
       beforeHash: nullableHash(raw.beforeHash), intendedHash: nullableHash(raw.intendedHash)
@@ -368,10 +360,9 @@ function validatePhase(
     ? [...PHASE_KEYS, 'status', 'releaseId', 'retainedReleaseId'] : [...PHASE_KEYS];
   assertExactKeys(raw, keys);
   if (raw.phase !== phase) invalidResourcePayload();
-  const phaseScope = phase === 'shared' ? 'home' : scope;
+  const phaseScope = scope;
   if (raw.scope !== phaseScope) invalidResourcePayload();
-  if (phase === 'shared' && (!Array.isArray(raw.selectedTargets) || raw.selectedTargets.length !== 0)) invalidResourcePayload();
-  const selectedTargets = targetList(raw.selectedTargets, phase === 'shared');
+  const selectedTargets = targetList(raw.selectedTargets);
   const bindingOrderValue = bindingOrder(raw.bindingOrder, phase, scope, selectedTargets);
   const base = {
     phase, scope: phaseScope, selectedTargets,
@@ -384,32 +375,17 @@ function validatePhase(
   const releaseId = raw.releaseId === null ? null : validateOpaque(raw.releaseId, MAX_PUBLICATION_RELEASE_ID_BYTES, 'release id');
   const retainedReleaseId = raw.retainedReleaseId === null
     ? null : validateOpaque(raw.retainedReleaseId, MAX_PUBLICATION_RELEASE_ID_BYTES, 'retained release id');
-  if (status === 'committed' && releaseId === null) invalidResourcePayload();
-  if (status !== 'committed' && (releaseId !== null || retainedReleaseId !== null)) invalidResourcePayload();
+  if (releaseId === null || (scope === 'project' && retainedReleaseId !== null)) invalidResourcePayload();
   return Object.freeze({ ...base, status, releaseId, retainedReleaseId });
 }
-function phasePair(
-  value: unknown, scope: PublicationScope, kind: 'dry-run' | 'apply', allowPartial = false
-): readonly [DryRunPhaseRecord, DryRunPhaseRecord] | readonly [ApplyPhaseRecord, ApplyPhaseRecord] {
-  if (!Array.isArray(value) || value.length !== 2) invalidResourcePayload();
-  const shared = validatePhase(value[0], 'shared', scope, kind);
-  const harness = validatePhase(value[1], 'harness', scope, kind);
-  if (kind === 'dry-run') return Object.freeze([shared, harness]) as readonly [DryRunPhaseRecord, DryRunPhaseRecord];
-  const applyShared = shared as ApplyPhaseRecord;
-  const applyHarness = harness as ApplyPhaseRecord;
-  const complete = applyShared.status === 'committed' && applyHarness.status === 'committed';
-  const partial = allowPartial && scope === 'project'
-    && applyShared.status === 'committed' && applyHarness.status === 'failed';
-  if (!complete && !partial) invalidResourcePayload();
-  if (complete) {
-    if (scope === 'home') {
-      if (applyShared.releaseId !== applyHarness.releaseId
-        || applyShared.retainedReleaseId !== applyHarness.retainedReleaseId) invalidResourcePayload();
-    } else if (applyShared.releaseId === applyHarness.releaseId || applyHarness.retainedReleaseId !== null) {
-      invalidResourcePayload();
-    }
-  }
-  return Object.freeze([applyShared, applyHarness]) as readonly [ApplyPhaseRecord, ApplyPhaseRecord];
+function harnessPhase(
+  value: unknown, scope: PublicationScope, kind: 'dry-run' | 'apply'
+): readonly [DryRunPhaseRecord] | readonly [ApplyPhaseRecord] {
+  if (!Array.isArray(value) || value.length !== 1) invalidResourcePayload();
+  const harness = validatePhase(value[0], 'harness', scope, kind);
+  return kind === 'dry-run'
+    ? Object.freeze([harness as DryRunPhaseRecord])
+    : Object.freeze([harness as ApplyPhaseRecord]);
 }
 function validateLegacyLeftovers(
   value: unknown, selectedTargets?: readonly PublicationStateTarget[]
@@ -440,20 +416,20 @@ function validateLegacyLeftovers(
   return Object.freeze(result);
 }
 
-function publishEnvelope(value: unknown, kind: 'dry-run' | 'apply', allowPartial = false): {
+function publishEnvelope(value: unknown, kind: 'dry-run' | 'apply'): {
   scope: PublicationScope; projectIdentity: string | null; buildManifestPath: string;
-  buildManifestDigest: string; phases: readonly [DryRunPhaseRecord, DryRunPhaseRecord] | readonly [ApplyPhaseRecord, ApplyPhaseRecord];
+  buildManifestDigest: string; phases: readonly [DryRunPhaseRecord] | readonly [ApplyPhaseRecord];
   legacyLeftovers?: readonly LegacyLeftoverRecord[];
 } {
   const raw = asPayloadObject(value);
   const scope = validatePublicationScope(raw.scope);
-  const phases = phasePair(raw.phases, scope, kind, allowPartial);
+  const phases = harnessPhase(raw.phases, scope, kind);
   if (raw.legacyLeftovers !== undefined) {
     assertExactKeys(raw, ['scope', 'projectIdentity', 'buildManifestPath', 'buildManifestDigest', 'phases', 'legacyLeftovers']);
   } else {
     assertExactKeys(raw, ['scope', 'projectIdentity', 'buildManifestPath', 'buildManifestDigest', 'phases']);
   }
-  const selectedTargets = phases[1].selectedTargets;
+  const selectedTargets = phases[0].selectedTargets;
   const legacyLeftovers = validateLegacyLeftovers(raw.legacyLeftovers, selectedTargets);
   return {
     scope, projectIdentity: projectIdentity(scope, raw.projectIdentity),
@@ -482,17 +458,15 @@ export function validateRecoverRequestPayload(value: unknown): RecoverRequestPay
 export function validatePublishDryRunResultPayload(value: unknown): PublishDryRunResultPayload {
   assertSafeBoundedJson(value, MAX_PUBLICATION_RESULT_BYTES);
   const result = publishEnvelope(value, 'dry-run');
-  return Object.freeze({ ...result, phases: result.phases as readonly [DryRunPhaseRecord, DryRunPhaseRecord] });
+  return Object.freeze({ ...result, phases: result.phases as readonly [DryRunPhaseRecord] });
 }
-export function validatePublishApplyResultPayload(
-  value: unknown, allowPartial = false
-): PublishApplyResultPayload {
+export function validatePublishApplyResultPayload(value: unknown): PublishApplyResultPayload {
   assertSafeBoundedJson(value, MAX_PUBLICATION_RESULT_BYTES);
-  const result = publishEnvelope(value, 'apply', allowPartial);
-  return Object.freeze({ ...result, phases: result.phases as readonly [ApplyPhaseRecord, ApplyPhaseRecord] });
+  const result = publishEnvelope(value, 'apply');
+  return Object.freeze({ ...result, phases: result.phases as readonly [ApplyPhaseRecord] });
 }
 function validateRecoveryPhase(
-  value: unknown, phase: PublicationPhase, scope: PublicationScope
+  value: unknown, phase: 'shared' | 'harness', scope: PublicationScope
 ): RecoveryPhaseRecord {
   const raw = asPayloadObject(value);
   assertExactKeys(raw, ['phase', 'scope', 'releaseId', 'action', 'selectedTargets', 'bindingOrder']);
@@ -525,6 +499,10 @@ export function validateRecoverResultPayload(value: unknown): RecoverResultPaylo
     if (raw.phases.length !== 1) invalidResourcePayload();
     const phase = validateRecoveryPhase(raw.phases[0], 'harness', scope);
     return Object.freeze({ scope, projectIdentity: identity, action: 'recovered', phases: Object.freeze([phase]) });
+  }
+  if (raw.phases.length === 1 && isPlainObject(raw.phases[0]) && raw.phases[0].phase === 'harness') {
+    const harness = validateRecoveryPhase(raw.phases[0], 'harness', scope);
+    return Object.freeze({ scope, projectIdentity: identity, action: 'recovered', phases: Object.freeze([harness]) });
   }
   const shared = validateRecoveryPhase(raw.phases[0], 'shared', scope);
   if (raw.phases.length === 1) return Object.freeze({ scope, projectIdentity: identity, action: 'recovered', phases: Object.freeze([shared]) });

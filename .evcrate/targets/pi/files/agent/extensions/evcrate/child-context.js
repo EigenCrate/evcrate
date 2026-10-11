@@ -41,18 +41,16 @@ function commandTransportError(message) {
 }
 
 /** Carry cooperative caller data in the model-visible command result; it is not provenance. */
-export function createCommandContext({ source, command, rawArguments, handoff = null }) {
+export function createCommandContext({ source, command, rawArguments }) {
   if (source !== "native-user" && source !== "model-tool") commandTransportError("unsupported source");
   if (typeof command !== "string" || !command) commandTransportError("canonical command is required");
   if (typeof rawArguments !== "string") commandTransportError("raw arguments must be a string");
-  if (handoff !== null && (!isObject(handoff))) commandTransportError("handoff must be an object or null");
   return Object.freeze({
     protocol: "evcrate-pi-command-context",
-    version: 1,
+    version: 2,
     source,
     command,
     raw_arguments: rawArguments,
-    handoff,
   });
 }
 

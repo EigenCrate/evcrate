@@ -114,18 +114,6 @@ function validateRuntimeClosure(packageRoot) {
   const entrypoints = ['dist/cli/evcrate.js', 'dist/index.js'];
   const visited = traverseRuntimeClosure(packageRoot, entrypoints);
 
-  const controllerValidatorPath = path.join(packageRoot, 'dist', 'manifests', 'controller.js');
-  if (!fs.existsSync(controllerValidatorPath)) {
-    throw new Error(`Controller validator authority missing: ${controllerValidatorPath}`);
-  }
-  const controllerRoot = path.join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin');
-  if (!fs.existsSync(controllerRoot)) {
-    throw new Error(`Controller root missing: ${controllerRoot}`);
-  }
-  assertNoSymlinkAncestors(controllerRoot);
-
-  const { validateAdvisorControllerSource } = require(controllerValidatorPath);
-  validateAdvisorControllerSource(controllerRoot);
 
   return {
     valid: true,

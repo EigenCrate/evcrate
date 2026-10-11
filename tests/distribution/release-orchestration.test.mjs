@@ -17,7 +17,6 @@ const { buildReleaseArchives } = require('../../scripts/release/archive-writers.
 const { createMinimalValidRecords } = await import('../installers/fixtures/fixture-records.mjs');
 const {
   getRealInstallerEntry,
-  computeControllerClosureDigest,
   computeBuildManifestDigests
 } = await import('../installers/fixtures/release-fixture-shared-helpers.mjs');
 const { buildWindowsTestReleaseSet } = await import('../installers/fixtures/windows-release-fixture.mjs');
@@ -41,14 +40,13 @@ function createExactSevenAssets(outputDir, version = '2.2.0', commit = 'c'.repea
     outputDir,
     version,
     metadataGenerator: ({ inventoryDigest, platforms }) => ({
-      schema: 'evcrate-private-release/v1',
+      schema: 'evcrate-private-release/v2',
       version,
       tag: `v${version}`,
       source_commit: commit,
       node_floor: '>=22.19.0',
       inventory_digest: inventoryDigest,
       build_manifest_digests: computeBuildManifestDigests(sortedRecords),
-      controller_closure_digest: computeControllerClosureDigest(sortedRecords),
       platforms,
       installers: {
         'install.sh': { name: 'install.sh', size: installSh.size, sha256: installSh.sha256 },
@@ -1195,7 +1193,7 @@ test('Phase 10: real semantic-release dry-run predicts 3.0.0-rc.1 on next and 3.
     execFileSync('git', ['-C', repoDir, 'commit', '-m', 'feat(naming)!: unified command and agent naming across all harnesses\n\nBREAKING CHANGE: all command and agent identities unified']);
 
     const bareRemote = path.join(tmpDir, 'remote.git');
-    execFileSync('git', ['init', '--bare', bareRemote]);
+    execFileSync('git', ['-c', 'init.defaultBranch=main', 'init', '--bare', bareRemote]);
     const remoteUrl = pathToFileURL(bareRemote).href;
     execFileSync('git', ['-C', repoDir, 'push', remoteUrl, 'main:refs/heads/main', 'next:refs/heads/next', '--tags']);
 

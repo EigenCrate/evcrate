@@ -54,7 +54,7 @@ test('all-target schema-2 build resolves with explicit publication policy parity
     assert.deepEqual(build.manifest.home_policy.codex.publication_rules, ['codex-home-path-rewrite']);
     assert.deepEqual(build.manifest.home_policy.claude.publication_rules, ['claude-home-path-rewrite', 'claude-skill-root-exclusion']);
     assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
-      '.evcrate/bin', '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
+      '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
     ]);
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
@@ -70,7 +70,6 @@ test('build verification rejects a stale source hash before publication planning
       manifestPath: build.manifestPath,
       manifest: build.manifest,
       outputRoots: build.outputPaths,
-      controllerRoot: context.controllerRoot,
       sourceHashes: stale,
       adapterHashes: build.manifest.adapter_hashes
     }));

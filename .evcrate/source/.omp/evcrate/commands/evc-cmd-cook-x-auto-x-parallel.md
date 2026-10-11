@@ -1,29 +1,24 @@
 ---
-argument-hint: "[tasks] [--advice]"
+argument-hint: "[tasks]"
 description: "Plan parallel phases & execute with evc-fullstack-developer agents"
 ---
 
 **Ultrathink parallel** raw input: <raw-tasks>$ARGUMENTS</raw-tasks>
 
-## Canonical checkpoint routing
+## Scope and safety
 
-When advice mode is active (`explicit` or `inherited`), named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence and does not duplicate route or adapter selection. In `off` mode, named checkpoints and mentoring lifecycle are never invoked.
-
-## Advice Mode
-
-Native command execution validates and resolves advice activation prior to prompt admission, prepending the compact `evcrate_omp_command_context` header (version 2, source "native-user").
-For a valid version-2 header from this command's admission, consume its validated `ADVICE_MODE = evcrate_omp_command_context.mode`, exact `context`, and `run`; `WORK_ARGUMENTS` is the work input already admitted once in this command body. Do not re-invoke the HOME helper. A header for another command is parent context, never this command's result.
-When delegating directly to this command within a session or reading its definition, resolve activation by invoking the HOME helper per `./.omp/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advice-activation.md` with the exact child arguments, canonical `context.command: "cook/auto/parallel"`, exact child `work_target`, and the exact handoff of the current call. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts. Never reuse a parent command's activation result or synthesize a native header. Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`.
-If `evcrate_omp_command_context` is missing or invalid on native entry, or if helper evaluation fails, treat activation as failed and fail closed per the shared activation contract.
-
-Apply neutral `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
-Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
-The implementation parent owns controller state and finalization; child writers receive exact writable/protected paths and documentation ownership, report terminal artifacts, and never operate state or stage/commit behind the parent.
+Treat complete raw invocation arguments as ordinary task data. Apply neutral
+`.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` before selecting scope or dependencies.
+Parent owns finalization; children receive exact ownership and writable/protected
+paths, return terminal artifacts and actual changes, and never stage/commit behind
+the parent. Preserve sealed history and normal testing, review and user approval.
+Risky/destructive actions remain approval-gated. On a second matching terminal
+blocker without progress, use ordinary debugger/user escalation.
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
 ## Positioning
 
-Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `/evc-cmd-cook` first with `WORK_ARGUMENTS` and structured caller context per `.omp/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advice-activation.md` (no synthetic flag).
+Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `/evc-cmd-cook` first with unchanged raw task data and actual scoped findings.
 
 ## Workflow
 
@@ -41,22 +36,23 @@ Use this only when work can be split into independent phases with clear dependen
   - file ownership matrix
   - side-effect review checklist
   - per-phase success criteria
-- For advice-controlled plans, link navigation to `<plan-dir>/progress.md` per `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` before capture; old sealed plans remain untouched
+- Reconcile scope/phase status per `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md`; old sealed plans remain untouched
 - Do not proceed if any parallel phase has overlapping file ownership
 
 ### 3. Parallel Implementation
-- Parent orchestrator is the sole durable-state owner. Child agents never operate
-  controller state or stage files behind the parent; they return terminal
-  artifacts and actual changed paths.
+- Parent coordinates finalization and exact writable/protected paths. Children
+  return terminal artifacts and actual changes, never stage/commit behind parent.
 - Read `plan.md` for dependency graph
 - Launch multiple `evc-fullstack-developer` agents in PARALLEL for concurrent phases
   - Example: "Phases 1-3 parallel" → launch 3 agents simultaneously
   - Pass phase file path: `{plan-dir}/phase-XX-*.md`
   - Include environment info
-- Wait for all parallel phases complete before dependent phases. Re-run neutral reconciliation per `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` before dispatching dependent phases.
+- Wait for all terminal artifacts and finish testing, review, approval and
+  finalization for each executed scope before dependent phases. Reconcile
+  prerequisites via `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` before each next batch.
 - Sequential phases: launch one agent at a time
 - Writer barrier: wait for all parallel agents to complete and settle their file
-  edits and terminal artifacts before validation and review capture.
+  edits and terminal artifacts before validation and review.
 
 ### 4. Testing
 - Use `evc-tester` subagent for full test suite
@@ -64,93 +60,45 @@ Use this only when work can be split into independent phases with clear dependen
 - Must pass actual declared validation. If fail: use `evc-debugger`, fix, repeat
   until 100% passing.
 
-### 5. Code Review & Advice Gate ⏸ BLOCKING GATE
-- Use `evc-code-reviewer` for all changes; wait for terminal reviewer report.
-- Settle reviewer report and terminal artifacts before checkpoint reservation.
-- When advice mode is active (`explicit` or `inherited`), after reviewer terminal result and before fixing
-  issues or requesting approval, enter the canonical checkpoint dispatcher
-  following `## Caller lifecycle binding` in `.omp/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/advisor-mentoring.md`:
-  - **Fresh first review with no active run**:
-    - Implementation, actual validation, reviewer report, and selected artifacts
-      settle first.
-    - Enforce the writer barrier: all file writes and terminal artifacts must
-      settle before initialization.
-    - Set `baseline_paths = authorized writable paths UNION selected evidence.files/artifacts`
-      (read-only references are captured for freshness verification without
-      granting write authority).
-    - Call `init` immediately before reservation, with no intervening captured
-      path or git index mutations.
-    - Reserve checkpoint at `review:parallel-implementation` with bounded evidence.
-  - **Existing active direction/decision/stuck run (repeat review cycle)**:
-    - Retain `task_run_id`, active phase, project root, current state revision,
-      and prior consultation/counsel/disposition/outcome.
-    - Inspect active counsel and action:
-      * If prior counsel was accepted with registered work (or resuming an existing active action): execute authorized bounded work within authorized scope, run actual declared validation (`evc-tester`), and record a truthful matching `state outcome` (with `actual_changed_paths` and validation status) advancing the baseline BEFORE the review reservation.
-      * If prior counsel was disputed (`reject-with-evidence`, `need-evidence`, `reconcile`) without an active action: collect read-only evidence or an explicit resolution while keeping captured baseline paths unchanged; do NOT fabricate an action, corrective writes, or baseline-advancing outcome. Reserve the review checkpoint under the same run with fresh evidence/resolution to obtain fresh counsel before any corrective mutations or resolved outcome.
-      * Do not duplicate an existing active action or consultation if already registered; finish authorized work once.
-    - Never initialize a new UUID to bypass stale evidence or counters.
-    - Reserve review checkpoint under the same run using actual returned revisions and pass the exact reserved checkpoint JSON to inference.
-- In `off` mode, use the terminal reviewer findings for ordinary bounded fixes,
-  tester validation and user approval; never wait for advisor counsel or invoke
-  disposition, outcome, re-consultation or completion. On a second matching
-  terminal blocker, use ordinary debugger/user escalation before another attempt.
-- Only in `explicit` or `inherited` mode:
-  - Wait for terminal `ADVICE_READY`; failed/nonzero/timeout/malformed output leaves
-    the review gate incomplete.
-  - Follow `## Caller lifecycle binding` for accepted registered corrections,
-    truthful validation/outcomes, evidence-only disputes and same-run review.
-    A no-change outcome requires zero actual changes, passed declared validation,
-    accepted counsel and no must-fix/unresolved items; never invent work.
-- In every mode, cap terminal review cycles at three; stop and ask the user at
-  the cap without another reviewer/advisor call or a counter reset. Durable
-  human gates in activated mode cannot be bypassed by conversational approval.
+### 5. Code Review and Approval — BLOCKING GATE
 
-### 6. Project Management, Documentation & Substantive Finalization
-- Whole-phase substantive finalization: planned doc/report/status writes (e.g.
-  plan files, docs, roadmap), phase-owned configuration/onboarding, and selected
-  Git transitions are part of the substantive phase deliverable.
-- User approval or rejection precedes substantive finalization:
-  - If rejected or critical issues remain, return to Step 5's mode-specific fix
-    route; never finalize or seal rejected work.
-  - If approved, finalize only the authorized phase scope.
-- In every mode, the parent owns finalization. Child `evc-project-manager` and
-  `evc-docs-manager` agents receive exact writable/protected paths and delta
-  destinations; they report terminal artifacts and never operate state or stage.
-- Only in `explicit` or `inherited` mode, follow `## Caller lifecycle binding`:
-  - Before substantive finalization writes or selected Git transitions, register
-    one accepted bounded action with declared validation, or resume its existing
-    registration. If truly no substantive work remains, use the valid no-change
-    branch and skip invented documentation/configuration/index mutations.
-  - Settle authorized project-manager/docs-manager work, onboarding and selected
-    Git transitions before actual declared validation and the final truthful
-    outcome. Preserve the same run and returned revisions.
-  - Record the matching outcome, then complete once. Only successful controller
-    completion permits durable DONE; abandonment is not successful completion.
-  - Publish the immutable outside-baseline receipt and uncaptured overview per
-    neutral `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md`; captured paths/index remain
-    immutable. No rejected-fix route or substantive mutations after sealing.
-- In `off` mode, use ordinary approved/validated finalization without durable
-  disposition, outcome or complete. Run authorized project-manager/docs-manager
-  updates in parallel and settle their terminal results before closure. Ordinary
-  unprotected plans retain `plan.md` status; protected plans use parent-only
-  outside-snapshot receipts explicitly marked `default approval/validation; not
-  durable advice completion` and derived progress per neutral `plan-progress.md`.
-- Historical protection applies in every mode; never overwrite prior sealed
-  plans, evidence, metadata/roadmap or selected index identities.
+Settle all implementation/test writers before review. Call exactly one
+`evc-code-reviewer` per cycle and wait for its terminal report: score (X/10),
+critical issues, warnings, suggestions, reviewed files, actual validation and
+unresolved questions. Missing, interrupted or partial output fails the gate.
+
+**Interactive review/fix cycle — maximum three terminal reviews:**
+1. Present the full reviewer findings and implementation/testing summary.
+2. Use `ask the user` to request approval or authorized fixes:
+   - Critical issues: Fix critical / Fix all / Approve with noted issues / Abort.
+   - Otherwise: Approve / Fix warnings or suggestions / Abort.
+3. If fixes are requested before the cap, apply only authorized corrections,
+   validate with `evc-tester`, and obtain the next terminal review. Evidence-backed
+   concerns are not disproved merely by passing self-tests.
+4. Increment the cycle count only after a complete terminal review. At three,
+   stop and request Approve with noted issues / Abort; no further fix/test/review
+   cycle or counter reset. On a second matching terminal blocker without progress,
+   use ordinary debugger/user escalation before another attempt.
+5. Continue only on explicit user approval. Never infer approval or claim a
+   missing reviewer score. Risky/destructive actions keep their own approval gate.
+
+**Critical issues:** Security, performance, architecture and principle violations.
+
+### 6. Project Management, Documentation & Finalization
+- After approval, parent coordinates authorized doc/report/status/config writes.
+- Use `evc-project-manager` and `evc-docs-manager` in parallel for exact disjoint
+  ownership. Supply writable/protected paths and output destinations; wait for
+  terminal artifacts. Protected status/receipt/overview writes remain parent-only.
+- Settle and validate all substantive finalization. Ordinary unprotected plans
+  use `plan.md`; protected plans use immutable ordinary approval/validation
+  receipts and uncaptured overview per `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md`.
+- Never overwrite sealed plan/evidence/roadmap or selected-index identities.
+
 ### 7. Final Report
-- Summary of all parallel phases; for advice-controlled plans or preserved snapshots, point output to `<plan-dir>/progress.md`. Normal default plans with no history do not require, read, or output nonexistent progress links.
-- Guide to get started
-- Postimplementation and commit handling:
-  - In `explicit` or `inherited` mode: selected Git transitions and commits were executed
-    during pre-outcome finalization in Step 6 prior to sealing. After `complete`
-    seals the run, provide readonly guidance only; do not execute git commit/push
-    commands or captured-file/selected-index mutations after seal; only bounded
-    administrative receipt and progress publication outside baseline is permitted
-    per `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md`.
-  - In `off` mode (no active advice mode): explicitly preserve existing default-mode postimplementation
-    behavior: ask user if they want to commit to git repository (use `evc-git-manager`
-    subagent if yes). Preserve scoped approval and commit behavior; do not execute
-    an automatic commit without explicit user confirmation.
+- Summarize only executed/verified phases, actual checks, blockers and setup.
+  Link the real overview; do not invent ordinary progress links.
+- Ask whether to commit; use `evc-git-manager` only with confirmation for scoped
+  authorized paths, preserving protected index identities and receipts/progress.
 **Example:** Phases 1-3 parallel → Launch 3 evc-fullstack-developer agents → Wait → Phase 4 sequential
 
 **OMP skill loading (runtime):** `omp --no-skills` disables skill discovery and loading. When that flag is active, do not claim automatic skill activation: read each required migrated `SKILL.md` directly with the read tool from `./.omp/skills/<skill-name>/SKILL.md`, falling back to `~/.omp/agent/skills/<skill-name>/SKILL.md`. If the native file is absent, consult `./.omp/evcrate/skill-map.json` or `~/.omp/agent/evcrate/skill-map.json`, then read the archived package under `./.omp/evcrate/skills/` (or the published `~/.omp/agent/evcrate/skills/` path), then follow the instructions. Without `--no-skills`, use OMP's normal skill discovery.

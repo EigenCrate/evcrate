@@ -1161,22 +1161,29 @@ test('current publication consumes predecessor ownership without pruning leftove
       writeAtomicFile(markerPath, canonicalJsonBytes(stored));
       const preserved = [
         '.agents/skills/retired.md', '.agents/rules/retired.md', '.gemini/GEMINI.md',
-        '.agents/rules/user.md', '.gemini/vendor-user.txt', '.github/workflows/user.yml'
+        '.agents/rules/user.md', '.gemini/vendor-user.txt', '.github/workflows/user.yml',
+        '.evcrate/bin/evcrate-advisor', '.evcrate/bin/evcrate-advice-mode', '.evcrate/bin/custom',
+        '.evcrate/advisor-routing.json', '.evcrate/advisor-state/corrupt.json',
+        '.evcrate/advisor-history/record.json', '.evcrate/advisor-cache/user'
       ].map((relativePath) => {
         const path = join(destination, relativePath);
         directory(dirname(path));
         writeAtomicFile(path, text(`keep ${relativePath}`));
-        return [path, readFileSync(path)];
+        const stat = lstatSync(path);
+        return [path, readFileSync(path), stat.dev, stat.ino, stat.mode];
       });
       const before = readFileSync(markerPath);
       const preview = publishDryRun(context, { scope, selectedTargets: ['codex'] });
-      const change = preview.phases[1].changes.find(({ path }) => path === `.agents/skills/${skill.relativePath}`);
+      const change = preview.phases[0].changes.find(({ path }) => path === `.agents/skills/${skill.relativePath}`);
       assert.equal(change.action, 'update', 'old recorded skills authorize their current leaf, not an unmanaged collision');
       assert.deepEqual(readFileSync(markerPath), before, 'dry-run must preserve historical record bytes');
-      assert.ok(preview.phases[1].changes.every(({ path }) => path !== '.agents' && !path.startsWith('.gemini/')));
-      assert.equal(preview.phases[1].changes.some(({ action }) => action === 'delete'), false);
+      assert.ok(preview.phases[0].changes.every(({ path }) => path !== '.agents' && !path.startsWith('.gemini/')));
+      assert.equal(preview.phases[0].changes.some(({ action }) => action === 'delete'), false);
       publishApply(context, {}, { scope, selectedTargets: ['codex'] });
-      const current = readOptionalPublicationMarker(markerPath).records.harness;
+      const converted = readOptionalPublicationMarker(markerPath);
+      assert.equal(converted.schema_version, 3);
+      assert.deepEqual(Object.keys(converted.records), ['harness']);
+      const current = converted.records.harness;
       assert.deepEqual(current.selected_targets, ['codex']);
       assert.ok(current.binding_order.includes('.agents/skills'));
       assert.equal(current.binding_order.includes('.agents'), false);
@@ -1184,12 +1191,20 @@ test('current publication consumes predecessor ownership without pruning leftove
       assert.deepEqual(current.managed_paths.codex['.agents'], ['skills/retired.md', 'rules/retired.md']);
       assert.ok(current.managed_paths.codex['.agents/skills'].includes(skill.relativePath));
       assert.deepEqual(current.managed_paths.gemini, ownership.gemini);
-      for (const [path, bytes] of preserved) assert.deepEqual(readFileSync(path), bytes);
+      for (const [path, bytes, device, inode, mode] of preserved) {
+        const stat = lstatSync(path);
+        assert.deepEqual(readFileSync(path), bytes);
+        assert.deepEqual([stat.dev, stat.ino, stat.mode], [device, inode, mode]);
+      }
       // The next consumer must accept residual ownership, not just the first transition.
       publishApply(context, {}, { scope, selectedTargets: ['codex'] });
       const next = readOptionalPublicationMarker(markerPath).records.harness;
       assert.deepEqual(next.managed_paths, current.managed_paths);
-      for (const [path, bytes] of preserved) assert.deepEqual(readFileSync(path), bytes);
+      for (const [path, bytes, device, inode, mode] of preserved) {
+        const stat = lstatSync(path);
+        assert.deepEqual(readFileSync(path), bytes);
+        assert.deepEqual([stat.dev, stat.ino, stat.mode], [device, inode, mode]);
+      }
     }
   } finally {
     rmSync(root, { recursive: true, force: true });

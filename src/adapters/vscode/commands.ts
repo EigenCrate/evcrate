@@ -36,7 +36,7 @@ export function convertVscodeCommands(
     };
     let body = parsed.body;
     if (entry.sourceSemanticId === 'advise') {
-      outFrontmatter.description = 'Interview-first technical advice; advisor relay is unsupported by VS Code Local.';
+      outFrontmatter.description = 'Interview-first technical advice in the main session.';
       outFrontmatter['argument-hint'] = '[prompt-or-url]';
       body = renderVscodeInlineAdviseCommand(parsed.body, 'vscode/askQuestions');
     } else if (entry.argumentHint) {

@@ -1,78 +1,118 @@
 # Plan Progress and Phase Reconciliation
 
-Apply before selecting/confirming a phase, dispatching each dependency batch, or advancing an automatic next-phase loop. This neutral contract never requires full mentoring. Activation is resolved separately by `advice-activation.md`; historical records, checkpoint names and blockers cannot activate or resume advice.
-
-## Mode boundary
-
-`off` never invokes `evcrate-advisor` (no get, no locks, no lock maintenance), even when a receipt, retained run or controller state exists. Its dependency basis is immutable in-repo receipts plus sealed-path metadata, reported verbatim as `receipt-attested; controller not consulted`. Only `explicit`/`inherited` use controller get and state-derived completion steps. The mode comes from `advice-activation.md`; this contract never infers it.
+Apply before selecting or confirming a phase, dispatching each dependency batch,
+or advancing an automatic next-phase loop. Reconcile from bounded in-repository
+records only. Do not consult HOME, execute historical tools, resume historical
+runs, or reconstruct their runtime state.
 
 ## Authority and selection
 
-- Ordinary plans without advice-controlled evidence retain normal `plan.md` tracking after required approval and actual validation. No controller state or receipt requirement merely for tracking.
-- Protected historical plans retain sealed plan/phase/evidence/index identities in every mode. Their current overview is `<plan-dir>/progress.md`, derived and uncaptured, never completion authority, implementation permission, checkpoint evidence, or an authorized substantive path. Missing progress does not mean no history.
-- Read selected plan/phase contracts, retained handoff/finalization records, receipts and supplied caller context. Bound discovery to identified dependency records, not a global history scan, newest UUID, table status or phase-label equality. Each document read is at most 64 KiB; unavailable/oversize decisive evidence blocks the affected prerequisite, never silently truncated into success.
-- Preserve any unresolved selected-scope gates. Only a validated exact-call same-run handoff enables deliberate continuation under the separately loaded mentoring lifecycle. Without it, same-scope pending/correction/stale/human gates pause affected work and dependents without activating advice, refreshing state, choosing a replacement UUID, switching phases, or routing through a gate-bypass debugger/workflow. Proven unrelated independently requested work may continue; referenced sealed paths remain protected.
-- Establish dependencies and existing approvals before selecting incomplete scope. Explicitly requested completed scope is a no-op: report completion and suggest the next incomplete phase, never auto-execute a different phase. Unprovable association/overlap pauses relevant work, not an assumption of unrelated scope.
-- Emit selected scope, completion basis, overview path and outstanding prerequisites. Ordinary overview: `plan.md`; advice/protected overview: `<plan-dir>/progress.md`. Keep captured wording, reconciled current status, validation scope and native qualification distinct.
+- Ordinary unprotected plans retain normal `plan.md` status tracking after
+  required user approval and actual validation. No historical receipt is needed
+  merely to track a new ordinary plan.
+- Protected historical plans retain sealed plan, phase, evidence, roadmap and
+  selected-index identities. Their current overview is `<plan-dir>/progress.md`,
+  derived and uncaptured, never completion authority, implementation permission,
+  substantive write authority, or captured evidence. Missing progress does not
+  mean no history. Never add navigation links to a sealed plan.
+- Read selected plan/phase contracts and identified retained association,
+  finalization, approval/validation receipts and sealed-path metadata. Bound each
+  document read to 64 KiB. Missing, unreadable, oversize, contradictory or
+  incomplete decisive records pause only affected work and dependencies; never
+  truncate decisive evidence into success. Do not scan global history or select
+  the newest UUID or matching phase label as authority.
+- Establish exact requested scope, dependencies, existing approvals and protected
+  paths before selecting incomplete work. An explicitly requested completed
+  scope is a no-op: report completion and suggest the next incomplete phase,
+  never execute a different scope without authorization.
+- Retained unresolved gates, abandoned or interrupted work are not success.
+  Unprovable association or overlap pauses the relevant work, not all independent
+  work. Proven unrelated independently requested work may continue while all
+  referenced sealed paths stay protected.
+- Emit selected scope, completion basis, overview path and outstanding
+  prerequisites. Keep historical completion, current status, validation scope
+  and native qualification distinct. Use `plan.md` for ordinary plans and
+  `<plan-dir>/progress.md` for protected historical plans.
 
-## Identified get-only retrieval (`explicit` / `inherited` only)
+## Historical association, completion and freshness
 
-Reached only when the resolved mode is `explicit` or `inherited`; `off` never executes this section, never attempts get and catches failure. A candidate run from retained records permits inspection, not lifecycle mutation. Invoke only the existing HOME-owned `evcrate-advisor` with supported Node, argv `state`, `get`, exact UTF-8 JSON stdin, and the agreed project root as cwd:
+Keep three independent judgments: **association**, **recorded completion**, and
+**current workspace freshness**. These are reconciliation findings, not new
+persistent state fields.
 
-```json
-{"protocol":"evcrate-advisor-state","version":1,"operation":"get","task_run_id":"<identified UUID>","operation_id":null,"expected_revision":null,"payload":{}}
-```
+1. Establish association from retained repository-relative plan/phase paths,
+   exact approved scope, project provenance, completion identity, evidence
+   revisions, reviewed artifacts, actual validation and sealed metadata.
+   Relocation can change local root identity; retained provenance may establish
+   repository association, but never manufacture a matching identity. A bare
+   UUID or common phase label proves nothing.
+2. Protect exact sealed historical paths and selected-index identities. Verify
+   retained digests when a dependency needs that proof; a digest alone does not
+   preserve original bytes. If necessary evidence is unavailable, report
+   last-recorded success separately and pause dependent proof rather than
+   re-capturing or rerunning completed work.
+3. Distinguish ordinary approval/validation receipts from durable historical
+   completion receipts. Ordinary receipts must say
+   `default approval/validation; not durable advice completion`; they do not
+   manufacture historical completion. A complete matching historical receipt
+   permits completed-scope no-op or the dependency it actually attests. Report
+   `receipt-attested; controller not consulted` for that historical basis.
+   It establishes past approved completion only, not write permission, current
+   freshness, or detection of contradictions outside the retained records.
+4. Match all applicable receipts against approved scope, retained completion
+   identity, reviewed evidence, revisions, actual validation and sealed digest.
+   Missing or contradictory decisive records block the affected prerequisite.
+   An identified historical run without a matching receipt pauses same or
+   overlapping selected scope and dependents; never infer success from display
+   status. Abandonment is not completion.
+5. Report current file/index drift separately. Do not erase historical success
+   because freshness is unavailable, nor grant fresh dependency proof from old
+   success. Never refresh sealed baselines, repair selected Git state, remove
+   captured paths, overwrite evidence, or rerun completed work to manufacture
+   consistency.
 
-- POSIX requires valid absolute HOME and invokes `node "$HOME/.evcrate/bin/evcrate-advisor" state get`; no generic no-argument dispatcher or project runtime lookup.
-- Native Windows uses explicit HOME when set (invalid explicit HOME fails), otherwise nonempty USERPROFILE then native user profile. Invoke Node with the absolute script path. PowerShell 5.1 saves `$OutputEncoding`, sets BOM-free UTF-8 for piped JSON, and restores it in `finally`.
-- Programmatic callers use actual supported Node, `[absoluteController, 'state', 'get']`, `shell: false`, explicit cwd, bounded stdout/error/close handling, and `stdin.end(jsonPayload, 'utf8')`. Bun's executable is not Node. Never interpolate raw task/JSON into shell commands.
-- Require exit 0 and one complete matching `evcrate-advisor-state` version 1 / `operation:get` / `status:STATE_READY` envelope, validated state, matching run and canonical project identity/root. Missing/unsupported/malformed state, uncertain/live locks or mismatched identity blocks dependent verification. Do not manually delete locks, retry as inference, initialize, or refresh to obtain success.
-- Existing get acquires/releases short locks and may reap provably dead locks; it leaves durable state/ledger/history unchanged. Do not claim filesystem-side-effect-free inspection. Pending process observation is not permission to recover/relaunch its consultation. Get does not assert current baseline freshness or publish administrative outputs.
+| Finding | Selected scope |
+|---|---|
+| Ordinary unprotected plan | Normal approval, validation and tracking |
+| Complete matching historical receipt and sealed metadata | Completed requested scope is a no-op; evidence supports only attested dependencies |
+| Identified history without receipt, same/overlapping scope | Affected work and dependents pause; no automatic resume or substitution |
+| Proven unrelated interrupted history | Independent requested scope continues; sealed paths remain protected |
+| Bare UUID or ambiguous association | No authority; establish relevance from retained records |
+| Abandoned work | Not successful completion; affected prerequisite unresolved |
+| Historical completion with current drift | Preserve history; assess required freshness independently |
+| Missing, contradictory, incomplete or oversize decisive record | Report known status and exact proof gap; no fabricated reconstruction |
 
-No neutral operation calls init, checkpoint/reservation, claim/attachment, inference, disposition, outcome, complete, human-decision, pending recovery, or baseline refresh. A lifecycle must be separately and deliberately activated; neutral findings never synthesize a handoff.
+## Parent-only receipt and overview publication
 
-## Historical association and completion
+Reconciliation itself writes nothing administrative. Publication is a separate,
+authorized parent action. One parent owns immutable receipts and serializes
+uncaptured overview updates across all children and batches; children return
+terminal reports and actual changed paths, not receipt or overview edits.
 
-Keep independent judgments: **association**, **recorded completion**, **current workspace freshness**. These are reconciliation results, not new durable fields.
-
-### `off`: receipts and sealed metadata (controller never consulted)
-
-1. Establish association from retained records only: repository-relative plan/phase, exact approved scope, run/completion identity, evidence revisions, accepted disposition/outcome, sealed baseline digest, retained reviewed evidence and actual validation, with retained project provenance. Relocation may change local root identity: use provenance to establish repository association; never manufacture a matching controller root or consult HOME. If identity or association cannot be established, pause the affected scope.
-2. Sealed-path metadata protects the exact historical paths. Verify retained evidence digests when a dependency requires them; a digest does not retain original bytes. Distinguish default approval/validation receipts (`default approval/validation; not durable advice completion`) from durable advice receipts. Abandonment is never successful completion. Missing, contradictory, incomplete or oversize decisive records block the affected prerequisite, not unrelated work.
-3. A complete matching durable advice receipt permits a dependency or completed-scope no-op; report `receipt-attested; controller not consulted`. It attests past approved completion only: no write permission, no current freshness, and contradictions present only in unconsulted controller state are not detected. An identified run without a receipt pauses the same/overlapping selected scope and dependents without get; proven independent requested scope continues; a bare UUID grants nothing. Establish overlap from actual retained records, never newest UUID or phase-label equality.
-4. Report current file/index drift independently from historical success. Never refresh baseline, repair selected Git state, remove captured paths, overwrite evidence or rerun completed work to manufacture consistency.
-
-### `explicit` / `inherited`: strict state verification
-
-1. Establish canonical root/project ID and exact run from validated state. Match selected repository-relative plan/phase paths, controller phase, approved scope and retained handoff/receipt evidence. State has no structured plan ID; a UUID, receipt assertion or shared `phase-01` label alone proves none.
-2. Establish association from captured task/evidence paths and retained reviewed artifacts whose full-file digests match the captured snapshot. A digest does not retain original bytes. If necessary retained content is unavailable, report last-recorded success separately and pause dependent proof rather than re-capture or rerun completed work.
-3. Genuine success requires an actual `complete` operation in `operation_ledger`, not only `gate_status:completed` (abandonment also sets it). Match operation ID/revision/digest to the existing canonical state-request hash for that run, empty payload and `expected_revision = entry.revision - 1`. Reuse `state-contract.cjs`'s `hash` (recursive sorted-key canonical JSON plus SHA-256), never ordinary insertion-order JSON hashing or a second state protocol.
-4. Match the accepted disposition and resolved outcome to the last successful terminal consultation, checkpoint/result evidence, task/evidence/scope revisions, approved paths and sealed baseline digest. Verify the existing completion invariants without executing complete: no pending consultation/correction/unresolved episode; resolved outcome with current evidence revision, matching consultation/result digest and `hash(current_baseline)`; accepted disposition for the same last consultation and `last_terminal.status:ADVICE_READY`. Verify retained checkpoint/result identity and declared actual validation as well.
-5. Identify abandonment from retained human-decision/ledger evidence; never call human-decision to inspect it. Match the receipt's full completion identity and authorized scope against durable state and retained reviewed evidence. Conflicts/stale receipt claims block automatic selection and are not overwritten.
-6. Report current file/index drift independently from historical success. Never silently refresh baseline, repair selected Git state, remove captured paths, overwrite evidence or manufacture consistency by rerunning completed work. Deny dependencies needing unavailable snapshot/freshness proof while preserving historical completion.
-
-| Finding | Mode | Selected scope |
-|---|---|---|
-| Ordinary unprotected plan | off | Normal approval/validation/tracking |
-| Complete matching durable advice receipt + sealed metadata | off | `receipt-attested; controller not consulted`: no-op if requested; retained evidence may establish dependencies |
-| Identified run without receipt, same/overlapping scope | off | Affected work/dependents pause; no get, no automatic resume or substitution |
-| Proven unrelated interrupted run | off | Independent scope continues; referenced sealed paths protected |
-| Bare UUID without association | off | No authority; establish relevance from retained records |
-| Ambiguous association/overlap or missing prerequisite | off | Only the relevant selected work/proof pauses |
-| Abandoned run (retained evidence) | off | Not successful completion; prerequisite unresolved |
-| Completed historical scope with live drift | off | Preserve history; assess required freshness separately, missing freshness proof does not erase completion |
-| Missing, contradictory, incomplete or oversize receipt | off | Report last-recorded status and missing/conflicting proof; no rerun/overwrite/reconstruction without separately available full evidence |
-| Identified run, any state | explicit/inherited | Strict get, ledger verification, CAS/freshness/human gates; unavailable/corrupt/locked state fails closed |
-
-## Receipt and overview publication
-
-Retrieval/reconciliation itself writes nothing administrative. Publication is a separate authorized parent action; one parent owns receipts and serializes overview updates across all children/batches.
-
-- Before first capture of a new advice plan, link `plan.md` to `progress.md` and retain plan/phase/run association in task/evidence/handoff. Never add a link to a previously sealed plan. Ordinary plans need no nonexistent progress link.
-- Keep mutable overview and planned receipt destinations outside `task.authorized_paths`, `baseline_paths`, checkpoint evidence/artifacts and selected Git transitions. Cite immutable receipts, never mutable progress. If a destination is already captured, stop publication and report the conflict; never remove it from the manifest.
-- Only after successful controller `state complete` (explicit/inherited), publish an immutable receipt under `<plan-dir>/reports/`: project/plan/phase, approved scope, run, completion operation/revision, evidence revision, accepted disposition/resolved outcome, sealed baseline digest, retained reviewed evidence and actual validation. Preserve the completion response or an exact durable reference; do not invent identity or claim digest retains bytes. Substantive writes and selected index/commit transitions must already be settled before final outcome/seal.
-- First receipt may use `<phase-id>-completion-receipt.md`; further scopes/runs use `<phase-id>-<task-run-id>-completion-receipt.md`. Reuse only a full matching completion identity; contradictory same-identity receipt blocks publication. Keep all prior receipts immutable and reconcile all applicable scope receipts.
-- New **off-mode** phases on protected plans require no durable controller operations. After ordinary approval/validation, publish `<phase-id>-default-<scope-revision-label>-completion-receipt.md`, explicitly `default approval/validation; not durable advice completion`, with actual approved scope and validation links. No invented controller IDs. Preserve sealed plan, roadmap, historical paths and selected index identities.
-- Then reread and update uncaptured `progress.md` from reconciled evidence, preserving unresolved/conflicting records and distinguishing captured/current status, completion basis, scope, evidence, next phase and blockers. This bounded administrative publication alone is permitted after sealing; no captured file or selected-index changes, broadening of permission, or copying DONE into sealed snapshots.
-- Reconstructing a missing receipt needs separate parent authorization and separately available full retained evidence. `off` never reconstructs nonexistent durable advice completion from display/status assertions or controller state; a receipt/overview alone cannot resolve unavailable or contradictory evidence.
-- Publication failure does not reopen successful completion. Report `phase complete; progress publication failed` with known run/revision. On the next invocation reconcile first, repair only authorized uncaptured administrative outputs, and do not rerun implementation or initialize a run merely to repair display. Another active run's writer barrier/capture still binds publication.
+- Publish new ordinary completion only after required approval and actual
+  validation of the executed scope. For a new ordinary phase on a protected
+  historical plan, use
+  `<phase-id>-default-<scope-revision-label>-completion-receipt.md` under its
+  authorized reports directory, explicitly marked
+  `default approval/validation; not durable advice completion`, with approved
+  scope and actual validation links. Do not invent historical run or operation
+  identities. Preserve all existing receipts unchanged.
+- Receipt and overview destinations must remain outside captured baseline,
+  selected index transitions and substantive evidence/write sets. If a
+  destination is already captured, stop publication and report the conflict;
+  never remove it from protection to permit a write. Reuse a receipt only when
+  its full identity and content match; contradictory same-identity evidence
+  blocks publication. Use immutable receipts, never mutable progress, as proof.
+- Reread relevant records and update only authorized uncaptured `progress.md`
+  from reconciled evidence. Distinguish captured/current status, completion
+  basis, executed scope, validation, next phase and unresolved blockers. Do not
+  copy DONE into sealed snapshots or broaden permissions through an overview.
+- Reconstructing a missing receipt requires separate parent authorization and
+  separately available full retained evidence. Display assertions, digests
+  without bytes, or an overview cannot manufacture durable historical completion
+  or resolve missing/contradictory proof.
+- Publication failure does not reopen successful implementation. Report
+  `phase complete; progress publication failed` with the known scope and
+  evidence. Next invocation reconciles first and repairs only authorized
+  uncaptured administrative outputs; never rerun completed implementation for
+  display repair. Existing captured paths and writer ownership remain binding.

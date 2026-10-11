@@ -5,7 +5,7 @@ import { ControlPlaneError, exitCodeForError } from '../errors/control-plane-err
 import { dispatchInvocation } from './dispatch.js';
 import { parseArguments } from './arguments.js';
 import { readBoundedRequestFile } from './request-file.js';
-import { createCliErrorResult, exitCodeForResult, writeResult } from './output.js';
+import { createCliErrorResult, writeResult } from './output.js';
 import type { CliInvocation } from './arguments.js';
 import type { CliOutput, CliRuntime } from './types.js';
 
@@ -17,9 +17,7 @@ function commandLabel(invocation: CliInvocation | undefined): string {
   if (!invocation) return 'cli';
   switch (invocation.command.kind) {
     case 'version': return 'version';
-    case 'health': return 'health';
     case 'request-file': return 'request-file';
-    case 'advisor-settings': return `advisor settings ${invocation.command.operation}`;
     case 'distribute': return `distribute ${invocation.command.action}`;
     case 'publish': return `publish ${invocation.command.action}`;
     case 'recover': return 'recover';

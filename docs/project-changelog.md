@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-10-10
-**Status:** Core package `evcrate` 3.0.0; Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
+**Status:** Core package release history; Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
 ### 2026-10-10 — fix(distribution): recover retired cleanup and authenticate stable approval
 

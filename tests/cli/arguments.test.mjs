@@ -11,9 +11,9 @@ test('parses commands and all supported scalar options', () => {
   const invocation = parseArguments([
     '--source', '/tmp/source', '--home=/tmp/home', '--state-home', '/tmp/state',
     '--project-id', 'project-1', '--project-root', '/tmp/project', '--target', 'copilot',
-    '--target=omp', '--protocol-version', '1', '--timeout', '1234', '--json', 'health'
+    '--target=omp', '--protocol-version', '1', '--timeout', '1234', '--json', 'version'
   ]);
-  assert.deepEqual(invocation.command, { kind: 'health' });
+  assert.deepEqual(invocation.command, { kind: 'version' });
   assert.deepEqual(invocation.options.targets, ['copilot', 'omp']);
   assert.equal(invocation.options.source, '/tmp/source');
   assert.equal(invocation.options.home, '/tmp/home');
@@ -83,3 +83,10 @@ test('parses exact publication and recovery command grammar', () => {
   assert.equal(codeOf(() => parseArguments(['distribute', 'publish', '--scope', 'home', '--scope', 'project'])), 'USAGE_INVALID');
 });
 
+
+test('retired commands and options fail ordinary usage parsing', () => {
+  for (const argv of [['health'], ['advisor', 'settings', 'get'], ['advisor', 'settings', 'preview'],
+    ['advisor', 'settings', 'apply'], ['version', '--advice'], ['version', '--agent']]) {
+    assert.equal(codeOf(() => parseArguments(argv)), 'USAGE_INVALID');
+  }
+});

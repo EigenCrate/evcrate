@@ -577,14 +577,6 @@
     {
       "classification": "skill-package",
       "kind": "skill-package",
-      "source": "advisor-strategy/SKILL.md",
-      "status": "migrated",
-      "target": ".agents/skills/advisor-strategy/SKILL.md",
-      "target_name": "advisor-strategy"
-    },
-    {
-      "classification": "skill-package",
-      "kind": "skill-package",
       "source": "aesthetic/SKILL.md",
       "status": "migrated",
       "target": ".agents/skills/aesthetic/SKILL.md",
@@ -879,12 +871,9 @@
       "target_name": "web-testing"
     },
     {
-      "checkpoint": "supported",
+      "capability": "advise-inline/v1",
       "classification": "target-native",
-      "inline": "supported",
-      "kind": "advisory-capability",
-      "relay": "unsupported",
-      "relay_error": "ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX"
+      "kind": "advisory-capability"
     },
     {
       "classification": "hook-driven",

@@ -162,7 +162,6 @@ for (const scope of ['project', 'home']) {
       assert.doesNotMatch(later[0], /Session startup\.|CONTEXT COMPACTED/u);
       assert.equal(later[0].includes(authority), false);
     }
-    assert.equal(existsSync(join(fixture.resourceRoot, 'workflows/advisor-mentoring.md')), false);
   });
 }
 

@@ -182,8 +182,7 @@ test("canonical Pi command and main/child instructions read the installed HOME p
   const foreignCwd = join(root, "foreign-project");
   const references = [
     "AGENTS.md",
-    "workflows/advisor-mentoring.md",
-    "workflows/advice-activation.md",
+    "workflows/documentation-management.md",
     "workflows/plan-progress.md",
     "workflows/development-rules.md",
   ];
@@ -223,7 +222,7 @@ test("canonical Pi command and main/child instructions read the installed HOME p
     const rawArgs = "plans/selected.md {{evcrate:workflows/user-literal.md}}";
     const expanded = await expandManagedCommand(command, rawArgs, { cwd: process.cwd() }, { agentRoot });
     assert.ok(expanded.body.includes(rawArgs));
-    for (const reference of ${JSON.stringify(references.slice(0, 4))}) readReference(expanded.body, reference);
+    for (const reference of ["AGENTS.md", "workflows/plan-progress.md"]) readReference(expanded.body, reference);
     const handlers = new Map();
     const adapter = registerHooks({ on(name, handler) { handlers.set(name, handler); } }, {
       agentRoot, resourceRoot, hookMap: { schema: "evcrate-pi-hook-map-v1", events: {} },

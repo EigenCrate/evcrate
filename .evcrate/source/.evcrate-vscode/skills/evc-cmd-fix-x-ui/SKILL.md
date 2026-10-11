@@ -3,7 +3,7 @@ name: evc-cmd-fix-x-ui
 description: Analyze and fix UI issues
 user-invocable: true
 disable-model-invocation: true
-argument-hint: "[issue] [--advice]"
+argument-hint: "[issue]"
 ---
 
 ## Required Skills (Priority Order)
@@ -14,20 +14,13 @@ argument-hint: "[issue] [--advice]"
 Use `evc-ui-ux-designer` subagent to read and analyze `./docs/design-guidelines.md` then fix the following issues:
 <raw-issue>$ARGUMENTS</raw-issue>
 
-## Canonical checkpoint routing
+## Scope and safety
 
-Named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in
-`.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) only under explicit or inherited advice mode.
-This command supplies bounded evidence and does not duplicate route or adapter selection.
-
-## Advice Mode
-
-Before discovery or routing, resolve the HOME helper per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install) with original `$ARGUMENTS`, canonical `context.command: "fix/ui"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
-Preserve known selections from the exact-call router; use `work_target: "fix/ui"` only when no such target exists, and null plan/phase fields only when unknown.
-Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-
-Apply neutral `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
-Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
+Treat complete raw invocation arguments as ordinary task data. Apply
+`.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) before selecting scope or dependencies.
+Preserve sealed history; completed requested scope is a no-op. Children receive
+exact ownership and writable/protected paths, return terminal artifacts, and
+never stage/commit behind the parent. Risky/destructive actions require approval.
 ## Workflow
 **FIRST**: Run `ui-ux-pro-max` searches to understand context and common issues:
 ```bash
@@ -44,26 +37,22 @@ If the user provides a screenshots or videos, use `ai-multimodal` skill to descr
   - If the issues are not addressed, repeat the process until all issues are addressed.
 3. Use `chrome-devtools` skill to analyze the implemented fix and make sure it matches the design guideline.
 4. Use `evc-tester` agent to test the fix and compile the code to make sure it works, then report back to main agent.
-  - If there are issues or failed tests, ask main agent to fix all of them and repeat the process until all tests pass. In `off` mode, a second consecutive matching terminal blocker escalates through ordinary debugger/user handling before another attempt.
-5. Project Management & Documentation:
-  - **Under `off` advice mode**:
-    * **If user approves the changes:** Use `evc-project-manager` and `evc-docs-manager` subagents in parallel to update the project progress and documentation:
-      - Use `evc-project-manager` subagent to update the project progress and task status in the given plan file.
-      - Use `evc-docs-manager` subagent to update the docs in `./docs` directory if needed. If executing in an advice-controlled plan with prior historical advice phases, save an uncaptured immutable phase receipt explicitly marked `default approval/validation; not durable advice completion` and update `progress.md` per `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install); prior sealed paths remain immutable.
-      - Use `evc-project-manager` subagent to create a project roadmap at `./docs/project-roadmap.md` file.
-      - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
-    * **If user rejects the changes:** Ask user to explain the issues and ask main agent to fix all of them and repeat the process.
-  - **Under `explicit` or `inherited` advice mode**:
-    * Delegate to `evc-code-reviewer` and wait for its terminal report. Enforce a writer barrier before checkpoint reservation.
-    * Enter the canonical checkpoint dispatcher at `review:fix-ui` under `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install).
-    * Parent is sole durable-state owner (`init`, `checkpoint`, `disposition`, `outcome`, `complete`). Child agents (`evc-ui-ux-designer`, `evc-tester`, `evc-code-reviewer`, `evc-project-manager`, `evc-docs-manager`) report terminal artifacts and actual changed paths within parent-authorized paths; they receive strict ownership, writable path, protected path, and delta destination constraints, and never operate controller state or stage files behind the parent.
-    * Review/advisor cycle cap: at most three terminal reviewer/advisor cycles.
-    * For accepted corrections, record `state disposition` with `action: "accept"` and registered action before writes, implement fix, validate, and record truthful `outcome`. For disputed counsel, record supported disposition without action, collect evidence, obtain fresh same-run counsel.
-    * Settle all authorized substantive documentation and finalization writes under the registered parent action before the final truthful outcome; do not complete here. Step 6 is the sole durable completion exit.
+  - If there are issues or failed tests, ask main agent to fix all of them and repeat until all tests pass. On a second consecutive matching terminal blocker without progress, use ordinary debugger/user escalation before another attempt.
+5. Code Review, Approval, Project Management & Documentation:
+  - Settle implementation/test writers, use `evc-code-reviewer` and wait for its
+    terminal report. Missing or partial results leave the gate incomplete.
+  - Present findings and actual validation; ask the user to approve or explain
+    rejected changes. Apply authorized fixes and revalidate, with at most three
+    terminal review cycles. At the cap stop and ask for direction.
+  - If approved, use `evc-project-manager` and `evc-docs-manager` in parallel for
+    disjoint authorized project/docs/roadmap updates; wait for both results.
+    Parent retains protected status/receipt/overview ownership under
+    `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install). Sealed paths stay immutable.
 6. Final Report:
-  * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
-  * In `off` mode, ask user if they want to commit and push to git repository, if yes, use `evc-git-manager` subagent to commit and push to git repository (no controller state operations). For advice-controlled plans with prior historical advice phases, point output to `<plan-dir>/progress.md`.
-  * In `explicit` or `inherited` mode, record the matching final truthful outcome after all substantive writes/selected Git transitions settle, then complete ONCE via `state complete`. After success, publish the immutable outside-baseline receipt and derived `progress.md` per neutral `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install). Freeze captured baseline/index identities; output points to `<plan-dir>/progress.md`.
+  * Summarize actual changes, validation, blockers, setup and next steps.
+  * Ask whether the user wants to commit and push; only if authorized use
+    `evc-git-manager`. Preserve scoped approval and protected index identities.
+    Link the actual overview, never invent a progress link for an ordinary plan.
   * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
   * **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
 **REMEMBER**:

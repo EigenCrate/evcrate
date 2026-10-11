@@ -37,7 +37,6 @@ const runtimeHome = join(fixtureRoot, 'home');
 const runtimeTemp = join(fixtureRoot, 'tmp');
 const stages = [];
 const temporaryRoots = [];
-const forbiddenControllerMarkers = ['advisor-bridge.cjs', 'advisor-coordinator.cjs', 'advisor-dispatch.cjs', 'advisor-handoff.cjs', 'native-capabilities.json', 'active_host'];
 const materializedTargets = new Map();
 
 function code(expected) {
@@ -169,17 +168,6 @@ test('Copilot relative skill handoffs resolve across package and reference nesti
 });
 
 
-test('projections exclude controller implementation and host-selection artifacts', () => {
-  for (const target of PROJECTION_QUALIFICATION_ORDER) {
-    const { stage } = materialize(target);
-    for (const path of filesUnder(stage.path)) {
-      assert.equal(path.includes('/bin/lib/advisor/'), false, `${target} copied controller path ${path}`);
-      assert.equal(path.endsWith('/bin/evcrate-advisor'), false, `${target} copied controller entrypoint ${path}`);
-      const value = readFileSync(join(stage.path, path), 'utf8');
-      for (const marker of forbiddenControllerMarkers) assert.equal(value.includes(marker), false, `${target} copied ${marker} in ${path}`);
-    }
-  }
-});
 
 test('target-specific managed settings and command maps stay independent', () => {
   const pi = materialize('pi').stage.path;
@@ -219,8 +207,6 @@ test('Codex and Antigravity project flat evc command and agent identities', () =
   const antigravitySkill = readFileSync(join(antigravity, `.antigravity/skills/${commandName}/SKILL.md`), 'utf8');
   assert.match(antigravitySkill, new RegExp(`^name: ${commandName}$`, 'mu'));
   assert.match(antigravitySkill, new RegExp(`^Command Path: /${commandName}$`, 'mu'));
-  assert.equal(existsSync(join(antigravity, '.antigravity/agents/evc-advisor.md')), true);
-  assert.equal(existsSync(join(antigravity, '.antigravity/agents/advisor.md')), false);
   const antigravityAdvise = readFileSync(join(antigravity, '.antigravity/skills/evc-cmd-advise/SKILL.md'), 'utf8');
   assert.match(antigravityAdvise, /\/evc-cmd-advise/u);
   assert.doesNotMatch(antigravityAdvise, /\/advise\b/u);
@@ -255,31 +241,16 @@ test('Antigravity command path derives only from the source filename', () => {
   assert.match(projected, /^Command Path: \/evc-cmd-code-x-auto$/mu);
 });
 
-test('Antigravity rejects conflicting advisor names before emission and preserves absent names', () => {
-  for (const name of ['evc-advisor', 'evc-other', 'advisor', '', null]) {
-    const sourceContainer = temporaryDirectory();
-    const sourceRoot = join(sourceContainer, '.claude');
-    cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
-    const advisorPath = join(sourceRoot, 'agents/evc-advisor.md');
-    const content = readFileSync(advisorPath, 'utf8').replace(
-      /^name: evc-advisor\n/mu, name === null ? '' : `name: ${name}\n`,
-    );
-    writeFileSync(advisorPath, content);
-    const stage = createStagedRoot(fixtureRoot, '.antigravity-advisor-name-');
-    stages.push(stage);
-    const context = createProjectionBuildContext(registry.targets.get('antigravity'), sourceRoot, stage);
-    const projectedPath = join(stage.path, '.antigravity/agents/evc-advisor.md');
-    const build = () => getProjectionAdapter('antigravity').build(context);
-    if (name === 'evc-advisor' || name === null) {
-      build();
-      const projected = readFileSync(projectedPath, 'utf8');
-      if (name === null) assert.doesNotMatch(projected, /^name:/mu);
-      else assert.match(projected, /^name: evc-advisor$/mu);
-    } else {
-      assert.throws(build, code('VALIDATION_INVALID'), `advisor name ${JSON.stringify(name)}`);
-      assert.equal(existsSync(projectedPath), false, 'conflicting advisor must not be emitted');
-    }
-  }
+test('Antigravity rejects conflicting canonical agent names before emission', () => {
+  const sourceContainer = temporaryDirectory();
+  const sourceRoot = join(sourceContainer, '.claude');
+  cpSync(canonicalRoot, sourceRoot, { recursive: true, dereference: true });
+  const agentPath = join(sourceRoot, 'agents/evc-planner.md');
+  writeFileSync(agentPath, readFileSync(agentPath, 'utf8').replace(/^name: evc-planner$/mu, 'name: evc-other'));
+  const stage = createStagedRoot(fixtureRoot, '.antigravity-agent-name-');
+  stages.push(stage);
+  const context = createProjectionBuildContext(registry.targets.get('antigravity'), sourceRoot, stage);
+  assert.throws(() => getProjectionAdapter('antigravity').build(context), code('VALIDATION_INVALID'));
 });
 
 

@@ -8,7 +8,6 @@ import { assertNoSymlinkAncestors, assertRealDirectory, containedPath, normalize
 import { canonicalJsonBytes, hashBytes, hashFile, readBoundedFile, treeHash } from '../filesystem/hashing.js';
 import { loadTargetManifest } from './manifest.js';
 import { RESOURCE_KINDS, type BuildManifest, type ResourceKind, type ResourceRootMap, type TargetManifest, type TargetManifestRegistry } from './types.js';
-import { ADVISOR_CONTROLLER_FILES, controllerHashes } from './controller.js';
 function invalid(code: 'PROTOCOL_INVALID' | 'PATH_UNSAFE' | 'CAPABILITY_UNSUPPORTED' = 'PROTOCOL_INVALID'): never {
   throw new ControlPlaneError(code);
 }
@@ -165,7 +164,6 @@ function treeHashIfPresent(path: string): string {
 export interface BuildManifestInputs {
   readonly sourceHashes: Readonly<Record<string, string>>;
   readonly adapterHashes: Readonly<Record<string, string>>;
-  readonly controllerHashes: Readonly<Record<string, string>>;
   readonly owners: Readonly<Record<string, string>>;
   readonly outputRoots: Readonly<Record<string, string>>;
   readonly validation: Readonly<Record<string, unknown>>;
@@ -182,13 +180,9 @@ export function buildManifestBytes(inputs: BuildManifestInputs): Uint8Array {
     if (!stat.isFile() && !stat.isDirectory()) invalid('PATH_UNSAFE');
     putRecord(outputHashes, normalized, stat.isDirectory() ? treeHash(path) : hashFile(path));
   }
-  const expectedController = new Set(ADVISOR_CONTROLLER_FILES.map((entry) => `.evcrate/bin/${entry}`));
-  const actualController = Object.keys(inputs.controllerHashes);
-  if (actualController.length !== expectedController.size || actualController.some((key) => !expectedController.has(key))) invalid();
-  const manifest: BuildManifest = { schema_version: 2, source_hashes: sortedRecord(inputs.sourceHashes),
-    adapter_hashes: sortedRecord(inputs.adapterHashes), controller_hashes: sortedRecord(inputs.controllerHashes),
+  const manifest: BuildManifest = { schema_version: 3, source_hashes: sortedRecord(inputs.sourceHashes),
+    adapter_hashes: sortedRecord(inputs.adapterHashes),
     owners: sortedRecord(inputs.owners), output_hashes: sortedRecord(outputHashes), validation: inputs.validation, home_policy: inputs.homePolicy };
   return canonicalJsonBytes(manifest);
 }
 export function buildManifestDigest(inputs: BuildManifestInputs): string { return hashBytes(buildManifestBytes(inputs)); }
-export { controllerHashes };

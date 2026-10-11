@@ -7,7 +7,7 @@
  *   agent   = 'evc-' rest
  * `-x-` is the reserved path separator, so no segment may contain a `x` token.
  * Semantic id (`code/auto`) is the segments joined with `/`; it stays the stable
- * key for the advisor activation allowlist.
+ * key for canonical command inventory.
  */
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 

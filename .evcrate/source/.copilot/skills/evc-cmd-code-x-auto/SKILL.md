@@ -1,21 +1,19 @@
 ---
 name: "evc-cmd-code-x-auto"
 description: "[AUTO] Start coding & testing an existing plan (\"trust me bro\")"
-argument-hint: "[plan] [all-phases-yes-or-no] [--advice] (default: yes)"
+argument-hint: "[plan] [all-phases-yes-or-no] (default: yes)"
 user-invocable: true
 disable-model-invocation: true
 ---
 
 ## Invocation contract
 
-The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-code-x-auto`. Do not split, normalize, or discard it before the canonical command parses it.
+The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-code-x-auto`. Do not split, normalize, or discard it; arguments are ordinary task data.
 
-Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions and activation-first ordering; load full mentoring only after resolved explicit or inherited mode.
+Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions.
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advice-activation.md`
-- `@evcrate/workflows/advisor-mentoring.md`
 - `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
@@ -26,22 +24,18 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 **MUST READ** `.github/copilot-instructions.md` if present; otherwise read `~/.copilot/copilot-instructions.md` (the published install) then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
 <raw-plan>$ARGUMENTS</raw-plan>
 
-## Canonical checkpoint routing
+## Scope and safety
 
-When advice mode is active (`explicit` or `inherited`), named checkpoints use the canonical `evcrate-advisor-checkpoint/v2` dispatcher block in `.copilot/evcrate/workflows/advisor-mentoring.md`; this command supplies bounded evidence and does not duplicate route or adapter selection. In `off` mode, named checkpoints and mentoring lifecycle are never invoked.
-
-## Advice Mode
-
-Before discovery or routing, resolve the HOME helper per `.copilot/evcrate/workflows/advice-activation.md` with original `$ARGUMENTS`, canonical `context.command: "code/auto"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
-Preserve known selections from the exact-call router; use `work_target: "code/auto"` only when no such target exists, and null plan/phase fields only when unknown.
-Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-
-Apply neutral `.copilot/evcrate/workflows/plan-progress.md` in every mode. Only resolved `explicit` or `inherited` loads `.copilot/evcrate/workflows/advisor-mentoring.md` and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
-Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
-The implementation parent owns controller state and finalization; child writers receive exact writable/protected paths and documentation ownership, report terminal artifacts, and never operate state or stage/commit behind the parent.
+Treat complete raw invocation arguments as ordinary task data. Apply neutral
+`.copilot/evcrate/workflows/plan-progress.md` before selecting scope or dependencies.
+Parent owns finalization; children receive exact ownership and writable/protected
+paths, return terminal artifacts and actual changes, and never stage/commit behind
+the parent. Preserve sealed history and normal testing, review and user approval.
+Risky/destructive actions remain approval-gated. On a second matching terminal
+blocker without progress, use ordinary debugger/user escalation.
 ## Arguments
-- $PLAN: first positional token from `WORK_ARGUMENTS` (specific or auto-detected plan; default: latest plan)
-- $ALL_PHASES: second positional token from `WORK_ARGUMENTS` (`Yes` to finish all phases in one run or `No` to implement phase-by-phase; default: `Yes`)
+- $PLAN: first positional token from invocation arguments (specific or auto-detected plan; default: latest plan)
+- $ALL_PHASES: second positional token from invocation arguments (`Yes` to finish all phases in one run or `No` to implement phase-by-phase; default: `Yes`)
 
 ---
 
@@ -65,10 +59,10 @@ The implementation parent owns controller state and finalization; child writers 
 
 **Mandatory shared Plan progress and phase reconciliation:**
 Before selecting or confirming any phase (including explicit requested phases and loop continuations):
-1. Apply neutral plan progress and phase reconciliation per `.copilot/evcrate/workflows/plan-progress.md` to reconcile completed scope, verify execution prerequisites, and preserve any active advice run/action context.
+1. Apply neutral plan progress and phase reconciliation per `.copilot/evcrate/workflows/plan-progress.md` to reconcile completed scope, verify execution prerequisites, and preserve protected historical paths.
 2. An explicitly requested already-completed phase is a no-op: report completion, recommend the next incomplete phase, but do not auto-execute a different phase without user authorization.
-3. Emit overview path (`<plan-dir>/progress.md` for advice/protected plans, or `plan.md` for ordinary default plans), reconciled actual scope, and any outstanding prerequisites/blockers. Auto-select next incomplete phase (prefer IN_PROGRESS or earliest Planned).
-**Output:** `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for advice/protected plans)
+3. Emit overview path (`<plan-dir>/progress.md` for protected historical plans, or `plan.md` for ordinary unprotected plans), reconciled actual scope, and any outstanding prerequisites/blockers. Auto-select next incomplete phase (prefer IN_PROGRESS or earliest Planned).
+**Output:** `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for protected historical plans)
 
 **Subagent Pattern (use throughout):**
 ```
@@ -130,124 +124,61 @@ Mark Step 3 complete in `TodoWrite`, mark Step 4 in_progress.
 
 ## Step 4: Code Review (Smart Auto-Handling)
 
-Call `evc-code-reviewer` subagent: "Review code changes in **Step 2** of plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
+Settle implementation/test writers, then call exactly one `evc-code-reviewer`
+per cycle and wait for its complete terminal report: score, critical issues,
+warnings, suggestions, actual validation and unresolved questions. Missing,
+partial, interrupted or failed review leaves the gate incomplete.
 
-**Advice gate & lifecycle placement:** When advice mode is active (`explicit` or `inherited`):
-- **Cycle 1 reservation**: After reviewer terminal output arrives and before logging, fixing, auto-approving, or escalating:
-  - If a fresh review run: initialize task state immediately before reservation (`baseline_paths` = authorized writable paths UNION selected read-only `evidence.files`/artifacts, with read-only files omitted from `authorized_paths`).
-  - If an active run has a registered action, finish its bounded work, actual validation, and matching truthful outcome before reservation without duplicating the action. Disputed counsel without an active action uses read-only evidence/resolution and fresh same-run consultation before writes or a resolved correction outcome; do not invent an outcome to reserve that consultation.
-  - Enter the canonical checkpoint dispatcher exactly once at `review:step-4` for this review cycle. Supply bounded evidence, declared validation commands/output, relevant prior counsel, and owner disposition per `## Caller lifecycle binding`.
-  - Freeze all baseline paths during reservation, inference, and disposition.
-  - A dispatcher failure or non-`ADVICE_READY` result fails Step 4. Include advisor must-fix guidance in the findings.
+**Smart auto-handling — maximum three terminal reviews:**
+1. Log full findings. Increment the counter only on a complete terminal review.
+2. With no critical issues: auto-approve at score >=9.5; otherwise approve with
+   warnings/suggestions recorded, preserving this command's automatic behavior.
+3. With critical issues before the cap: evaluate each finding with evidence,
+   apply only accepted corrections within authorized scope, revalidate with
+   `evc-tester`, and repeat review. No out-of-scope refactoring, suppressed tests,
+   or assumption that passing self-tests defeats an evidence-backed concern.
+4. With critical issues at the cap: present all findings with file/line and use
+   `user input` for Approve with noted issues / Abort. No further
+   fix/test/review cycle or reset. Explicit user acknowledgement is required
+   to continue with critical issues.
+5. On a second consecutive matching terminal blocker without progress, use
+   ordinary debugger/user escalation before another attempt.
 
-**Auto-Handling Logic (max 3 cycles):**
+**Validation:** No outstanding critical issue unless explicitly user-approved.
 
-**Review/advisor cycle cap: at most three terminal reviewer/advisor cycles.**
-
-```
-review_cycles = 0
-LOOP:
-  1. IF review_cycles >= 3:
-     → ESCALATE TO USER; do not start another review or advisor call
-     → DISPLAY all findings and ask "Approve with noted issues" / "Abort workflow"
-     → STOP
-  2. Run evc-code-reviewer → wait for its terminal result; get score, critical_count, warnings, suggestions
-  3. IF the reviewer result is missing, partial, interrupted, cancelled,
-     timed-out, or failed: STOP the gate; do not increment review_cycles.
-  4. IF advice mode is active: enter the canonical dispatcher → wait for its terminal result
-  5. IF advice mode is active and the advisor result is missing, partial,
-     interrupted, cancelled, timed-out, or failed: STOP the gate; do not
-     increment review_cycles.
-  6. review_cycles++ only after every required reviewer/advisor result is terminal
-  7. reviewer_must_fix = (critical_count > 0)
-  8. advisor_must_fix = false
-     → When advice mode is active, set advisor_must_fix from the terminal advisor report.
-     → In off mode, advisor_must_fix is always false.
-  9. review_must_fix = reviewer_must_fix OR advisor_must_fix
-  10. must_fix_count = reviewer critical count + advisor must-fix count
-  11. LOG reviewer + advisor findings: "Review: [score]/10 | Must-fix: [N] | Warnings: [N] | Suggestions: [N]"
-  12. IF score >= 9.5 AND NOT review_must_fix:
-     → Output: "✓ Step 4: Code reviewed - [score]/10 - Auto-approved ([warnings] warnings logged)"
-     → PROCEED to Step 5
-  13. ELSE IF review_must_fix AND review_cycles < 3:
-     → Output: "⚙ Step 4: Evaluating [must_fix_count] must-fix items (cycle [review_cycles]/3)"
-     → Executor evaluates each reviewer critical issue and advisor must-fix item.
-     → Record causal executor decisions for individual findings; only accepted, authorized corrections may be applied.
-    → IF advice mode is active AND counsel is disputed:
-       - Record reject-with-evidence, need-evidence, or reconcile without correction metadata.
-       - Collect read-only evidence or an explicit resolution, preserving captured state; obtain fresh same-run counsel before any corrective mutation or resolved correction outcome.
-       - GOTO LOOP within the review cap; do not register invented work or record a corrective outcome for this evidence-only branch.
-    → ELSE (accepted corrections, or default operational branch in off mode):
-      → When advice mode is active, record accept with one bounded action and declared validation command before writes; resume an already-active action rather than registering it twice.
-      → Apply only accepted corrections within authorized scope that preserve the user baseline. Never auto-apply out-of-scope refactorings or unverified guidance.
-      → Passing self-tests do not override an evidence-backed concern; re-run actual declared validation with evc-tester.
-      → When advice mode is active, record the matching truthful state outcome with actual changed paths and validation status before the next reservation.
-      → Default operational branch in off mode retains its correction/test/review loop without controller operations.
-      → GOTO LOOP
-  14. ELSE IF review_must_fix AND review_cycles >= 3:
-     → ESCALATE TO USER (review cap reached)
-     → DISPLAY all findings to user (critical, warnings, suggestions with file:line)
-     → IF durable state is needs_human (correction_count === 3):
-       - Conversational approval cannot complete the state gate; invoke state human-decision with fresh revision or abort.
-    → ELSE (review cap without durable correction exhaustion, or off mode):
-       - Use user input: "Approve with noted issues" / "Abort workflow"
-       - On approve: proceed with explicit acknowledgement; STOP further review cycles.
-     → STOP; do not run another fix/test/reviewer/advisor sequence
-  15. ELSE (no must-fix item, but score < 9.5):
-     → Output: "✓ Step 4: Code reviewed - [score]/10 - Approved ([warnings] warnings, [suggestions] suggestions logged)"
-     → PROCEED to Step 5
-```
-
-**Critical issues:** Security vulnerabilities (XSS, SQL injection, OWASP), performance bottlenecks, architectural violations, principle violations.
-
-**Output formats:**
-- Auto-approved: `✓ Step 4: Code reviewed - 9.8/10 - Auto-approved (2 warnings logged)`
-- After auto-fix: `✓ Step 4: Code reviewed - 7.2/10 → Auto-fixed 2 critical → 9.5/10 - Approved`
-- Escalation: `⚠ Step 4: 3 fix cycles exhausted, [N] critical remain - User input required`
-
-**Validation:** Step 4 INCOMPLETE if critical issues > 0 AND user hasn't approved.
-
-Mark Step 4 complete in TodoWrite, mark Step 5 in_progress.
+Mark Step 4 complete in TodoWrite only when its gate passes.
 
 ---
 
 ## Step 5: Finalize
 
-- When advice mode is active (`explicit` or `inherited`): follow the substantive finalization lifecycle in `## Caller lifecycle binding` of `.copilot/evcrate/workflows/advisor-mentoring.md`. Planned docs, status, and onboarding paths are authorized writable paths. Parent records `state disposition` for finalization (registering the bounded action and declared validation command) BEFORE executing any finalization writes or Git index transitions. All substantive finalization changes (docs, status, summary reports, and auto-commit staging/commit) are executed under this registered action.
-- When advice mode is `off` (default operational branch): preserve ordinary approved/validated completed status without durable controller dependencies or controller state operations.
+**Prerequisite:** Step 4 approval and tests passed.
+If last phase, ask whether to configure onboarding requirements.
 
-1. **STATUS UPDATE - BOTH MANDATORY - PARALLEL EXECUTION:**
-- **Call** `evc-project-manager` sub-agent:
-  - Advice finalization must NOT assign sealed plan writes to child status writer.
-  - When advice mode is active: "Do NOT write to sealed plan.md or roadmap. Report terminal project status and documentation updates to parent without claiming durable completion."
-  - In default operational branch (`off` mode) on an untouched ordinary plan: "Update plan status in [plan-path]. Mark plan phase [phase-name] as DONE with timestamp. Update roadmap."
-  - In default operational branch (`off` mode) on a protected historical advice plan: "Do NOT mutate captured plan.md, roadmap, or prior sealed paths. Report phase completion and validation evidence to parent for progress.md and default completion receipt update."
-- **Call** `evc-docs-manager` sub-agent:
-  - Supply parent protected path set (prior sealed paths) and authorized destinations: "Update docs for plan phase [phase-name]. Authorized doc paths: [authorized destinations]. Do not touch prior sealed paths: [protected path set]. Changed files: [list]."
+1. **STATUS AND DOCS — BOTH REQUIRED, DISJOINT PARALLEL OWNERS:**
+   - `evc-project-manager`: for ordinary unprotected plans, update only the
+     executed and validated phase status with timestamp and authorized roadmap.
+     For protected historical plans, return status/validation evidence only;
+     never mutate captured plan/phase/roadmap or progress.
+   - `evc-docs-manager`: update only exact authorized docs, with the parent
+     protected-path set and actual changed-file list. Never touch sealed paths.
+   - Wait for both terminal results; partial results leave finalization incomplete.
+2. **ONBOARDING AND REPORT:** Identify API-key/env/config setup requirements and
+   prepare a concise summary with next steps. Keep secrets out of reports and
+   chat; guide local configuration rather than requesting secret values.
+3. **SCOPED AUTO-COMMIT:** Only after steps 1–2 settle, required approval and
+   actual validation pass, use `evc-git-manager` for the authorized deliverables.
+   Never stage protected historical paths, alter their selected-index identities,
+   or stage receipts/progress. Do not push without separate user authorization.
+4. **COMPLETION:** Settle and validate all finalized work. Report actual changed
+   paths, scope and checks. Parent alone applies
+   `.copilot/evcrate/workflows/plan-progress.md`: ordinary plans use `plan.md`; protected
+   plans use immutable ordinary approval/validation receipts and uncaptured
+   `progress.md`, preserving sealed paths/index identities. Publication failure
+   does not reopen successful implementation. Never mark unexecuted phases DONE.
 
-2. **ONBOARDING CHECK & SUBSTANTIVE REPORTS:** Detect onboarding requirements (API keys, env vars, config) + generate any substantive summary report or onboarding files with next steps before the final outcome (authorized in baseline manifest and registered under finalization disposition).
-- If this is the last phase: use `user input` tool to ask if user wants to set up onboarding requirements.
-
-3. **AUTO-COMMIT (after steps 1 and 2 complete):**
-- **Call** `evc-git-manager` subagent to handle git operation.
-- Run only if: Steps 1 and 2 successful + Tests passed
-- Pass parent protected paths and authorized destinations to `evc-git-manager`: stage only authorized current-run deliverables; never stage prior sealed paths, alter their selected index identities, or stage receipts/progress.
-- When advice mode is active: authorized staging and commit transitions settle pre-seal before recording final outcome. After sealing, only shared-contract administrative publication is permitted.
-- In default operational branch (`off` mode): retain standard scoped commit behavior without durable controller operations and with the same protected-path/index restrictions.
-4. **CONTROLLER OUTCOME & COMPLETION:**
-- When advice mode is active:
-  - Enforce writer barrier: all documentation/roadmap writes, substantive summary reports, onboarding configuration, and auto-commit staging/commit settle before recording final outcome.
-  - Run declared validation across all finalized deliverables.
-  - Parent records ONE truthful `state outcome` matching the registered finalization action, reporting actual changed paths and declared validation status. (A no-change outcome is valid ONLY if zero actual files were changed, declared validation passed, disposition was accept, and no must-fix/unresolved-question items remain).
-  - Parent executes `state complete` to seal the task run. The durable completion receipt is authoritative; only then is the phase durably DONE.
-  - At complete, parent publishes mandatory immutable phase completion receipt (outside baseline) AND updates mutable overview `<plan-dir>/progress.md` per `.copilot/evcrate/workflows/plan-progress.md`. Publication failure does not reopen successful phase.
-  - Preserve all sealed file/index identities; only the bounded receipt/overview publication above is allowed after sealing. Summary and archive branches cannot modify sealed paths. Output identifies `<plan-dir>/progress.md`.
-- When advice mode is `off` (default operational branch):
-  - No controller state operations (`state disposition`, `state outcome`, `state complete`).
-  - On untouched ordinary plans: phase is completed upon successful validation, and marked DONE with timestamp in `plan.md`. Output identifies `plan.md`.
-  - On protected historical advice plans: phase completion is explicitly non-durable; never modify captured `plan.md`, status, roadmap, or prior sealed paths. Parent records uncaptured default completion receipt (with approval/validation evidence) and updates `<plan-dir>/progress.md` per `.copilot/evcrate/workflows/plan-progress.md`. Output identifies `<plan-dir>/progress.md`.
-
-**Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met. When advice mode is active, `state complete` must succeed before phase completion.
+**Validation:** Both status/docs results and applicable actual validation must
+succeed; auto-commit is conditional, not proof of completion.
 
 Mark Step 5 complete in `TodoWrite`.
 
@@ -257,26 +188,25 @@ If $ALL_PHASES is `No`, wait for user confirmation before proceeding to the next
 - Use `user input` tool to ask if user wants to proceed to the next phase: "**Phase workflow finished. Ready for next plan phase.**"
 - On user confirmation, run neutral reconciliation per `.copilot/evcrate/workflows/plan-progress.md` before selecting the next phase.
 ## Summary report
-All substantive summary-report files must be produced before the final outcome (during Step 5 finalization, authorized in the baseline manifest).
-When advice mode was active or when operating on a protected historical advice plan:
-- After sealing via `state complete` (or default completion on a protected plan), summary output is strictly read-only terminal output or an uncaptured administrative receipt outside the captured baseline snapshot identifying the sealed snapshot without claiming later unreviewed edits.
-- If this is the last phase: offer only read-only viewing of the sealed report and `<plan-dir>/progress.md`. Do not invoke `/evc-cmd-plan-x-archive` or any preview operation that mutates prior sealed files; prior sealed paths remain unchanged.
-When operating on an untouched ordinary default plan:
-- Ordinary default behavior is unchanged. If this is the last phase, use `user input` tool to ask:
-  - If user wants to preview the report with `/preview` slash command.
-  - If user wants to archive the plan with `/evc-cmd-plan-x-archive` slash command.
+Prepare substantive summary files during authorized finalization. For protected
+historical plans, final output is read-only with links to the verified report and
+uncaptured overview; never invoke archive/preview operations that mutate sealed
+paths. For ordinary unprotected plans at the last phase, ask whether to preview
+the report or archive the plan through `/evc-cmd-plan-x-archive`, retaining its
+confirmation and destructive-action gates.
+
 ---
 ## Critical Enforcement Rules
 
 **Step outputs must follow unified format:** `✓ Step [N]: [Brief status] - [Key metrics]`
 
 **Examples:**
-- Step 0: `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for advice/protected plans)
+- Step 0: `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for protected historical plans)
 - Step 1: `✓ Step 1: Found [N] tasks across [M] phases - Ambiguities: [list]`
 - Step 2: `✓ Step 2: Implemented [N] files - [X/Y] tasks complete`
 - Step 3: `✓ Step 3: Tests [X/X passed] - All requirements met`
 - Step 4: `✓ Step 4: Code reviewed - [0] critical issues`
-- Step 5: `✓ Step 5: Finalize - Status updated - Git committed` (include `- Overview: [plan-dir]/progress.md` for advice/protected plans)
+- Step 5: `✓ Step 5: Finalize - Status updated - Git committed` (include `- Overview: [plan-dir]/progress.md` for protected historical plans)
 
 **If any "✓ Step N:" output missing, that step is INCOMPLETE.**
 
@@ -290,7 +220,7 @@ When operating on an untouched ordinary default plan:
 **Blocking gates:**
 - Step 3: Tests must be 100% passing
 - Step 4: Critical issues must be 0 (or user approved on escalation)
-- Step 5: Both `evc-project-manager` and `evc-docs-manager` must complete successfully; when advice mode is active, `state complete` must succeed before phase completion and parent publishes immutable receipt + mutable overview
+- Step 5: Both status/docs terminal results and actual applicable validation must pass; parent owns neutral receipt/overview publication.
 
 
 **REMEMBER:**

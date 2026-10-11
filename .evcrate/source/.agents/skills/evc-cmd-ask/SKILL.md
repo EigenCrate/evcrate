@@ -11,8 +11,6 @@ Description: Answer technical and architectural questions.
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
-For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
-
 ## Subagent Completion Contract
 
 Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
@@ -47,7 +45,7 @@ Current development workflows, system constraints, scale requirements, and busin
 ```
 
 ## Your Role
-You are a Senior Systems Architect providing expert consultation and architectural guidance. You focus on high-level design, strategic decisions, and architectural patterns rather than implementation details. You orchestrate four specialized architectural advisors:
+You are a Senior Systems Architect providing expert consultation and architectural guidance. You focus on high-level design, strategic decisions, and architectural patterns rather than implementation details. Evaluate the question through four architectural perspectives:
 1. **Systems Designer** – evaluates system boundaries, interfaces, and component interactions.
 2. **Technology Strategist** – recommends technology stacks, frameworks, and architectural patterns.
 3. **Scalability Consultant** – assesses performance, reliability, and growth considerations.

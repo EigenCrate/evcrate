@@ -11,7 +11,7 @@ import {
   validateProjection
 } from './projection-utils.js';
 import { escapeYamlString, projectCatalogDataAndLayout } from './catalog-data.js';
-import { renderMentoringWorkflow } from './advisory.js';
+import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from './advisory.js';
 import type { ResourceGraphFile } from './resource-graph.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from './types.js';
 import { assertAgentName, assertUniqueNames, commandNameFromSourcePath } from './resource-naming.js';
@@ -44,7 +44,11 @@ function assertResourceNames(context: ProjectionBuildContext): void {
     .map((file) => commandNameFromSourcePath(file.path).name);
   for (const file of sourceFiles(context, 'agents')) {
     const stem = file.path.slice('agents/'.length, -3);
-    if (file.path.endsWith('.md') && !stem.includes('/')) names.push(assertAgentName(stem, stem));
+    if (file.path.endsWith('.md') && !stem.includes('/')) {
+      const { data } = parseMarkdownFrontmatter(decode(file.bytes));
+      if (Object.hasOwn(data, 'name') && typeof data.name !== 'string') invalid();
+      names.push(assertAgentName(typeof data.name === 'string' ? data.name : stem, stem));
+    }
   }
   assertUniqueNames(names);
 }
@@ -60,7 +64,7 @@ function shouldCopy(path: string): boolean {
   if (path === 'scripts/commands_data.yaml' || path === 'scripts/skills_data.yaml') return false;
   if (/^(?:agents|commands)(?:\/|$)/u.test(path)) return false;
   if (/^(?:statusline\.cjs|statusline\.ps1|statusline\.sh)$/u.test(path)) return false;
-  return !path.split('/').some((part) => part.includes('advise-state')) && !productionPath(path);
+  return !productionPath(path);
 }
 function pythonJson(value: unknown): string {
   const json = JSON.stringify(value, null, 2);
@@ -87,101 +91,10 @@ function description(content: string): string {
   return 'Migrated command from .claude';
 }
 function workflowFallback(text: string): string {
-  for (const name of ['advice-activation.md', 'plan-progress.md', 'advisor-mentoring.md', 'advisory-interview.md']) {
+  for (const name of ['plan-progress.md', 'advisory-interview.md']) {
     text = text.replaceAll(`\`.antigravity/workflows/${name}\``, `\`.antigravity/workflows/${name}\` if present; otherwise read \`~/.gemini/config/workflows/${name}\` (the published install)`);
   }
   return text;
-}
-function advisoryCapabilities(text: string): string {
-  const start = '<!-- EVCRATE_ADVISORY_CAPABILITIES_START -->';
-  const end = '<!-- EVCRATE_ADVISORY_CAPABILITIES_END -->';
-  if (text.split(start).length !== 2 || text.split(end).length !== 2) return invalid();
-  const from = text.indexOf(start);
-  const to = text.indexOf(end);
-  if (to < from) return invalid();
-  const body = text.slice(from + start.length, to).trim();
-  if (body !== '<!-- EVCRATE_CAPABILITY: advise-inline/v1 -->\n<!-- EVCRATE_CAPABILITY: advise-agent-relay/claude/v1 -->') return invalid();
-  const replacement = [
-    start,
-    '<!-- EVCRATE_CAPABILITY: advise-inline/v1 -->',
-    '<!-- EVCRATE_CAPABILITY: advise-agent-relay/unsupported/antigravity/v1 -->',
-    '<!-- EVCRATE_CAPABILITY_ERROR: ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY -->',
-    end
-  ].join('\n');
-  return text.slice(0, from) + replacement + text.slice(to + end.length)
-    .replaceAll('advise-agent-relay/claude/v1', 'advise-agent-relay/unsupported/antigravity/v1');
-}
-function inlineAdviseCommand(canonical: string): string {
-  const projected = advisoryCapabilities(canonical);
-  const start = projected.indexOf('<!-- EVCRATE_ADVISORY_CAPABILITIES_START -->');
-  const end = projected.indexOf('<!-- EVCRATE_ADVISORY_CAPABILITIES_END -->')
-    + '<!-- EVCRATE_ADVISORY_CAPABILITIES_END -->'.length;
-  const capabilities = projected.slice(start, end);
-  return `<!-- generated target: antigravity -->
-${capabilities}
-
-Use this command for candid technical or architectural advice. \`/evc-cmd-advise\` is
-separate from \`--advice\` checkpoint mentorship: it first converges on the
-problem, then provides advice.
-
-## Parse input
-
-Count exact, case-sensitive, whitespace-delimited standalone \`--agent\` tokens.
-Reject two or more tokens. One token requests relay only when it is final after
-trailing whitespace; quoted, embedded, suffixed, non-final, and differently
-cased text remains ordinary input. If a final token requests relay, return
-\`ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY\` and say: \`Run /evc-cmd-advise <prompt> without --agent for inline
-advice.\` Do not invoke an advisor, create relay
-state, or silently continue in inline mode.
-
-## Inline interview
-
-Run in the main session. Do not invoke a subagent or create persistent state.
-
-1. Analyze only bounded local context relevant to the prompt or URL.
-2. Ask exactly one concise substantive question per turn using \`ask_user\`.
-   Never batch questions or infer an answer. Stop after eight discovery questions.
-3. Present one \`reframe\` and require explicit \`confirm\` or \`correct\`. Permit
-   at most two confirmation/correction cycles. On exhaustion, return
-   \`INTERVIEW_NOT_CONVERGED\` and write no report.
-4. After confirmation, write a concise Markdown report with exactly these
-   headings: \`## Reframed problem\`, \`## Recommendation\`,
-   \`## Alternatives/tradeoffs\`, \`## Risks\`, \`## Assumptions/evidence gaps\`,
-   \`## Success checks\`, \`## Next actions\`, and \`## Unresolved questions\`.
-5. Write the sanitized report to the active \`<plan>/reports\` directory, or
-   \`plans/reports\` when there is no active plan. Never include credentials,
-   environment values, tool traces, fetched page bodies, or model reasoning.
-`;
-}
-function advisoryWorkflow(text: string): string {
-  let projected = advisoryCapabilities(text).replace(
-    'The second marker is a Claude-only capability claim. Generated targets must\nreplace it with their tested capability or an explicit unsupported result;\npresence of a generated file is never runtime proof.',
-    "The second marker records this target's explicit `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` relay rejection.\nGenerated-file presence is never runtime proof."
-  );
-  projected = projected.replace('`design a cache --agent` | Claude relay | `design a cache`', '`design a cache --agent` | `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` | no inline interview');
-  projected = projected.replace('`design a cache --agent ` | Claude relay | `design a cache`', '`design a cache --agent ` | `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` | no inline interview');
-  projected = projected.replace('`--agent` | Claude relay, empty prompt | empty; normal empty-input handling', '`--agent` | `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` | no inline interview');
-  projected = projected.replace(
-    'Inline mode keeps the active conversation in the main session. Relay mode\npersists only the bounded, sanitized invocation state through\n`scripts/advise-state.cjs`. Both modes ask exactly one question per turn.\n\nThe helper exposes the executable `parse`, `validate-envelope`, `write-report`,\nand `validate-report` operations in addition to state lifecycle operations.\nCommands must call those operations; prose is not a substitute for validation.\n\n',
-    'Inline mode keeps the active conversation in the main session and asks exactly\none question per turn. No relay state is created on this target.\n\n'
-  );
-  const relay = projected.indexOf('## Relay turn envelope');
-  if (relay < 0) return invalid();
-  return workflowFallback(projected.slice(0, relay) + '## Unsupported relay\n\nA final standalone `--agent` returns `ADVISE_AGENT_RELAY_UNSUPPORTED_ANTIGRAVITY` before advisor delegation, state creation, or inline-interview work. Users can run `/evc-cmd-advise <prompt>` for inline advice.\n');
-}
-function projectAdvisor(content: string): string {
-  const match = /^(---\n[\s\S]*?\n---\n)([\s\S]*)$/u.exec(content);
-  if (!match) return invalid();
-  const { data } = parseMarkdownFrontmatter(content);
-  if (Object.hasOwn(data, 'name')) {
-    if (typeof data.name !== 'string') return invalid();
-    assertAgentName(data.name, 'evc-advisor');
-  }
-  const frontmatter = match[1]
-    .replace(/^model:\s*opus$/mu, 'model: pro')
-    .replace(/^description:.*$/mu, 'description: Use this high-tier mentor for fresh named checkpoints; Antigravity uses the central controller.');
-  if (!match[2].includes('## Required checkpoint method') || !match[2].includes('## Checkpoint terminal report')) return invalid();
-  return frontmatter + workflowFallback(match[2]);
 }
 function renderResourcePath(scope: 'global' | 'local', suffix: string): string {
   return scope === 'global' ? `.gemini/config/${suffix}` : `.antigravity/${suffix}`;
@@ -607,17 +520,10 @@ function build(context: ProjectionBuildContext): void {
   writeProjectionFile(context, '.antigravity/AGENTS.md', textBytes(graphText(context, 'AGENTS.md')));
   for (const file of context.resources.files) if (shouldCopy(file.path)) writeProjectionFile(context, `.antigravity/${file.path}`, file.bytes, file.executable ?? false);
   const hookBehaviors = extractHooks(context);
-  const advisor = context.resources.files.find((file) => file.path === 'agents/evc-advisor.md');
-  if (advisor) writeProjectionFile(context, '.antigravity/agents/evc-advisor.md', textBytes(projectAdvisor(decode(advisor.bytes))));
   const workflow = context.resources.files.find((file) => file.path === 'workflows/advisory-interview.md');
   if (workflow) {
     const content = decode(workflow.bytes);
-    writeProjectionFile(context, '.antigravity/workflows/advisory-interview.md', textBytes(advisoryWorkflow(content)));
-  }
-  const mentoring = context.resources.files.find((file) => file.path === 'workflows/advisor-mentoring.md');
-  if (mentoring) {
-    const content = decode(mentoring.bytes);
-    writeProjectionFile(context, '.antigravity/workflows/advisor-mentoring.md', textBytes(renderMentoringWorkflow(content, 'antigravity')));
+    writeProjectionFile(context, '.antigravity/workflows/advisory-interview.md', textBytes(renderAdvisoryInterviewWorkflow(content).replaceAll('AskUserQuestion', 'ask_user')));
   }
   for (const file of sourceFiles(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;
@@ -629,9 +535,9 @@ function build(context: ProjectionBuildContext): void {
       .replaceAll('.claude/workflows/', '.antigravity/workflows/');
     body = workflowFallback(body);
     const commandDescription = identity.semanticId === 'advise'
-      ? 'Interview-first technical advice with native inline questioning and explicit relay rejection'
+      ? 'Interview-first technical advice in the main session'
       : description(body);
-    if (identity.semanticId === 'advise') body = inlineAdviseCommand(body);
+    if (identity.semanticId === 'advise') body = renderInlineAdviseCommand(body, 'ask_user');
     const text = `---
 name: ${name}
 description: ${escapeYamlString(commandDescription)}

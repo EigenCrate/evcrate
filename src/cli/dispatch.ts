@@ -2,14 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { ControlPlaneError, serializeControlPlaneError } from '../errors/control-plane-error.js';
 import { parseJsonDocument, isPlainObject } from '../protocol/json.js';
-import {
-  createAdvisorSettingsRequest, createSettingsErrorResult, validateAdvisorSettingsRequest,
-  validateAdvisorSettingsResult
-} from '../protocol/advisor-settings.js';
-import type { AdvisorSettingsRequest, AdvisorSettingsResult } from '../protocol/advisor-settings.js';
-import { createDiagnosticRequest, validateDiagnosticRequest } from '../protocol/diagnostic.js';
 import { createResourceRequest, createResourceRecoveryResult, createResourceResult,
-  createResourcePartialResult, validateResourceRequest, validateResourceResult } from '../protocol/resource-control.js';
+  validateResourceRequest, validateResourceResult } from '../protocol/resource-control.js';
 import { PROTOCOL_VERSION } from '../protocol/validation.js';
 import {
   PUBLICATION_BINDING_ORDER, validatePublishApplyResultPayload, validatePublishDryRunResultPayload,
@@ -29,13 +23,10 @@ import { validateScopeRevisionVector } from '../protocol/scope-payloads.js';
 import type { InvocationContext } from '../context/invocation-context.js';
 import type { CliInvocation } from './arguments.js';
 import { runCompatibilityDistribution, runTypedPublication } from './compatibility-distribution.js';
-import { isPublicationPartialError } from '../distribution/publication.js';
-import { runHealth } from './health.js';
 import { exitCodeForResult } from './output.js';
 import type { CliResult } from './output.js';
 import { createResourceHandler, defaultResourceHandler } from '../imports/handler.js';
 import type { ResourceHandler } from '../imports/handler.js';
-import { createAdvisorSettingsCoordinator, defaultAdvisorSettingsCoordinator } from '../advisor-settings/coordinator.js';
 import type { CliRuntime } from './types.js';
 import { coordinateVscodeSettingsRegistration } from './vscode-settings-registration.js';
 
@@ -55,19 +46,6 @@ function version(context: InvocationContext, runtime: CliRuntime): string {
   throw new ControlPlaneError('INTERNAL_ERROR');
 }
 
-function unsupportedSettingsResult(
-  requestId: string,
-  operation: AdvisorSettingsRequest['operation']
-): AdvisorSettingsResult {
-  return validateAdvisorSettingsResult({
-    protocol: 'evcrate-advisor-settings',
-    protocolVersion: PROTOCOL_VERSION,
-    requestId,
-    operation,
-    status: 'FAILED',
-    error: serializeControlPlaneError(new ControlPlaneError('CAPABILITY_UNSUPPORTED'))
-  });
-}
 
 
 function versionResult(requestId: string, versionValue: string): ResourceResult {
@@ -177,20 +155,6 @@ function cliResourceRequest(requestId: string, invocation: CliInvocation, contex
   return createResourceRequest(requestId, 'imports.apply', envelope, { previewToken: options.previewToken ?? '' });
 }
 
-async function settingsResult(
-  request: AdvisorSettingsRequest,
-  context: InvocationContext,
-  runtime: CliRuntime
-): Promise<AdvisorSettingsResult> {
-  const handler = runtime.settingsHandler
-    ?? (runtime.now === undefined ? defaultAdvisorSettingsCoordinator : createAdvisorSettingsCoordinator({ now: runtime.now }));
-  const result = await handler.handle(request, context);
-  const normalized = validateAdvisorSettingsResult(result);
-  if (normalized.requestId !== request.requestId || normalized.operation !== request.operation) {
-    throw new ControlPlaneError('PROTOCOL_INVALID');
-  }
-  return normalized;
-}
 function homeBindingName(context: InvocationContext, homeRoot: string): string {
   const value = relative(context.homeRoot, homeRoot).replaceAll('\\', '/');
   if (!value || value === '..' || value.startsWith('../')) throw new ControlPlaneError('PROTOCOL_INVALID');
@@ -216,7 +180,7 @@ function publicationBindingOrder(
     }
     return Object.freeze(result);
   }
-  const bindings = new Set<string>(['.evcrate/bin']);
+  const bindings = new Set<string>();
   for (const targetId of selectedTargets) {
     const target = context.selectedTargets.find(({ id }) => id === targetId);
     if (!target) throw new ControlPlaneError('PROTOCOL_INVALID');
@@ -227,13 +191,6 @@ function publicationBindingOrder(
     }
   }
   return PUBLICATION_BINDING_ORDER.filter((binding) => bindings.has(binding));
-}
-function publicationHarnessBindingOrder(
-  context: InvocationContext, selectedTargets: readonly string[], scope: PublicationScope
-): readonly string[] {
-  return scope === 'home'
-    ? publicationBindingOrder(context, selectedTargets, scope).filter((binding) => binding !== '.evcrate/bin')
-    : publicationBindingOrder(context, selectedTargets, scope);
 }
 function assertExactValues(actual: readonly string[], expected: readonly string[]): void {
   if (actual.length !== expected.length || actual.some((value, index) => value !== expected[index])) {
@@ -260,15 +217,10 @@ function assertPhaseCorrelation(
   phase: DryRunPhaseRecord | ApplyPhaseRecord,
   expectedHarnessTargets: readonly string[]
 ): void {
-  const expectedTargets = phase.phase === 'shared' ? [] : expectedHarnessTargets;
-  assertExactValues(phase.selectedTargets, expectedTargets);
-  const expectedOrder = phase.phase === 'shared'
-    ? ['.evcrate/bin'] : publicationHarnessBindingOrder(context, expectedHarnessTargets, scope);
-  assertExactValues(phase.bindingOrder, expectedOrder);
+  assertExactValues(phase.selectedTargets, expectedHarnessTargets);
+  assertExactValues(phase.bindingOrder, publicationBindingOrder(context, expectedHarnessTargets, scope));
   const bindings = new Map<string, Set<string>>(
-    phase.phase === 'shared'
-      ? [['advisor-controller', new Set(['.evcrate/bin'])]]
-      : expectedHarnessTargets.map((targetId) => [targetId, new Set(targetBindingNames(context, targetId, scope))])
+    expectedHarnessTargets.map((targetId) => [targetId, new Set(targetBindingNames(context, targetId, scope))])
   );
   for (const change of phase.changes) {
     const targetBindings = bindings.get(change.target);
@@ -358,21 +310,12 @@ async function publicationResult(
       ...(runtime.publicationOptions ?? {}),
       abortSignal: runtime.publicationOptions?.abortSignal ?? runtime.abortSignal
     };
-    try {
-      const raw = handler
-        ? await handler.publishApply(context, options, publicationRequest)
-        : await runTypedPublication('publish.apply', context, runtime, publicationRequest);
-      const payload = validatePublishApplyResultPayload(raw);
-      assertPublicationCorrelation(context, publicationRequest, payload);
-      return createResourceResult(
-        request, payload as unknown as JsonValue, request.operation === 'publish.apply' ? 'published' : 'activated'
-      );
-    } catch (error) {
-      if (!isPublicationPartialError(error)) throw error;
-      const payload = validatePublishApplyResultPayload(error.payload, true);
-      assertPublicationCorrelation(context, publicationRequest, payload);
-      return createResourcePartialResult(request, payload as unknown as JsonValue, new ControlPlaneError(error.code));
-    }
+    const raw = handler
+      ? await handler.publishApply(context, options, publicationRequest)
+      : await runTypedPublication('publish.apply', context, runtime, publicationRequest);
+    const payload = validatePublishApplyResultPayload(raw);
+    assertPublicationCorrelation(context, publicationRequest, payload);
+    return createResourceResult(request, payload as unknown as JsonValue, 'published');
   }
   const recoveryRequest = request.payload as unknown as RecoverRequestPayload;
   assertRecoveryRequestCorrelation(context, recoveryRequest);
@@ -399,18 +342,6 @@ async function dispatchRequest(
 ): Promise<DispatchOutcome> {
   if (!isPlainObject(request) || typeof request.protocol !== 'string') {
     throw new ControlPlaneError('PROTOCOL_INVALID');
-  }
-  if (request.protocol === 'evcrate-advisor-diagnostic') {
-    const diagnosticRequest = validateDiagnosticRequest(request);
-    const result = await runHealth(context, runtime, diagnosticRequest, invocation.options.timeoutMs);
-    return { result, exitCode: exitCodeForResult(result) };
-  }
-  if (request.protocol === 'evcrate-advisor-settings') {
-    const settingsRequest = validateAdvisorSettingsRequest(request);
-    if (invocation.command.kind === 'advisor-settings'
-      && invocation.command.operation !== settingsRequest.operation) throw new ControlPlaneError('PROTOCOL_INVALID');
-    const result = await settingsResult(settingsRequest, context, runtime);
-    return { result, exitCode: exitCodeForResult(result) };
   }
   if (request.protocol === 'evcrate-resource-control') {
     const resourceRequest = validateResourceRequest(request);
@@ -466,21 +397,6 @@ export async function dispatchInvocation(
       case 'version': {
         const result = versionResult(requestId, version(context, runtime));
         return { result, exitCode: 0 };
-      }
-      case 'health': {
-        const result = await runHealth(
-          context, runtime, createDiagnosticRequest(requestId), invocation.options.timeoutMs
-        );
-        return { result, exitCode: exitCodeForResult(result) };
-      }
-      case 'advisor-settings': {
-        if (invocation.command.operation !== 'get') {
-          const result = unsupportedSettingsResult(requestId, invocation.command.operation);
-          return { result, exitCode: exitCodeForResult(result) };
-        }
-        const requestValue = createAdvisorSettingsRequest(requestId, 'get');
-        const result = await settingsResult(requestValue, context, runtime);
-        return { result, exitCode: exitCodeForResult(result) };
       }
       case 'distribute': {
         const result = await runCompatibilityDistribution(invocation, context, {

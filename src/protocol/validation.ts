@@ -2,8 +2,6 @@ import { ControlPlaneError, ControlPlaneErrorCode } from '../errors/control-plan
 import { canonicalBytes, isPlainObject, JsonValue, MAX_JSON_DEPTH } from './json.js';
 
 export const RESOURCE_PROTOCOL = 'evcrate-resource-control' as const;
-export const SETTINGS_PROTOCOL = 'evcrate-advisor-settings' as const;
-export const DIAGNOSTIC_PROTOCOL = 'evcrate-advisor-diagnostic' as const;
 export const PROTOCOL_VERSION = 1 as const;
 export const PERSISTED_TARGETS = Object.freeze(['claude', 'codex', 'antigravity', 'pi', 'omp', 'copilot', 'vscode'] as const);
 export const INPUT_TARGETS = Object.freeze([...PERSISTED_TARGETS, 'agy'] as const);

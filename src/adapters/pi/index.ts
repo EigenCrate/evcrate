@@ -64,8 +64,8 @@ function build(context: ProjectionBuildContext): void {
   writeJson(context, `.pi/${shared.fragment}`, { packages: [...MANAGED_PACKAGES], schema: 'evcrate-pi-managed-settings-v1' });
   writeJson(context, '.pi/agent/evcrate/inventory.json', {
     agents: [...resources.agents],
-    advisoryCapabilities: { checkpoint: 'supported', inline: 'supported', relay: 'unsupported', relayError: 'ADVISE_AGENT_RELAY_UNSUPPORTED_PI' },
-    commands: [...resources.commands], hooks: [...resources.hooks], legacySkillExcluded: 'claude-code/skill.md', scripts: [...resources.scripts.filter((item) => !item.includes('advise-state') && item !== 'commands_data.yaml' && item !== 'skills_data.yaml'), 'commands_data.yaml', 'skills_data.yaml', 'scanner-layout.json'].sort(), skills: [...resources.skills], workflows: [...resources.workflows]
+    advisoryCapabilities: ['advise-inline/v1'],
+    commands: [...resources.commands], hooks: [...resources.hooks], legacySkillExcluded: 'claude-code/skill.md', scripts: [...resources.scripts.filter((item) => item !== 'commands_data.yaml' && item !== 'skills_data.yaml'), 'commands_data.yaml', 'skills_data.yaml', 'scanner-layout.json'].sort(), skills: [...resources.skills], workflows: [...resources.workflows]
   });
   projectCatalogDataAndLayout(context, {
     target: 'pi',

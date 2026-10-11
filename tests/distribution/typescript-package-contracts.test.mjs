@@ -13,24 +13,18 @@ function fixture(t) {
   return root;
 }
 
-test('F4: npm clean build repairs missing advisor runtime, brief, and controller inventory', (t) => {
+test('clean build repairs missing compiled public and protocol outputs', (t) => {
   const root = fixture(t);
-  for (const name of ['src', 'scripts', 'tsconfig.json', 'tsconfig.advisor-runtime.json']) {
+  for (const name of ['src', 'scripts', 'tsconfig.json']) {
     cpSync(join(packageRoot, name), join(root, name), { recursive: true });
   }
   symlinkSync(join(packageRoot, 'node_modules'), join(root, 'node_modules'), 'junction');
-  const generated = join(root, '.evcrate/source/.evcrate/bin/lib/advisor/generated');
-  const brief = join(root, '.evcrate/source/.evcrate/bin/lib/advisor/runtime-brief.generated.cjs');
-  const inventory = join(root, 'src/manifests/controller-inventory.generated.ts');
-  rmSync(generated, { recursive: true });
-  rmSync(brief);
-  rmSync(inventory);
+  rmSync(join(root, 'dist'), { recursive: true, force: true });
   const result = spawnNpmSync(['run', 'build:clean'], { cwd: root, encoding: 'utf8', timeout: 120_000 });
   assert.equal(result.status, 0, result.stdout + result.stderr);
   const require = createRequire(join(root, 'package.json'));
-  const runtime = require(join(generated, 'canonical-json.js'));
+  const runtime = require(join(root, 'dist/index.js'));
   assert.equal(runtime.canonicalJson({ z: 2, a: 1 }), '{"a":1,"z":2}');
-  assert.equal(existsSync(brief), true);
-  assert.equal(existsSync(inventory), true);
-  require(join(root, 'dist/index.js')).controllerHashes(join(root, '.evcrate/source/.evcrate/bin'));
+  assert.equal(typeof runtime.publishApply, 'function');
+  assert.equal(existsSync(join(root, 'dist/index.d.ts')), true);
 });

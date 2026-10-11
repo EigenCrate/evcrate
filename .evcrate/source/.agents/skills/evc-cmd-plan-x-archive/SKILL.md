@@ -11,8 +11,6 @@ Description: Write journal entries and archive specific plans or all plans
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
-For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
-
 ## Subagent Completion Contract
 
 Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
@@ -40,10 +38,10 @@ Read the plan directory:
 - `phase-*.md` - 20 first lines of each phase file to understand the progress and status
 
 Before interpreting completion, apply `Plan progress and phase reconciliation`
-in `.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) regardless of the current mode flag.
-For advice-controlled plans, read `progress.md` and reconcile receipts/run scope;
-do not infer completion from frozen phase headers. Do not move, delete, rewrite
-or stage captured plans/evidence or their immutable receipts: exclude those
+in `.codex/workflows/plan-progress.md` if present; otherwise read `~/.codex/workflows/plan-progress.md` (the published install).
+For protected historical plans, read uncaptured `progress.md` and immutable
+receipts to reconcile exact scope; do not infer completion from frozen headers.
+Do not move, delete, rewrite or stage captured plans/evidence or their immutable receipts: exclude those
 plans from the archive candidates and provide read-only links instead. Ordinary
 uncaptured plans retain the confirmation and archive behavior below.
 

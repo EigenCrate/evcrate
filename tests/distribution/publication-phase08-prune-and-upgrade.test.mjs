@@ -117,8 +117,7 @@ function assertRetiredCleanupRestored(value) {
   assert.equal(readFileSync(value.active, 'utf8'), '# Previous active instructions\n');
   assert.equal(readFileSync(value.untracked, 'utf8'), 'Untracked vendor content\n');
   for (const path of value.created) assert.equal(existsSync(path), false, `rollback must remove ${path}`);
-  assert.equal(existsSync(join(value.home, '.evcrate/bin')), value.scope === 'project',
-    'HOME rollback includes the controller; project rollback preserves the separately committed shared phase');
+  assert.equal(existsSync(join(value.home, '.evcrate/bin')), false);
   assert.equal(existsSync(join(value.state, 'publication-journal.json')), false);
   const record = readOptionalPublicationMarker(join(value.state, 'release-marker.json')).records.harness;
   assert.equal(record.status, 'recovered');
@@ -496,7 +495,6 @@ test('Phase 08: validatePublishApplyResultPayload and validatePublishDryRunResul
     buildManifestPath: '.evcrate/build-manifest-omp.json',
     buildManifestDigest: 'a'.repeat(64),
     phases: [
-      { phase: 'shared', scope: 'home', status: 'committed', releaseId: 'rel-1', retainedReleaseId: null, selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
       { phase: 'harness', scope: 'home', status: 'committed', releaseId: 'rel-1', retainedReleaseId: null, selectedTargets: ['omp'], bindingOrder: ['.omp'], changes: [] }
     ]
   };
@@ -506,7 +504,6 @@ test('Phase 08: validatePublishApplyResultPayload and validatePublishDryRunResul
     buildManifestPath: '.evcrate/build-manifest-omp.json',
     buildManifestDigest: 'a'.repeat(64),
     phases: [
-      { phase: 'shared', scope: 'home', selectedTargets: [], bindingOrder: ['.evcrate/bin'], changes: [] },
       { phase: 'harness', scope: 'home', selectedTargets: ['omp'], bindingOrder: ['.omp'], changes: [] }
     ]
   };
@@ -552,8 +549,7 @@ test('Phase 08: validatePublishApplyResultPayload and validatePublishDryRunResul
       () => validate({
         ...base,
         phases: [
-          base.phases[0],
-          { ...base.phases[1], selectedTargets: ['claude', 'omp'] }
+          { ...base.phases[0], selectedTargets: ['claude', 'omp'] }
         ],
         legacyLeftovers: [
           { target: 'omp', path: 'commands/cmd-code.md', kind: 'command' },
@@ -755,7 +751,7 @@ test('Phase 08 / PR #24: Predecessor Gemini cleanup in project scope preserves l
     assert.deepEqual(firstResult.legacyLeftovers, [
       { target: 'antigravity', path: 'skills/cmd_advise/SKILL.md', kind: 'command' }
     ]);
-    const harnessPhase = firstResult.phases[1];
+    const harnessPhase = firstResult.phases[0];
     assert.deepEqual([...harnessPhase.selectedTargets], ['antigravity']);
     assert.equal(harnessPhase.bindingOrder.includes('.gemini'), false, 'bindingOrder must not include .gemini');
     assert.equal(harnessPhase.bindingOrder.includes('GEMINI.md'), false, 'bindingOrder must not include GEMINI.md');

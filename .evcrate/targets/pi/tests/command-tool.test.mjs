@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { createCommandDispatchState, dispatchManagedCommand, registerCommandTool } from "../files/agent/extensions/evcrate/command-tool.js";
 import { expandManagedCommand, registerManagedCommands } from "../files/agent/extensions/evcrate/commands.js";
+import { createCommandContext, prependCommandContext } from "../files/agent/extensions/evcrate/child-context.js";
 function fixture() {
   const agentRoot = mkdtempSync(join(tmpdir(), "evcrate-command-tool-"));
   const commands = join(agentRoot, "evcrate", "commands");
@@ -40,8 +41,8 @@ test("dispatches an exact discovered command with canonical model context", asyn
     assert.equal(result.canonicalCommand, "plan");
     assert.equal(expanded.body, "plan safe task");
     assert.deepEqual(expanded.context, {
-      protocol: "evcrate-pi-command-context", version: 1, source: "model-tool",
-      command: "plan", raw_arguments: raw, handoff: null,
+      protocol: "evcrate-pi-command-context", version: 2, source: "model-tool",
+      command: "plan", raw_arguments: raw,
     });
   } finally {
     rmSync(agentRoot, { recursive: true, force: true });
@@ -63,7 +64,7 @@ test("uses the bounded shell executor when no command executor is injected", asy
   }
 });
 
-test("registered model tool carries exact raw work and direct handoff through real expansion", async () => {
+test("registered model tool carries exact raw work through real expansion and exposes only command arguments", async () => {
   const { agentRoot, commands } = fixture();
   const handlers = new Map();
   const tools = new Map();
@@ -75,22 +76,10 @@ test("registered model tool carries exact raw work and direct handoff through re
     };
     await registerCommandTool(pi, { agentRoot });
     handlers.get("agent_start")?.();
-    const raw = " \t\"$& $` $' $$\" 'unmatched-single \"unmatched-double \\trailing \r\n雪 {{evcrate:workflows/missing.md}} $ARGUMENTS ";
-    const handoff = {
-      kind: "pre-run",
-      context: {
-        project_root: agentRoot,
-        command: "code/auto",
-        work_target: "plans/demo/plan.md",
-        plan_path: "plans/demo/plan.md",
-        phase_path: null,
-        phase_id: null,
-      },
-      run: null,
-    };
+    const raw = " \t\"$& $` $' $$\" 'unmatched-single \"unmatched-double \\trailing \r\n雪 {{evcrate:workflows/missing.md}} $ARGUMENTS --advice --agent --agent --advice ";
     const result = await tools.get("evcrate_command").execute(
       "call-1",
-      { name: "evc-cmd-code-x-auto", args: raw, handoff },
+      { name: "evc-cmd-code-x-auto", args: raw },
       undefined,
       undefined,
       context(agentRoot),
@@ -99,30 +88,23 @@ test("registered model tool carries exact raw work and direct handoff through re
     assert.equal(expanded.body, raw);
     assert.equal(expanded.context.command, "code/auto");
     assert.equal(expanded.context.raw_arguments, raw);
-    assert.deepEqual(expanded.context.handoff, handoff);
+    assert.deepEqual(Object.keys(expanded.context).sort(), ["command", "protocol", "raw_arguments", "source", "version"]);
     assert.deepEqual(result.details, {
-      command: "evc-cmd-code-x-auto", canonicalCommand: "code/auto", source: "model-tool", handoff,
+      command: "evc-cmd-code-x-auto", canonicalCommand: "code/auto", source: "model-tool",
     });
     handlers.get("agent_start")?.();
-    const sameRun = {
-      kind: "same-run",
-      context: { ...handoff.context, phase_path: "plans/demo/phase-03.md", phase_id: "phase-03" },
-      run: {
-        task_run_id: "00000000-0000-4000-8000-000000000001", project_id: "a".repeat(64),
-        task_revision: 4, scope_revision: 1, evidence_revision: 2,
-      },
-    };
     const continued = await tools.get("evcrate_command").execute(
-      "call-2", { name: "evc-cmd-code-x-auto", args: "continue", handoff: sameRun },
+      "call-2", { name: "evc-cmd-code-x-auto", args: "continue" },
       undefined, undefined, context(agentRoot),
     );
-    assert.deepEqual(parseCommandContext(continued.content[0].text).context.handoff, sameRun);
+    assert.equal(parseCommandContext(continued.content[0].text).body, "continue");
+    assert.deepEqual(Object.keys(tools.get("evcrate_command").parameters.properties).sort(), ["args", "name"]);
   } finally {
     rmSync(agentRoot, { recursive: true, force: true });
   }
 });
 
-test("native command handler labels its transport and cannot claim model handoff", async () => {
+test("native command handler labels exact v2 transport and preserves raw task bytes", async () => {
   const { agentRoot, commands } = fixture();
   const handlers = new Map();
   const registered = new Map();
@@ -136,14 +118,16 @@ test("native command handler labels its transport and cannot claim model handoff
     };
     registerManagedCommands(pi, { agentRoot });
     handlers.get("session_start")?.();
-    const raw = "\tuser \"quote 'unmatched-single \\trailing \r\n雪 ";
+    const raw = "\tuser \"quote 'unmatched-single \\trailing \r\n雪 --advice --agent --agent --advice ";
     await registered.get("evc-cmd-code").handler(raw, context(agentRoot));
     const expanded = parseCommandContext(messages[0]);
     assert.equal(expanded.body, raw);
     assert.equal(expanded.context.source, "native-user");
     assert.equal(expanded.context.command, "code");
     assert.equal(expanded.context.raw_arguments, raw);
-    assert.equal(expanded.context.handoff, null);
+    assert.deepEqual(expanded.context, {
+      protocol: "evcrate-pi-command-context", version: 2, source: "native-user", command: "code", raw_arguments: raw,
+    });
   } finally {
     rmSync(agentRoot, { recursive: true, force: true });
   }
@@ -160,15 +144,6 @@ test("rejects unknown, disabled, repeated, and over-depth model dispatches", asy
     await assert.rejects(dispatchManagedCommand(
       { name: "evc-cmd-open", args: ["normalized"] }, context(agentRoot), options,
     ), /raw string args/);
-    await assert.rejects(dispatchManagedCommand(
-      { name: "evc-cmd-open", handoff: "discovered-json" }, context(agentRoot), options,
-    ), /handoff must be an object or null/);
-    await assert.rejects(dispatchManagedCommand(
-      { name: "evc-cmd-open", handoff: ["invalid", "array"] }, context(agentRoot), options,
-    ), /handoff must be an object or null/);
-    await assert.rejects(dispatchManagedCommand(
-      { name: "evc-cmd-open", handoff: true }, context(agentRoot), options,
-    ), /handoff must be an object or null/);
     const state = createCommandDispatchState();
     await dispatchManagedCommand({ name: "evc-cmd-open" }, context(agentRoot), { ...options, state });
     await assert.rejects(dispatchManagedCommand({ name: "evc-cmd-open" }, context(agentRoot), { ...options, state }), /cycle/);
@@ -216,3 +191,59 @@ test("fails closed when a resolved command carries no canonical identity", async
   }
 });
 
+test("command context admission validates source and raw representation with private bounded errors", () => {
+  const valid = { source: "native-user", command: "code/auto", rawArguments: "PRIVATE-RAW --advice --agent" };
+  assert.deepEqual(createCommandContext(valid), {
+    protocol: "evcrate-pi-command-context", version: 2, source: "native-user",
+    command: "code/auto", raw_arguments: valid.rawArguments,
+  });
+  for (const invocation of [
+    { ...valid, source: "PRIVATE-SOURCE" },
+    { ...valid, command: "" },
+    { ...valid, rawArguments: ["PRIVATE-RAW"] },
+  ]) {
+    assert.throws(() => createCommandContext(invocation), (error) => {
+      assert.ok(error.message.length < 128);
+      assert.equal(error.message.includes("PRIVATE-"), false);
+      return true;
+    });
+  }
+  assert.throws(() => prependCommandContext({}, valid), /expanded body must be a string/);
+});
+
+test("native and model dispatch preserve allowed-tool policy and release on expansion failure", async () => {
+  const { agentRoot, commands } = fixture();
+  try {
+    writeFileSync(join(commands, "evc-cmd-policy.md"), "---\nallowed-tools: [read, grep]\n---\n{{evcrate:workflows/missing.md}}");
+    const handlers = new Map();
+    const tools = new Map();
+    const registered = new Map();
+    const begun = [];
+    const released = [];
+    const parent = {};
+    const token = {};
+    const operationPolicy = {
+      currentToken: () => parent,
+      begin(options) { begun.push(options); return token; },
+      release(value) { released.push(value); },
+    };
+    const pi = {
+      on(name, handler) { handlers.set(name, handler); },
+      registerTool(tool) { tools.set(tool.name, tool); },
+      registerCommand(name, command) { registered.set(name, command); },
+      sendUserMessage() { assert.fail("unsafe expansion must not send a prompt"); },
+    };
+    await registerCommandTool(pi, { agentRoot, operationPolicy });
+    registerManagedCommands(pi, { agentRoot, operationPolicy });
+    handlers.get("session_start")();
+    await assert.rejects(tools.get("evcrate_command").execute(
+      "policy", { name: "evc-cmd-policy", args: "--advice --agent" }, undefined, undefined, context(agentRoot),
+    ), /resource is unavailable/);
+    assert.deepEqual(begun[0], { allowedTools: ["read", "grep"], parentToken: parent });
+    await assert.rejects(registered.get("evc-cmd-policy").handler("--advice --agent", context(agentRoot)), /resource is unavailable/);
+    assert.deepEqual(begun[1], { allowedTools: ["read", "grep"] });
+    assert.deepEqual(released, [token, token]);
+  } finally {
+    rmSync(agentRoot, { recursive: true, force: true });
+  }
+});

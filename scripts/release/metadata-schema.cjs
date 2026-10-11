@@ -2,7 +2,7 @@
 
 const { compareCodePoints } = require('./canonical-json.cjs');
 
-const SCHEMA_ID = 'evcrate-private-release/v1';
+const SCHEMA_ID = 'evcrate-private-release/v2';
 const PLATFORM_LINUX_X64 = 'linux-x64';
 const PLATFORM_WINDOWS_X64 = 'windows-x64';
 const SUPPORTED_PLATFORMS = Object.freeze([PLATFORM_LINUX_X64, PLATFORM_WINDOWS_X64]);
@@ -20,7 +20,6 @@ const METADATA_EXACT_KEYS = Object.freeze([
   'node_floor',
   'inventory_digest',
   'build_manifest_digests',
-  'controller_closure_digest',
   'platforms',
   'installers',
   'mutable_paths'
@@ -50,6 +49,9 @@ function releaseMetadataName(version) {
 function validateReleaseMetadata(data, mutablePathsExpected) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     throw new Error('Release metadata must be a non-null object');
+  }
+  if (data.schema === 'evcrate-private-release/v1') {
+    throw new Error('Old release assets cannot be installed fresh; use their predecessor installer for a recorded snapshot, or regenerate v2 assets.');
   }
 
   const keys = Object.keys(data).sort(compareCodePoints);
@@ -86,9 +88,6 @@ function validateReleaseMetadata(data, mutablePathsExpected) {
     if (!HEX_64.test(digest)) {
       throw new Error(`Invalid build manifest digest for target "${target}": ${digest}`);
     }
-  }
-  if (!HEX_64.test(data.controller_closure_digest)) {
-    throw new Error(`Invalid controller_closure_digest: ${data.controller_closure_digest}`);
   }
 
   if (!data.platforms || typeof data.platforms !== 'object') {

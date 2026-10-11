@@ -12,7 +12,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
   buildManifestBytes,
-  controllerHashes,
   loadTargetManifestRegistry,
   loadSelectedManifests,
   manifestAdapterHashes,
@@ -20,7 +19,6 @@ import {
 } from '../../dist/index.js';
 
 const packageRoot = process.cwd();
-const controllerRoot = join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin');
 const sharedHelper = 'dist/adapters/advisory.js';
 const vscodeHelper = 'dist/adapters/vscode/configuration-validation.js';
 
@@ -54,10 +52,9 @@ function recordedBuild(tempDir, adapterHashes) {
   writeFileSync(manifestPath, buildManifestBytes({
     sourceHashes: {},
     adapterHashes,
-    controllerHashes: controllerHashes(controllerRoot),
     owners: {},
     outputRoots: {},
-    validation: { complete: true },
+    validation: { complete: true, symlinks: 'rejected', target_registry: 'validated' },
     homePolicy: {}
   }));
   return manifestPath;
@@ -67,7 +64,6 @@ function verifyRecordedBuild(manifestPath, adapterHashes) {
   return verifyBuild({
     manifestPath,
     outputRoots: {},
-    controllerRoot,
     sourceHashes: {},
     adapterHashes
   });

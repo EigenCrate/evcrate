@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Test suite for ev-help.py with scanner independence regressions."""
+"""Behavior regressions for installed ev-help.py discovery and routing."""
 
+import json
 import os
 from pathlib import Path
 import re
@@ -19,18 +20,6 @@ def run_evcrate_help(*args):
     """Run ev-help.py with given arguments and return output."""
     res = subprocess.run([sys.executable, str(SCRIPT_PATH)] + list(args), capture_output=True, text=True)
     return res.stdout + res.stderr
-
-
-def test_independence():
-    """Verify ev-help.py does not import scanner modules or data files."""
-    code = SCRIPT_PATH.read_text(encoding="utf-8")
-    forbidden = ["scan_commands", "scan_skills", "commands_data", "skills_data", "import yaml"]
-    for word in forbidden:
-        if word in code:
-            print(f"{RED}✗ FAIL independence: found '{word}' in ev-help.py{RESET}")
-            return False
-    print(f"{GREEN}✓ PASS independence: ev-help.py has no scanner or data imports{RESET}")
-    return True
 
 
 LEGACY_NAME_RE = re.compile(r"/evcrate[:-]|(?<![\w-])cmd[_-][a-z]|\bcmd_[a-z]|`/[a-z0-9-]+:[a-z0-9]")
@@ -109,6 +98,59 @@ def test_codex_skill_discovery_accepts_dollar_command_path():
     return True
 
 
+def test_installed_layout_from_foreign_cwd():
+    """Installed layout, not caller cwd, owns discovery and command guidance."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        foreign = root / "foreign project"
+        foreign.mkdir()
+        (foreign / "commands").mkdir()
+        (foreign / "commands" / "evc-cmd-foreign.md").write_text(
+            '---\ndescription: Foreign command\n---\n', encoding="utf-8",
+        )
+        clean_env = os.environ.copy()
+        for name in ("COPILOT_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR"):
+            clean_env.pop(name, None)
+        for target in ("claude", "codex", "antigravity", "pi", "omp", "copilot", "vscode"):
+            installed = root / f"installed {target} 日本語"
+            scripts = installed / "scripts"
+            commands = installed / "native commands"
+            scripts.mkdir(parents=True)
+            commands.mkdir()
+            shutil.copy(SCRIPT_PATH, scripts / "ev-help.py")
+            (commands / "evc-cmd-advise.md").write_text(
+                '---\ndescription: Interview\nargument-hint: "[prompt]"\n---\n',
+                encoding="utf-8",
+            )
+            (scripts / "scanner-layout.json").write_text(json.dumps({
+                "schema": "evcrate-scanner-layout-v1",
+                "target": target,
+                "commands": {"format": "markdown", "root": "../native commands",
+                             "output": "commands_data.yaml"},
+            }), encoding="utf-8")
+            for args in (["core"], ["evc-cmd-advise"]):
+                result = subprocess.run(
+                    [sys.executable, str(scripts / "ev-help.py"), *args],
+                    capture_output=True, text=True, cwd=foreign, env=clean_env,
+                )
+                if (result.returncode != 0 or "/evc-cmd-advise" not in result.stdout
+                        or "/evc-cmd-foreign" in result.stdout
+                        or not result.stdout.startswith("@EVCRATE_OUTPUT_TYPE:")):
+                    print(f"{RED}✗ FAIL installed layout from foreign cwd: {target}{RESET}")
+                    return False
+            (commands / "evc-cmd-advise.md").unlink()
+            commands.rmdir()
+            missing = subprocess.run(
+                [sys.executable, str(scripts / "ev-help.py"), "evc-cmd-advise"],
+                capture_output=True, text=True, cwd=foreign, env=clean_env,
+            )
+            if missing.returncode != 1 or missing.stdout.startswith("@EVCRATE_OUTPUT_TYPE:"):
+                print(f"{RED}✗ FAIL missing installed command directory: {target}{RESET}")
+                return False
+    print(f"{GREEN}✓ PASS installed layout ownership and missing-resource failure{RESET}")
+    return True
+
+
 def test_case(name, args, expected, unexpected=None):
     """Run a test case and check for expected and unexpected patterns."""
     out = run_evcrate_help(*args) if args else run_evcrate_help()
@@ -134,7 +176,7 @@ def test_case(name, args, expected, unexpected=None):
 
 def main():
     print("=" * 60 + "\nev-help.py Test Suite\n" + "=" * 60)
-    tests = [test_independence(), test_no_legacy_names(), test_flat_discovery_ignores_legacy_layout(), test_codex_skill_discovery_accepts_dollar_command_path()]
+    tests = [test_no_legacy_names(), test_flat_discovery_ignores_legacy_layout(), test_codex_skill_discovery_accepts_dollar_command_path(), test_installed_layout_from_foreign_cwd()]
 
     print("\n--- Category Guides ---")
     tests.append(test_case("worktree category", ["worktree"], ["Git Worktrees", "Parallel Development", "/evc-cmd-worktree", "isolated branch"]))
@@ -169,7 +211,7 @@ def main():
     tests.append(test_case("search matches semantic id", ["plan:ha"], ["# Search:", "/evc-cmd-plan-x-hard"], ["/plan:"]))
     tests.append(test_case("config guide", ["config"], [".evcrate.json", "Configuration", "Resolution"]))
     tests.append(test_case("coding-level guide", ["coding-level"], ["Coding Level", "ELI5", "God Mode", "-1"]))
-    tests.append(test_case("advise guide", ["advise"], ["Interview-first technical advice", "/evc-cmd-advise"]))
+    tests.append(test_case("advise guide", ["advise"], ["/evc-cmd-advise"]))
 
     print("\n" + "=" * 60)
     passed, total = sum(tests), len(tests)

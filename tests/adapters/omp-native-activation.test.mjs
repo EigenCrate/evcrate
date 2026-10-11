@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { OMP_COMMAND_RUNTIME } from '../../dist/adapters/omp/activation.js';
@@ -11,13 +9,9 @@ import { translateHarnessReferences } from '../../dist/adapters/omp/commands.js'
 import { OMP_PRE_MODULE, OMP_RUNTIME_HELPER } from '../../dist/adapters/omp/templates.js';
 import { createProjectionBuildContext, createStagedRoot, loadTargetManifestRegistry } from '../../dist/index.js';
 import { ompAdapter } from '../../dist/adapters/omp/index.js';
-import helpers from '../advisor-controller/activation-test-helpers.cjs';
-const { initializeStateFixture } = helpers;
 
-const controllerRoot = fileURLToPath(new URL('../../.evcrate/source/.evcrate/bin/', import.meta.url));
 const REPUBLISH = 'evcrate publish --apply --scope home --target omp';
 const DIAGNOSTIC_PREFIX = 'EVCrate command stopped before prompt admission: ';
-const NODE_RANGE = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).engines.node;
 
 test('OMP references use installed project and HOME AGENTS payload paths without rewriting URIs', () => {
   const rendered = translateHarnessReferences(
@@ -33,16 +27,15 @@ async function fixture(t) {
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const home = join(root, 'HOME with spaces Việt');
   const project = join(root, 'project 日本');
-  const config = join(project, '.omp');
+  const config = join(root, 'installed OMP Việt');
   const resources = join(config, 'evcrate');
   const commandDir = join(config, 'commands/evc-cmd-code');
-  for (const path of [join(home, '.evcrate'), join(resources, 'commands'), join(resources, 'workflows'), commandDir]) {
-    mkdirSync(path, { recursive: true });
+  for (const directory of [home, project, join(resources, 'commands'), join(resources, 'workflows'), commandDir]) {
+    mkdirSync(directory, { recursive: true });
   }
-  cpSync(controllerRoot, join(home, '.evcrate/bin'), { recursive: true });
   writeFileSync(join(resources, 'omp-command-runtime.ts'), OMP_COMMAND_RUNTIME);
   writeFileSync(join(resources, 'commands/evc-cmd-code.md'), '---\ndescription: Native test\n---\n<work>$ARGUMENTS</work>');
-  for (const name of ['advice-activation', 'plan-progress']) {
+  for (const name of ['documentation-management', 'plan-progress']) {
     writeFileSync(join(resources, `workflows/${name}.md`), `# ${name}\n`);
   }
   const priorHome = process.env.HOME;
@@ -52,293 +45,157 @@ async function fixture(t) {
     else process.env.HOME = priorHome;
   });
   const { createCommand } = await import(pathToFileURL(join(resources, 'omp-command-runtime.ts')).href);
-  const command = createCommand({ name: 'evc-cmd-code', canonicalName: 'code', description: 'Native test',
-    activation: true, template: 'evc-cmd-code.md' }, pathToFileURL(join(commandDir, 'index.ts')).href);
+  const metadata = { name: 'evc-cmd-code', canonicalName: 'code', description: 'Native test', template: 'evc-cmd-code.md' };
+  const command = createCommand(metadata, pathToFileURL(join(commandDir, 'index.ts')).href);
   const notices = [];
   const ctx = { cwd: project, ui: { notify(message, level) { notices.push({ message, level }); } } };
-  return { home, project, resources, command, ctx, notices, helper: join(home, '.evcrate/bin/evcrate-advice-mode') };
-}
-
-function resultHeader(body) {
-  return JSON.parse(body.split('\n')[0]).evcrate_omp_command_context;
+  return { home, project, resources, config, command, ctx, notices, createCommand, metadata };
 }
 
 function assertBlocked(f, body) {
-  assert.equal(body, undefined, 'activation failure must not admit a model prompt');
-  assert.equal(f.notices.length, 1, 'operator receives one failure diagnostic');
+  assert.equal(body, undefined, 'failed admission must not return a model prompt');
+  assert.equal(f.notices.length, 1);
   assert.equal(f.notices[0].level, 'error');
-  assert.equal(existsSync(join(f.home, '.evcrate/advisor-state')), false);
   const { message } = f.notices[0];
   assert.ok(message.startsWith(DIAGNOSTIC_PREFIX));
-  assert.ok(message.length <= DIAGNOSTIC_PREFIX.length + 200, 'diagnostic detail stays within the 200 character cap');
+  assert.ok(message.length <= 256);
+  assert.equal(message.includes('PRIVATE-INPUT'), false);
+  assert.equal(message.includes('PRIVATE-ENV'), false);
   return message;
 }
 
-function setEnv(t, name, value) {
-  const prior = process.env[name];
-  process.env[name] = value;
-  t.after(() => {
-    if (prior === undefined) delete process.env[name];
-    else process.env[name] = prior;
-  });
-}
-
-function emptyDirectory(t) {
-  const dir = mkdtempSync(join(tmpdir(), 'evcrate-empty-path-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
-  return dir;
-}
-
-function writeFaultHelper(f, fault) {
-  writeFileSync(f.helper, `#!/usr/bin/env node\nprocess.stdin.resume(); process.stdin.on('end', () => { ${fault} });\n`);
-}
-
-// Wraps the real HOME helper so the exact request delivered by the host can be observed.
-function installCapturingHelper(f) {
-  const capture = join(f.home, 'captured-request.json');
-  const real = `${f.helper}.real`;
-  renameSync(f.helper, real);
-  writeFileSync(f.helper, [
-    '#!/usr/bin/env node',
-    "const fs = require('node:fs');",
-    "const { spawnSync } = require('node:child_process');",
-    'const input = fs.readFileSync(0);',
-    `fs.writeFileSync(${JSON.stringify(capture)}, input);`,
-    `const run = spawnSync(process.execPath, [${JSON.stringify(real)}], { input, cwd: process.cwd(), env: process.env });`,
-    'process.stdout.write(run.stdout);',
-    'process.exitCode = run.status;',
-    ''
-  ].join('\n'));
-  return {
-    reset: () => rmSync(capture, { force: true }),
-    read: () => (existsSync(capture) ? JSON.parse(readFileSync(capture, 'utf8')) : null)
-  };
-}
-
-test('native gate preserves quoted flag, Unicode, control bytes and literal replacement tokens', async (t) => {
+test('native v3 context has exact keys and preserves all raw task bytes once', async (t) => {
   const f = await fixture(t);
-  const raw = '  "task Việt 日本"\t\r\n$& $1 $ARGUMENTS "--advice"';
-  const offBody = await f.command.execute(['normalized', '--advice'], f.ctx, raw);
-  assert.notEqual(offBody, undefined);
-  const off = resultHeader(offBody);
-  assert.equal(off.protocol, 'evcrate-omp-command-context');
-  assert.equal(off.version, 2, 'compact metadata contract is version 2');
-  assert.equal(off.source, 'native-user', 'native execution identifies source as native-user');
-  assert.equal(off.mode, 'off', 'a quoted final flag must not activate advice');
-  assert.equal(off.reason, 'NO_FINAL_FLAG');
-  assert.equal(off.raw_arguments, undefined, 'raw_arguments excluded from compact metadata');
-  assert.equal(off.work_arguments, undefined, 'work_arguments excluded from compact metadata');
-  assert.equal(off.context.command, 'code');
-  assert.equal(off.context.project_root, resolve(f.project));
-  const offPrompt = offBody.slice(offBody.indexOf('\n\n') + 2);
-  assert.equal(offPrompt.includes(raw), true, 'body contains work arguments');
-  assert.equal(offPrompt.indexOf(raw), offPrompt.lastIndexOf(raw), 'task appears exactly once in prompt body');
-
-  const explicitBody = await f.command.execute([], f.ctx, `${raw}\t--advice\r\n`);
-  assert.notEqual(explicitBody, undefined);
-  const explicit = resultHeader(explicitBody);
-  assert.equal(explicit.version, 2);
-  assert.equal(explicit.source, 'native-user');
-  assert.equal(explicit.mode, 'explicit');
-  assert.equal(explicit.reason, 'EXPLICIT_FINAL_FLAG');
-  assert.equal(explicit.raw_arguments, undefined);
-  assert.equal(explicit.work_arguments, undefined);
-  const explicitPrompt = explicitBody.slice(explicitBody.indexOf('\n\n') + 2);
-  assert.equal(explicitPrompt.includes(raw), true);
-  assert.equal(explicitPrompt.indexOf(raw), explicitPrompt.lastIndexOf(raw), 'task appears exactly once in prompt body');
-  assert.equal(existsSync(join(f.home, '.evcrate/advisor-state')), false, 'mode evaluation must not initialize a run');
-});
-
-test('missing HOME helper blocks admission instead of using a project helper', async (t) => {
-  const f = await fixture(t);
-  rmSync(f.helper);
-  mkdirSync(join(f.project, '.evcrate/bin'), { recursive: true });
-  writeFileSync(join(f.project, '.evcrate/bin/evcrate-advice-mode'), 'throw new Error("project helper must never run");');
-  const message = assertBlocked(f, await f.command.execute([], f.ctx, 'plans/secret-plan.md'));
-  assert.equal(message.includes('secret-plan'), false, 'diagnostics must not echo work input');
-  assert.ok(message.includes(REPUBLISH), 'missing helper names the exact republication command');
-  assert.equal(message.includes('not found on PATH'), false, 'a missing helper is not a missing Node');
-});
-
-test('missing neutral resource blocks admission even with a working helper', async (t) => {
-  const f = await fixture(t);
-  rmSync(join(f.resources, 'workflows/advice-activation.md'));
-  const message = assertBlocked(f, await f.command.execute([], f.ctx, 'plans/test/plan.md'));
-  assert.ok(message.includes(REPUBLISH), 'missing resource names the exact republication command');
-});
-
-test('unavailable original raw representation cannot be rebuilt from parsed arguments', async (t) => {
-  const f = await fixture(t);
-  assertBlocked(f, await f.command.execute(['task', '--advice'], f.ctx));
-});
-
-test('Linux rejects absent or relative HOME rather than using USERPROFILE or cwd', { skip: process.platform !== 'linux' }, async (t) => {
-  const f = await fixture(t);
-  const priorProfile = process.env.USERPROFILE;
-  process.env.USERPROFILE = f.home;
-  t.after(() => {
-    if (priorProfile === undefined) delete process.env.USERPROFILE;
-    else process.env.USERPROFILE = priorProfile;
-  });
-  delete process.env.HOME;
-  assertBlocked(f, await f.command.execute([], f.ctx, 'private work'));
-  f.notices.length = 0;
-  process.env.HOME = '.';
-  assertBlocked(f, await f.command.execute([], f.ctx, 'private work'));
-});
-
-for (const [name, fault] of [
-  ['nonzero helper exit', 'process.exit(1);'],
-  ['malformed helper output', 'process.stdout.write("not a result\\n");'],
-  ['unterminated helper output', 'process.stdout.write("{} ");'],
-  ['helper output overflow', 'process.stdout.write("x".repeat(256 * 1024 + 1));'],
-]) {
-  test(`${name} blocks admission rather than falling back to off`, async (t) => {
-    const f = await fixture(t);
-    writeFaultHelper(f, fault);
-    const message = assertBlocked(f, await f.command.execute([], f.ctx, 'plans/test/plan.md'));
-    assert.ok(message.includes('HOME activation helper failed'));
-    assert.equal(message.includes('not found on PATH'), false, 'a helper fault is not a missing Node');
-    assert.equal(message.includes(REPUBLISH), false, 'a helper fault does not promise republication repairs it');
-  });
-}
-
-async function generatedCommandFixture(t) {
-  const root = mkdtempSync(join(tmpdir(), 'evcrate-gen-command-'));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-  const home = join(root, 'home');
-  const project = join(root, 'project');
-  const config = join(project, '.omp');
-  const resources = join(config, 'evcrate');
-  for (const path of [
-    join(home, '.evcrate'),
-    join(resources, 'commands'),
-    join(resources, 'workflows'),
-    join(config, 'commands/evc-cmd-code')
+  for (const raw of [
+    '  "task Việt 日本"\t\r\n$& $1 $ARGUMENTS "--advice"',
+    '  --advice --agent --agent topic\t--advice\r\n',
+    '--agent',
+    '日本語 Việt 🚀 '.repeat(1500),
   ]) {
-    mkdirSync(path, { recursive: true });
+    const body = await f.command.execute(['normalized', '--advice'], f.ctx, raw);
+    assert.equal(typeof body, 'string');
+    const envelope = JSON.parse(body.split('\n')[0]);
+    assert.deepEqual(envelope, { evcrate_omp_command_context: {
+      protocol: 'evcrate-omp-command-context', version: 3, source: 'native-user', command: 'code',
+      context: { project_root: f.project, command: 'code', work_target: 'code', plan_path: null, phase_path: null, phase_id: null },
+    } });
+    assert.equal(body.slice(body.indexOf('\n\n') + 2), `<work>${raw}</work>`);
+    assert.equal(JSON.stringify(envelope).includes(raw), false);
   }
-  cpSync(controllerRoot, join(home, '.evcrate/bin'), { recursive: true });
-  writeFileSync(join(resources, 'omp-command-runtime.ts'), OMP_COMMAND_RUNTIME);
+  assert.deepEqual(f.notices, []);
+});
 
+test('positional, sliced and default substitutions use parsed args without rescanning raw replacements', async (t) => {
+  const f = await fixture(t);
+  writeFileSync(join(f.resources, 'commands/evc-cmd-code.md'), '$1|${2:-missing}|$@[2:2]|$@[3:]|${ARGUMENTS:-empty}');
+  const body = await f.command.execute(['$ARGUMENTS', 'two', 'three'], f.ctx, 'raw $1 --advice');
+  assert.equal(body.slice(body.indexOf('\n\n') + 2), '$ARGUMENTS|two|two three|three|raw $1 --advice');
+});
+
+for (const resource of ['commands/evc-cmd-code.md', 'workflows/plan-progress.md', 'workflows/documentation-management.md']) {
+  test(`missing installed ${resource} cannot fall back to cwd or HOME`, async (t) => {
+    const f = await fixture(t);
+    for (const foreign of [f.home, f.project]) {
+      const replacement = join(foreign, '.omp/evcrate', resource);
+      mkdirSync(dirname(replacement), { recursive: true });
+      writeFileSync(replacement, 'foreign resource $ARGUMENTS');
+    }
+    rmSync(join(f.resources, resource));
+    const message = assertBlocked(f, await f.command.execute([], f.ctx, 'PRIVATE-INPUT'));
+    assert.ok(message.includes(REPUBLISH));
+  });
+}
+
+test('missing raw input and invalid cwd stop before admission without exposing task or paths', async (t) => {
+  const f = await fixture(t);
+  assertBlocked(f, await f.command.execute(['PRIVATE-INPUT'], f.ctx));
+  for (const cwd of ['', '.', join(f.project, 'PRIVATE-INPUT-missing'), join(f.resources, 'commands/evc-cmd-code.md')]) {
+    f.notices.length = 0;
+    assertBlocked(f, await f.command.execute([], { ...f.ctx, cwd }, 'PRIVATE-INPUT'));
+  }
+});
+
+for (const [name, arrange] of [
+  ['empty', (file) => writeFileSync(file, '')],
+  ['oversize', (file) => writeFileSync(file, 'x'.repeat(1024 * 1024 + 1))],
+  ['invalid UTF-8', (file) => writeFileSync(file, Buffer.from([0xff]))],
+  ['directory', (file) => { rmSync(file); mkdirSync(file); }],
+  ['symlink', (file, f) => { rmSync(file); symlinkSync(join(f.resources, 'workflows/plan-progress.md'), file); }],
+]) {
+  test(`${name} command resource fails with a bounded privacy-safe notice`, async (t) => {
+    const f = await fixture(t);
+    arrange(join(f.resources, 'commands/evc-cmd-code.md'), f);
+    assertBlocked(f, await f.command.execute([], f.ctx, 'PRIVATE-INPUT'));
+  });
+}
+
+test('symlinked installed resource ancestor cannot redirect admission', async (t) => {
+  const f = await fixture(t);
+  const foreign = join(f.project, 'foreign workflows');
+  mkdirSync(foreign);
+  writeFileSync(join(foreign, 'plan-progress.md'), 'foreign');
+  writeFileSync(join(foreign, 'documentation-management.md'), 'foreign');
+  rmSync(join(f.resources, 'workflows'), { recursive: true });
+  symlinkSync(foreign, join(f.resources, 'workflows'), 'dir');
+  assertBlocked(f, await f.command.execute([], f.ctx, 'PRIVATE-INPUT'));
+});
+
+test('local admission is independent of PATH, HOME settings, locked or corrupt old state', async (t) => {
+  const f = await fixture(t);
+  const privateRoot = join(f.home, '.evcrate');
+  mkdirSync(join(privateRoot, 'bin'), { recursive: true });
+  const sentinels = ['advisor-routing.json', 'advisor-state/state.json', 'advisor-state/state.lock', 'bin/evcrate-advice-mode'];
+  for (const relative of sentinels) {
+    const file = join(privateRoot, relative);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, relative.endsWith('mode') ? 'throw new Error("PRIVATE-ENV")' : '{ corrupt PRIVATE-ENV');
+  }
+  const before = sentinels.map((relative) => readFileSync(join(privateRoot, relative)));
+  const oldPath = process.env.PATH;
+  const oldHome = process.env.HOME;
+  process.env.PATH = '';
+  delete process.env.HOME;
+  try {
+    const raw = 'PRIVATE-INPUT --advice --agent';
+    const body = await f.command.execute([], f.ctx, raw);
+    assert.equal(body.slice(body.indexOf('\n\n') + 2), `<work>${raw}</work>`);
+    for (let index = 0; index < sentinels.length; index++) {
+      assert.deepEqual(readFileSync(join(privateRoot, sentinels[index])), before[index]);
+    }
+    assert.deepEqual(f.notices, []);
+  } finally {
+    if (oldPath === undefined) delete process.env.PATH; else process.env.PATH = oldPath;
+    if (oldHome === undefined) delete process.env.HOME; else process.env.HOME = oldHome;
+  }
+});
+
+test('no-UI failures emit one bounded notice and no admitted prompt', async (t) => {
+  const f = await fixture(t);
+  const messages = [];
+  t.mock.method(process.stderr, 'write', (message) => { messages.push(message); return true; });
+  assert.equal(await f.command.execute([], { cwd: '.', hasUI: false }, 'PRIVATE-INPUT'), undefined);
+  assert.equal(messages.length, 1);
+  assert.ok(messages[0].length <= 257);
+  assert.equal(messages[0].includes('PRIVATE-INPUT'), false);
+});
+
+test('generated native modules cover canonical inventory and admit command text once', async (t) => {
+  const f = await fixture(t);
   const repository = fileURLToPath(new URL('../../', import.meta.url));
   const registry = loadTargetManifestRegistry(join(repository, '.evcrate/targets/manifest.json'));
-  const stage = createStagedRoot(root, '.omp-current-projection-');
+  const stage = createStagedRoot(dirname(f.project), '.omp-current-projection-');
   t.after(() => stage.cleanup());
   ompAdapter.build(createProjectionBuildContext(registry.targets.get('omp'), join(repository, '.evcrate/source/.claude'), stage));
-  cpSync(join(stage.path, '.omp'), config, { recursive: true });
-
-  const priorHome = process.env.HOME;
-  process.env.HOME = home;
-  t.after(() => {
-    if (priorHome === undefined) delete process.env.HOME;
-    else process.env.HOME = priorHome;
-  });
-
-  const runtimeUrl = pathToFileURL(join(resources, 'omp-command-runtime.ts')).href;
-  const { createCommand } = await import(runtimeUrl);
-
-  const codeCmd = createCommand({
-    name: 'evc-cmd-code', canonicalName: 'code', description: 'Start coding & testing an existing plan',
-    activation: true, template: 'evc-cmd-code.md'
-  }, pathToFileURL(join(config, 'commands/evc-cmd-code/index.ts')).href);
-
-  const notices = [];
-  const ctx = { cwd: project, ui: { notify(message, level) { notices.push({ message, level }); } } };
-  return { home, project, resources, codeCmd, ctx, notices };
-}
-
-test('compact prompt projection ensures task appears exactly once for small and large Unicode inputs', async (t) => {
-  const f = await generatedCommandFixture(t);
-
-  // Small Unicode task
-  const smallRaw = 'Cải tiến hiệu năng & tính năng mới: 日本語とTiếng Việt 🚀✨';
-  const smallNativeBody = await f.codeCmd.execute([], f.ctx, smallRaw);
-  assert.notEqual(smallNativeBody, undefined);
-  const smallHeader = resultHeader(smallNativeBody);
-  assert.equal(smallHeader.version, 2);
-  assert.equal(smallHeader.raw_arguments, undefined);
-  assert.equal(JSON.stringify(smallHeader).includes(smallRaw), false, 'header must not contain task text');
-  const smallCount = smallNativeBody.split(smallRaw).length - 1;
-  assert.equal(smallCount, 1, 'small Unicode task appears exactly once across entire admitted prompt');
-
-  // Large Unicode task (10 KiB)
-  const largeSegment = 'Kế hoạch triển khai mã nguồn chi tiết với tiếng Việt có dấu và 日本語テキスト: 🌟 ';
-  const largeRaw = largeSegment.repeat(150);
-  assert.ok(Buffer.byteLength(largeRaw) > 10 * 1024, 'large input exceeds 10 KiB');
-
-  // Native execution with large Unicode task
-  const largeNativeBody = await f.codeCmd.execute([], f.ctx, largeRaw);
-  assert.notEqual(largeNativeBody, undefined);
-  const largeHeader = resultHeader(largeNativeBody);
-  assert.equal(largeHeader.version, 2);
-  assert.equal(largeHeader.raw_arguments, undefined);
-  assert.equal(JSON.stringify(largeHeader).includes(largeRaw), false, 'header must not contain task text');
-  const largeNativeCount = largeNativeBody.split(largeRaw).length - 1;
-  assert.equal(largeNativeCount, 1, 'large Unicode task appears exactly once across entire native prompt');
-});
-
-test('Node absent from PATH yields one Node diagnostic without admitting the prompt', async (t) => {
-  const f = await fixture(t);
-  setEnv(t, 'PATH', emptyDirectory(t));
-  const message = assertBlocked(f, await f.command.execute([], f.ctx, 'plans/secret-plan.md'));
-  assert.ok(message.includes(`Node ${NODE_RANGE} not found on PATH`));
-  assert.equal(message.includes(REPUBLISH), false, 'republication cannot repair a missing Node');
-  assert.equal(message.includes('secret-plan'), false, 'diagnostics must not echo work input');
-});
-
-test('helper exit with Node available yields a helper diagnostic and never leaks helper stderr', async (t) => {
-  const f = await fixture(t);
-  writeFaultHelper(f, "process.stderr.write('RAW-HELPER-SECRET'); process.exit(1);");
-  const message = assertBlocked(f, await f.command.execute([], f.ctx, 'plans/secret-plan.md'));
-  assert.ok(message.includes('HOME activation helper failed'));
-  assert.equal(message.includes('not found on PATH'), false);
-  assert.equal(message.includes('RAW-HELPER-SECRET'), false);
-  assert.equal(message.includes('secret-plan'), false);
-});
-
-
-test('native no-flag admission ignores locked or corrupt HOME state and sends a null handoff', async (t) => {
-  const f = await fixture(t);
-  chmodSync(f.home, 0o700);
-  chmodSync(f.project, 0o700);
-  const state = { home: f.home, project: f.project, taskRunId: randomUUID(),
-    context: { cwd: f.project, environment: { HOME: f.home } } };
-  initializeStateFixture(state);
-  const taskDirectory = dirname(state.stateFile);
-  const lockFile = join(taskDirectory, 'state.lock');
-  const capture = installCapturingHelper(f);
-  const raw = 'plans/test/plan.md';
-  const snapshot = () => ({
-    entries: readdirSync(taskDirectory).sort(),
-    state: readFileSync(state.stateFile),
-    lock: existsSync(lockFile) ? readFileSync(lockFile) : null
-  });
-
-  for (const [name, arrange] of [
-    ['live lock', () => writeFileSync(lockFile, JSON.stringify({ token: 'l'.repeat(32), process: { pid: process.pid, start: null } }), { mode: 0o600 })],
-    ['corrupt state', () => { rmSync(lockFile, { force: true }); writeFileSync(state.stateFile, '{ corrupt json'); }]
-  ]) {
-    arrange();
-    const before = snapshot();
-    capture.reset();
-    const body = await f.command.execute([], f.ctx, raw);
-    assert.notEqual(body, undefined, `${name}: off admission must not depend on HOME state`);
-    const header = resultHeader(body);
-    assert.equal(header.source, 'native-user');
-    assert.equal(header.mode, 'off');
-    assert.equal(header.reason, 'NO_FINAL_FLAG');
-    assert.equal(header.run, null);
-    assert.deepEqual(f.notices, []);
-    const after = snapshot();
-    assert.deepEqual(after.entries, before.entries, `${name}: no directory entries created or removed`);
-    assert.equal(after.state.equals(before.state), true, `${name}: state bytes unchanged`);
-    assert.equal(after.lock?.equals(before.lock) ?? before.lock === null, true, `${name}: lock bytes unchanged`);
-    const request = capture.read();
-    assert.equal(request.handoff, null, 'a user-entered command always sends a null handoff');
-    assert.equal(request.raw_arguments, raw);
-    assert.equal(request.context.command, 'code');
-  }
+  cpSync(join(stage.path, '.omp'), f.config, { recursive: true });
+  const canonical = readdirSync(join(repository, '.evcrate/source/.claude/commands')).filter((name) => name.endsWith('.md')).map((name) => name.slice(0, -3)).sort();
+  assert.deepEqual(readdirSync(join(f.config, 'commands')).sort(), canonical);
+  const { default: getCommand } = await import(pathToFileURL(join(f.config, 'commands/evc-cmd-code-x-auto/index.ts')).href);
+  const command = getCommand();
+  const raw = 'Cải tiến hiệu năng 日本語 🚀 --advice --agent';
+  const body = await command.execute([], f.ctx, raw);
+  assert.equal(body.split(raw).length - 1, 1);
+  assert.equal(JSON.parse(body.split('\n')[0]).evcrate_omp_command_context.version, 3);
+  assert.deepEqual(f.notices, []);
 });
 
 

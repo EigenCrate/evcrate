@@ -1,8 +1,8 @@
 - source: evc-cmd-advise.md
   name: /evc-cmd-advise
   path: evc-cmd-advise/SKILL.md
-  description: Interview-first technical advice; advisor relay is unsupported by Copilot CLI.
-  argument_hint: '[prompt-or-url] [--agent]'
+  description: Interview-first technical advice in the main session.
+  argument_hint: '[prompt-or-url]'
   category: core
 - source: evc-cmd-ask.md
   name: /evc-cmd-ask
@@ -14,25 +14,25 @@
   name: /evc-cmd-bootstrap
   path: evc-cmd-bootstrap/SKILL.md
   description: Bootstrap a new project step by step
-  argument_hint: '[user-requirements] [--advice]'
+  argument_hint: '[user-requirements]'
   category: core
 - source: evc-cmd-bootstrap-x-auto.md
   name: /evc-cmd-bootstrap-x-auto
   path: evc-cmd-bootstrap-x-auto/SKILL.md
   description: Bootstrap a new project automatically
-  argument_hint: '[user-requirements] [--advice]'
+  argument_hint: '[user-requirements]'
   category: bootstrap
 - source: evc-cmd-bootstrap-x-auto-x-fast.md
   name: /evc-cmd-bootstrap-x-auto-x-fast
   path: evc-cmd-bootstrap-x-auto-x-fast/SKILL.md
   description: Quickly bootstrap a new project automatically
-  argument_hint: '[user-requirements] [--advice]'
+  argument_hint: '[user-requirements]'
   category: bootstrap
 - source: evc-cmd-bootstrap-x-auto-x-parallel.md
   name: /evc-cmd-bootstrap-x-auto-x-parallel
   path: evc-cmd-bootstrap-x-auto-x-parallel/SKILL.md
   description: Bootstrap project with parallel execution
-  argument_hint: '[user-requirements] [--advice]'
+  argument_hint: '[user-requirements]'
   category: bootstrap
 - source: evc-cmd-brainstorm.md
   name: /evc-cmd-brainstorm
@@ -44,25 +44,25 @@
   name: /evc-cmd-code
   path: evc-cmd-code/SKILL.md
   description: Start coding & testing an existing plan
-  argument_hint: '[plan] [--advice]'
+  argument_hint: '[plan]'
   category: core
 - source: evc-cmd-code-x-auto.md
   name: /evc-cmd-code-x-auto
   path: evc-cmd-code-x-auto/SKILL.md
   description: '[AUTO] Start coding & testing an existing plan ("trust me bro")'
-  argument_hint: '[plan] [all-phases-yes-or-no] [--advice] (default: yes)'
+  argument_hint: '[plan] [all-phases-yes-or-no] (default: yes)'
   category: code
 - source: evc-cmd-code-x-no-test.md
   name: /evc-cmd-code-x-no-test
   path: evc-cmd-code-x-no-test/SKILL.md
   description: Start coding an existing plan (no testing)
-  argument_hint: '[plan] [--advice]'
+  argument_hint: '[plan]'
   category: code
 - source: evc-cmd-code-x-parallel.md
   name: /evc-cmd-code-x-parallel
   path: evc-cmd-code-x-parallel/SKILL.md
   description: Execute parallel or sequential phases based on plan structure
-  argument_hint: '[plan-path] [--advice]'
+  argument_hint: '[plan-path]'
   category: code
 - source: evc-cmd-coding-level.md
   name: /evc-cmd-coding-level
@@ -98,25 +98,25 @@
   name: /evc-cmd-cook
   path: evc-cmd-cook/SKILL.md
   description: Implement a feature [step by step]
-  argument_hint: '[tasks] [--advice]'
+  argument_hint: '[tasks]'
   category: core
 - source: evc-cmd-cook-x-auto.md
   name: /evc-cmd-cook-x-auto
   path: evc-cmd-cook-x-auto/SKILL.md
   description: Implement a feature automatically with plan and quality gates
-  argument_hint: '[tasks] [--advice]'
+  argument_hint: '[tasks]'
   category: cook
 - source: evc-cmd-cook-x-auto-x-fast.md
   name: /evc-cmd-cook-x-auto-x-fast
   path: evc-cmd-cook-x-auto-x-fast/SKILL.md
   description: 'Low-risk fast cook: scout, plan fast, implement with quality gates'
-  argument_hint: '[tasks-or-prompt] [--advice]'
+  argument_hint: '[tasks-or-prompt]'
   category: cook
 - source: evc-cmd-cook-x-auto-x-parallel.md
   name: /evc-cmd-cook-x-auto-x-parallel
   path: evc-cmd-cook-x-auto-x-parallel/SKILL.md
   description: Plan parallel phases & execute with evc-fullstack-developer agents
-  argument_hint: '[tasks] [--advice]'
+  argument_hint: '[tasks]'
   category: cook
 - source: evc-cmd-debug.md
   name: /evc-cmd-debug
@@ -182,55 +182,55 @@
   name: /evc-cmd-fix
   path: evc-cmd-fix/SKILL.md
   description: Analyze and fix issues [INTELLIGENT ROUTING]
-  argument_hint: '[issues] [--advice]'
+  argument_hint: '[issues]'
   category: core
 - source: evc-cmd-fix-x-ci.md
   name: /evc-cmd-fix-x-ci
   path: evc-cmd-fix-x-ci/SKILL.md
   description: Analyze Github Actions logs and fix issues
-  argument_hint: '[github-actions-url] [--advice]'
+  argument_hint: '[github-actions-url]'
   category: fix
 - source: evc-cmd-fix-x-fast.md
   name: /evc-cmd-fix-x-fast
   path: evc-cmd-fix-x-fast/SKILL.md
   description: Analyze and fix small issues [FAST]
-  argument_hint: '[issues] [--advice]'
+  argument_hint: '[issues]'
   category: fix
 - source: evc-cmd-fix-x-hard.md
   name: /evc-cmd-fix-x-hard
   path: evc-cmd-fix-x-hard/SKILL.md
   description: Use subagents to plan and fix hard issues
-  argument_hint: '[issues] [--advice]'
+  argument_hint: '[issues]'
   category: fix
 - source: evc-cmd-fix-x-logs.md
   name: /evc-cmd-fix-x-logs
   path: evc-cmd-fix-x-logs/SKILL.md
   description: Analyze logs and fix issues
-  argument_hint: '[issue] [--advice]'
+  argument_hint: '[issue]'
   category: fix
 - source: evc-cmd-fix-x-parallel.md
   name: /evc-cmd-fix-x-parallel
   path: evc-cmd-fix-x-parallel/SKILL.md
   description: Analyze & fix issues with parallel evc-fullstack-developer agents
-  argument_hint: '[issues] [--advice]'
+  argument_hint: '[issues]'
   category: fix
 - source: evc-cmd-fix-x-test.md
   name: /evc-cmd-fix-x-test
   path: evc-cmd-fix-x-test/SKILL.md
   description: Run test suite and fix issues
-  argument_hint: '[issues] [--advice]'
+  argument_hint: '[issues]'
   category: fix
 - source: evc-cmd-fix-x-types.md
   name: /evc-cmd-fix-x-types
   path: evc-cmd-fix-x-types/SKILL.md
   description: Fix type errors
-  argument_hint: '[options] [--advice]'
+  argument_hint: '[options]'
   category: fix
 - source: evc-cmd-fix-x-ui.md
   name: /evc-cmd-fix-x-ui
   path: evc-cmd-fix-x-ui/SKILL.md
   description: Analyze and fix UI issues
-  argument_hint: '[issue] [--advice]'
+  argument_hint: '[issue]'
   category: fix
 - source: evc-cmd-git-x-cm.md
   name: /evc-cmd-git-x-cm

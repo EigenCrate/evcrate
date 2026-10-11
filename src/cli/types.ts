@@ -1,5 +1,3 @@
-import type { AdvisorSettingsRequest, AdvisorSettingsResult } from '../protocol/advisor-settings.js';
-import type { InvocationContext } from '../context/invocation-context.js';
 import type { ResourceHandler } from '../imports/handler.js';
 import type { ProcessResult, RunBoundedProcessOptions } from './process-runner.js';
 import type { PublicationHandler, PublicationOptions } from '../distribution/publication.js';
@@ -18,12 +16,6 @@ export interface VscodeSettingsConsole {
   readonly writeNotice?: (text: string) => void;
 }
 
-export interface AdvisorSettingsHandler {
-  handle(
-    request: AdvisorSettingsRequest,
-    context: InvocationContext
-  ): AdvisorSettingsResult | Promise<AdvisorSettingsResult>;
-}
 
 export interface ProcessRunner {
   run(options: RunBoundedProcessOptions): Promise<ProcessResult>;
@@ -42,7 +34,6 @@ export interface CliRuntime {
   readonly abortSignal?: AbortSignal;
   readonly signalCode?: 130 | 143;
   readonly output?: CliOutput;
-  readonly settingsHandler?: AdvisorSettingsHandler;
   readonly resourceHandler?: ResourceHandler;
   readonly processRunner?: ProcessRunner;
   readonly publicationHandler?: PublicationHandler;

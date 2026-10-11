@@ -1,11 +1,10 @@
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from '../types.js';
-import { ensureProjectionDirectory, graphText, validateProjection, writeProjectionFile, textBytes, isProductionControllerArtifact } from '../projection-utils.js';
+import { ensureProjectionDirectory, graphText, validateProjection, writeProjectionFile, textBytes, isProductionArtifact } from '../projection-utils.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
 import { applyReplacements, addWorkflowFallback, canonicalCommandPath, isBinary, markdownFrontmatter, MODEL_MAP, normalizeDescription, parseFrontmatter, renderAdvisoryInterview, renderHarnessScriptReferences, renderInlineAdvise, rewriteCommandGuidance, SUBAGENT_WAIT_CONTRACT, tomlValue, transformResourceText } from './transforms.js';
 import { contextBridge, hooksJson, permissionHook, pretoolBridge, runMcpPackage, runNodeHook } from './hooks.js';
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { projectCatalogDataAndLayout } from '../catalog-data.js';
-import { renderMentoringWorkflow } from '../advisory.js';
 import { assertAgentName, assertUniqueNames, commandNameFromSourcePath } from '../resource-naming.js';
 
 const SKILLS_TO_SKIP = new Set(['claude-code', 'skill-creator']);
@@ -51,7 +50,7 @@ function copyScripts(context: ProjectionBuildContext): void {
   const known = knownCommands(context);
   for (const file of filesUnder(context, 'scripts')) {
     const relative = file.path.slice('scripts/'.length); const parts = relative.split('/');
-    if (parts.some((part) => OMITTED_PARTS.has(part)) || isProductionControllerArtifact(relative) || relative.includes('advise-state') || relative === 'commands_data.yaml' || relative === 'skills_data.yaml') continue;
+    if (parts.some((part) => OMITTED_PARTS.has(part)) || isProductionArtifact(relative) || relative === 'commands_data.yaml' || relative === 'skills_data.yaml') continue;
     const content = transformed(context, file, known);
     const final = relative === 'ev-help.py' ? new TextDecoder().decode(content).replace('("CODEX_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")', '("CLAUDE_PROJECT_DIR", "CODEX_PROJECT_DIR", "GEMINI_PROJECT_DIR", "AGY_PROJECT_DIR")') : content;
     writeProjectionFile(context, `.codex/scripts/${relative}`, typeof final === 'string' ? textBytes(final) : final, file.executable ?? false);
@@ -61,7 +60,7 @@ function copyHooks(context: ProjectionBuildContext): void {
   const known = knownCommands(context);
   for (const file of filesUnder(context, 'hooks')) {
     const relative = file.path.slice('hooks/'.length); const parts = relative.split('/');
-    if (parts.some((part) => OMITTED_PARTS.has(part)) || isProductionControllerArtifact(relative)) continue;
+    if (parts.some((part) => OMITTED_PARTS.has(part)) || isProductionArtifact(relative)) continue;
     writeProjectionFile(context, `.codex/hooks/${relative}`, transformed(context, file, known), file.executable ?? false);
   }
 }
@@ -91,8 +90,7 @@ function copySkills(context: ProjectionBuildContext): void {
 function renderAgent(context: ProjectionBuildContext, file: ResourceGraphFile, known: ReadonlySet<string>): string {
   const parsed = parseFrontmatter(new TextDecoder().decode(file.bytes)); const stem = file.path.slice('agents/'.length, -3);
   const name = assertAgentName(applyReplacements(typeof parsed.metadata.name === 'string' ? parsed.metadata.name : stem), stem);
-  let description = rewriteCommandGuidance(applyReplacements(typeof parsed.metadata.description === 'string' ? parsed.metadata.description : `Specialized Codex subagent for ${name}.`), known);
-  if (stem === 'evc-advisor') description = 'Use this high-tier mentor for fresh named checkpoints; Codex rejects interview relay.';
+  const description = rewriteCommandGuidance(applyReplacements(typeof parsed.metadata.description === 'string' ? parsed.metadata.description : `Specialized Codex subagent for ${name}.`), known);
   let body = addWorkflowFallback(rewriteCommandGuidance(applyReplacements(parsed.body), known));
   if (stem === 'evc-scout-external') body = body.replace(/<!-- EXTERNAL_SCOUT_STRATEGY_START -->[\s\S]*?<!-- EXTERNAL_SCOUT_STRATEGY_END -->/u, '<!-- EXTERNAL_SCOUT_STRATEGY_START -->\n## External command strategy\n\nFor each focused directory search, use the same read-only primary command. Prompts must request concise paths and supporting evidence, and must not ask for modifications or credentials.\n\n```bash\nagy -p "[prompt]" --model gemini-3.7-flash-high\n```\n\nRun focused searches in parallel when useful, with a three-minute timeout per command. Do not restart a timed-out command.\n<!-- EXTERNAL_SCOUT_STRATEGY_END -->');
   body = `${body.trim()}\n\n${SUBAGENT_WAIT_CONTRACT}`;
@@ -114,7 +112,6 @@ function copyWorkflows(context: ProjectionBuildContext): void {
   for (const file of filesUnder(context, 'workflows')) if (!file.path.slice('workflows/'.length).includes('/')) {
     let body = new TextDecoder().decode(file.bytes);
     if (file.path.endsWith('/advisory-interview.md')) body = renderAdvisoryInterview(body);
-    else if (file.path.endsWith('/advisor-mentoring.md')) body = renderMentoringWorkflow(body, 'codex');
     writeText(context, `.codex/workflows/${file.path.slice('workflows/'.length)}`, addWorkflowFallback(rewriteCommandGuidance(applyReplacements(body), known)));
   }
 }
@@ -198,7 +195,7 @@ function behaviorMatrix(context: ProjectionBuildContext): void {
     const target = rel.replace(first, mapped);
     entries.push({ kind: 'skill-package', source: rel, classification: 'skill-package', status: 'migrated', target: `.agents/skills/${target}`, target_name: mapped });
   }
-  entries.push({ kind: 'advisory-capability', classification: 'target-native', checkpoint: 'supported', inline: 'supported', relay: 'unsupported', relay_error: 'ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX' });
+  entries.push({ kind: 'advisory-capability', classification: 'target-native', capability: 'advise-inline/v1' });
   const hooks = settings.hooks;
   if (hooks && typeof hooks === 'object' && !Array.isArray(hooks)) for (const [eventName, groups] of Object.entries(hooks as Record<string, unknown>)) if (Array.isArray(groups)) for (const group of groups) if (group && typeof group === 'object') for (const hook of Array.isArray((group as Record<string, unknown>).hooks) ? (group as Record<string, unknown>).hooks as unknown[] : []) if (hook && typeof hook === 'object') {
     const mapped = COMMAND_EVENT_NAMES.has(eventName); const entry: Record<string, unknown> = { kind: 'hook-driven', source_event: eventName, source_matcher: (group as Record<string, unknown>).matcher ?? '*', source_command: (hook as Record<string, unknown>).command ?? '' };
@@ -222,17 +219,16 @@ function commands(context: ProjectionBuildContext): void {
     const command = commandNameFromSourcePath(file.path);
     const parsed = parseFrontmatter(new TextDecoder().decode(file.bytes));
     const commandPath = `$${command.name}`;
-    let body = command.semanticId === 'advise' ? renderInlineAdvise(parsed.body) : transformResourceText(parsed.body, known).trim();
+    let body = transformResourceText(command.semanticId === 'advise' ? renderInlineAdvise(parsed.body) : parsed.body, known).trim();
     let description = normalizeDescription(typeof parsed.metadata.description === 'string' ? parsed.metadata.description : undefined, body, `Run the $${command.name} command workflow.`);
-    if (command.semanticId === 'advise') description = 'Interview-first technical advice with native inline questioning and explicit relay rejection.';
+    if (command.semanticId === 'advise') description = 'Interview-first technical advice in the main session.';
     if (command.semanticId === 'coding-level') {
       const marker = '1. Set ' + String.fromCharCode(96) + 'codingLevel' + String.fromCharCode(96) + ' in .codex/.evcrate.json';
       body = body.replace(marker, marker + '.\n   This file is materialized from the canonical EVCrate source; update that source before regenerating to persist changes');
     }
     const tick = String.fromCharCode(96);
     const note = `Codex note: when this recipe says to run another ${tick}$evc-cmd-…${tick} command, invoke the matching ${tick}evc-cmd-*${tick} skill for that path.`;
-    const advice = `For high-impact architecture, security, debugging, or review decisions, consider explicit ${tick}$advisor-strategy${tick} use for current-session guidance; this pointer does not activate it.`;
-    const text = [markdownFrontmatter({ name: command.name, description }), '# ' + command.name, 'Command Path: ' + commandPath, 'Description: ' + description, note, advice, SUBAGENT_WAIT_CONTRACT + body].join('\n\n') + '\n';
+    const text = [markdownFrontmatter({ name: command.name, description }), '# ' + command.name, 'Command Path: ' + commandPath, 'Description: ' + description, note, SUBAGENT_WAIT_CONTRACT + body].join('\n\n') + '\n';
     writeText(context, `.agents/skills/${command.name}/SKILL.md`, text);
   }
 }

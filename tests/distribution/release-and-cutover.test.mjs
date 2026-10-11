@@ -6,7 +6,6 @@ import { readFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  ADVISOR_CONTROLLER_FILES,
   assertLegacyRootClean,
   assertUniformAuthoritativeEngine,
   authoritativeEngineForTarget,
@@ -129,14 +128,7 @@ test('packaged artifact allowlist is Python-free and contains required runtime a
   const jsFiles = files.filter((f) => f.startsWith('dist/'));
   assert.ok(jsFiles.length > 0, 'Compiled JS files must be present in package');
 
-  // Assert exact controller files present
-  for (const entry of ADVISOR_CONTROLLER_FILES) {
-    const controllerPath = `.evcrate/source/.evcrate/bin/${entry}`;
-    assert.ok(
-      files.includes(controllerPath),
-      `Packaged files must include controller file: ${controllerPath}`
-    );
-  }
+  assert.equal(files.some((file) => file.startsWith('.evcrate/source/.evcrate/')), false);
 
   // Assert target manifests present
   for (const target of PERSISTED_TARGETS) {
@@ -148,7 +140,7 @@ test('packaged artifact allowlist is Python-free and contains required runtime a
   }
 });
 
-test('pure TypeScript CLI routes health, settings, version, and publication without Python', async () => {
+test('pure TypeScript CLI routes version and publication without Python', async () => {
   const home = mkdtempSync(join(tmpdir(), 'evcrate-p10-home-'));
   try {
     const capturedVersion = [];
@@ -160,11 +152,6 @@ test('pure TypeScript CLI routes health, settings, version, and publication with
     assert.equal(vParsed.status, 'ok');
     assert.ok(vParsed.payload.version);
 
-    const capturedSettings = [];
-    const sCode = await main(['advisor', 'settings', 'get', '--home', home, '--json'], {
-      output: { isTTY: false, write: (v) => capturedSettings.push(v) }
-    });
-    assert.equal(sCode, 0);
     const capturedPub = [];
     const pCode = await main(['publish', '--dry-run', '--target', 'omp', '--home', home, '--json'], {
       output: { isTTY: false, write: (v) => capturedPub.push(v) }
@@ -172,7 +159,7 @@ test('pure TypeScript CLI routes health, settings, version, and publication with
     assert.equal(pCode, 0);
     const pParsed = JSON.parse(capturedPub[0]);
     assert.equal(pParsed.status, 'preview');
-    assert.deepEqual(pParsed.payload.phases[1].selectedTargets, ['omp']);
+    assert.deepEqual(pParsed.payload.phases[0].selectedTargets, ['omp']);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }

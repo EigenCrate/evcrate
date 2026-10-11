@@ -27,7 +27,6 @@ import {
   copilotSkillName,
   copilotStyleName,
 } from '../../dist/adapters/resource-naming.js';
-import { ADVISOR_COMMAND_NAMES } from '../../dist/manifests/controller.js';
 import { vscodeAdapter } from '../../dist/adapters/vscode/index.js';
 import { makeTempDir, packageRoot, prepareFixtureWorkspace } from './parity-verification-helpers.mjs';
 const registry = loadTargetManifestRegistry(join(packageRoot, '.evcrate/targets/manifest.json'));

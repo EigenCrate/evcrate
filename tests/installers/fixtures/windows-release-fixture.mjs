@@ -8,7 +8,6 @@ import { compareCodePoints } from '../../../scripts/release/canonical-json.cjs';
 import { createMinimalValidRecords } from './fixture-records.mjs';
 import {
   PROJECT_ROOT,
-  computeControllerClosureDigest,
   computeBuildManifestDigests,
   getRealInstallerEntry
 } from './release-fixture-shared-helpers.mjs';
@@ -41,7 +40,6 @@ export function buildWindowsTestReleaseSet(options = {}) {
   }
 
   const sortedRecords = [...records].sort((a, b) => compareCodePoints(a.path, b.path));
-  const controllerClosureDigest = computeControllerClosureDigest(sortedRecords);
   const buildManifestDigests = computeBuildManifestDigests(sortedRecords);
 
   const installSh = getRealInstallerEntry('install.sh', projectRoot);
@@ -59,14 +57,13 @@ export function buildWindowsTestReleaseSet(options = {}) {
       outputDir: stagingDir,
       version,
       metadataGenerator: ({ inventoryDigest: invDig, platforms }) => ({
-        schema: 'evcrate-private-release/v1',
+        schema: 'evcrate-private-release/v2',
         version,
         tag: `v${version}`,
         source_commit: commit,
         node_floor: nodeFloor,
         inventory_digest: invDig,
         build_manifest_digests: buildManifestDigests,
-        controller_closure_digest: controllerClosureDigest,
         platforms,
         installers: {
           'install.sh': {

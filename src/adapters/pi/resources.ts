@@ -2,12 +2,12 @@ import { basename } from 'node:path';
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { canonicalJsonBytes } from '../../filesystem/hashing.js';
 import { parseJsonDocument } from '../../protocol/json.js';
-import { copyGraphTree, graphFile, isProductionControllerArtifact, writeProjectionFile } from '../projection-utils.js';
+import { copyGraphTree, graphFile, isProductionArtifact, writeProjectionFile } from '../projection-utils.js';
 import type { ProjectionBuildContext } from '../types.js';
 import { normalizeLf, validateSkillFrontmatter } from './frontmatter.js';
 import { parseCommandName } from '../resource-naming.js';
 import { renderHarnessScriptReferences, translatePiSkill, translatePrompt } from './transforms.js';
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand, renderMentoringWorkflow } from '../advisory.js';
+import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from '../advisory.js';
 
 export interface ResourceInventory {
   readonly commands: readonly string[];
@@ -24,7 +24,6 @@ const canonicalFiles = (context: ProjectionBuildContext, prefix: string): readon
 
 function relativeName(path: string, prefix: string): string { return path === prefix ? '' : path.slice(prefix.length + 1); }
 function text(context: ProjectionBuildContext, path: string): string { return new TextDecoder('utf-8', { fatal: true }).decode(graphFile(context, path).bytes); }
-function isController(path: string): boolean { return path.includes('/bin/lib/advisor/') || path.startsWith('bin/lib/advisor/') || path === 'bin/evcrate-advisor'; }
 function transformed(bytes: Uint8Array, transform: (value: string) => string): Uint8Array {
   if (bytes.subarray(0, 1024).includes(0)) return bytes;
   let value: string;
@@ -42,7 +41,7 @@ export function inventory(context: ProjectionBuildContext): ResourceInventory {
   return Object.freeze({
     commands: Object.freeze(markdown('commands').map((name) => parseCommandName(name).name)), workflows: Object.freeze(markdown('workflows')),
     agents: Object.freeze(markdown('agents')), skills: Object.freeze([...skills].sort()),
-    scripts: Object.freeze(canonicalFiles(context, 'scripts').map((path) => relativeName(path, 'scripts')).filter((path) => !isController(path) && !path.includes('advise-state')).sort()),
+    scripts: Object.freeze(canonicalFiles(context, 'scripts').map((path) => relativeName(path, 'scripts')).sort()),
     hooks: Object.freeze(canonicalFiles(context, 'hooks').map((path) => relativeName(path, 'hooks')).filter((path) => !path.split('/').some((part) => SKIP_PARTS.has(part))).sort())
   });
 }
@@ -60,10 +59,10 @@ export function copyCommandsAndWorkflows(context: ProjectionBuildContext, resour
     const prefix = path.startsWith('commands/') ? 'commands' : 'workflows';
     const destination = `.pi/agent/evcrate/${prefix}/${relativeName(path, prefix)}`;
     const sourceText = normalizeLf(text(context, path));
-    let value = translatePrompt(sourceText, resources.commands);
-    if (path === 'commands/evc-cmd-advise.md') value = renderInlineAdviseCommand(sourceText, 'pi', 'ask_user_question');
-    if (path === 'workflows/advisory-interview.md') value = renderAdvisoryInterviewWorkflow(sourceText, 'pi');
-    if (path === 'workflows/advisor-mentoring.md') value = translatePrompt(renderMentoringWorkflow(sourceText, 'pi'), resources.commands);
+    let value = sourceText;
+    if (path === 'commands/evc-cmd-advise.md') value = renderInlineAdviseCommand(value, 'ask_user_question');
+    if (path === 'workflows/advisory-interview.md') value = renderAdvisoryInterviewWorkflow(value);
+    value = translatePrompt(value, resources.commands);
     writeProjectionFile(context, destination, new TextEncoder().encode(value));
   }
 }
@@ -90,7 +89,7 @@ export function copyHooksAndScripts(context: ProjectionBuildContext): void {
     writeProjectionFile(context, `.pi/agent/evcrate/hooks/${name}`, bytes, file.executable ?? false);
   }
   for (const path of canonicalFiles(context, 'scripts')) {
-    const name = relativeName(path, 'scripts'); if (name.includes('advise-state') || isController(name) || isProductionControllerArtifact(name) || name === 'commands_data.yaml' || name === 'skills_data.yaml') continue;
+    const name = relativeName(path, 'scripts'); if (isProductionArtifact(name) || name === 'commands_data.yaml' || name === 'skills_data.yaml') continue;
     const file = graphFile(context, path);
     const bytes = transformed(file.bytes, renderHarnessScriptReferences);
     writeProjectionFile(context, `.pi/agent/evcrate/scripts/${name}`, bytes, file.executable ?? false);

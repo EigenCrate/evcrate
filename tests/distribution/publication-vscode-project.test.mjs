@@ -42,13 +42,15 @@ test('VS Code target project publication commits scoped .evcrate-vscode without 
 
     const preview = publishDryRun(context, request);
     assert.equal(preview.scope, 'project');
-    assert.equal(preview.phases[0].scope, 'home');
-    assert.equal(preview.phases[1].scope, 'project');
+    assert.equal(preview.phases.length, 1);
+    assert.equal(preview.phases[0].phase, 'harness');
+    assert.equal(preview.phases[0].scope, 'project');
 
     const result = publishApply(context, {}, request);
     assert.equal(result.scope, 'project');
-    assert.equal(result.phases[0].scope, 'home');
-    assert.equal(result.phases[1].scope, 'project');
+    assert.equal(result.phases.length, 1);
+    assert.equal(result.phases[0].phase, 'harness');
+    assert.equal(result.phases[0].scope, 'project');
 
     assert.equal(existsSync(join(projectVscode, 'plugin.json')), true);
     assert.equal(readFileSync(userConfig, 'utf8'), '{"customUserSetting":true}\n');
@@ -58,7 +60,7 @@ test('VS Code target project publication commits scoped .evcrate-vscode without 
 
     const projectState = join(context.stateRoot, 'project-publication', identity);
     const marker = JSON.parse(readFileSync(join(projectState, 'release-marker.json'), 'utf8'));
-    assert.equal(marker.schema_version, 2);
+    assert.equal(marker.schema_version, 3);
     assert.equal(marker.scope, 'project');
     assert.equal(marker.records.harness.status, 'complete');
     assert.equal(marker.records.harness.destination_root, project);

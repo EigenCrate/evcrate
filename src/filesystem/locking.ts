@@ -10,7 +10,6 @@ import { writeAtomicFile } from './atomic.js';
 
 const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
 export const PUBLISH_LOCK_NAME = 'publish.lock';
-export const SETTINGS_LOCK_NAME = 'advisor-settings.lock';
 export const RELEASE_MARKER_NAME = 'release-marker.json';
 const MAX_MARKER_BYTES = MAX_PUBLICATION_STATE_BYTES;
 
@@ -129,9 +128,6 @@ export function withPublishLock<T>(stateRoot: string, callback: () => T): T {
   return withLock(stateRoot, PUBLISH_LOCK_NAME, callback);
 }
 
-export function withSettingsLock<T>(stateRoot: string, callback: () => T): T {
-  return withLock(stateRoot, SETTINGS_LOCK_NAME, callback);
-}
 
 function markerPath(stateRoot: string): string {
   const root = secureStateDirectory(stateRoot);
@@ -144,7 +140,7 @@ export function readReleaseMarker(stateRoot: string): Record<string, unknown> {
     const value = parseJsonDocument(readBoundedFile(path, MAX_MARKER_BYTES));
     if (value === null || Array.isArray(value) || typeof value !== 'object') fail('PUBLICATION_FAILED');
     const marker = value as Record<string, unknown>;
-    if (marker.schema_version !== 1 && marker.schema_version !== 2) fail('PUBLICATION_FAILED');
+    if (marker.schema_version !== 1 && marker.schema_version !== 2 && marker.schema_version !== 3) fail('PUBLICATION_FAILED');
     return marker;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -156,7 +152,7 @@ export function readReleaseMarker(stateRoot: string): Record<string, unknown> {
 }
 
 export function writeReleaseMarker(stateRoot: string, marker: Record<string, unknown>): void {
-  if (marker.schema_version !== 1 && marker.schema_version !== 2) fail('PUBLICATION_FAILED');
+  if (marker.schema_version !== 1 && marker.schema_version !== 2 && marker.schema_version !== 3) fail('PUBLICATION_FAILED');
   const bytes = canonicalJsonBytes(marker);
   if (bytes.byteLength > MAX_MARKER_BYTES) fail('PUBLICATION_FAILED');
   const path = markerPath(stateRoot);

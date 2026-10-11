@@ -164,13 +164,12 @@ describe('Phase 05: Platform & Lifecycle Contracts', () => {
       }
     });
 
-    it('advisor controller files preserve executable bits on POSIX', () => {
+    it('the CLI preserves executable bits on POSIX', () => {
       if (process.platform === 'win32') return;
 
-      const advisorBin = join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin', 'evcrate-advisor');
-      assert.ok(existsSync(advisorBin), 'Advisor controller binary must exist on repository source tree');
-      const mode = statSync(advisorBin).mode;
-      assert.ok((mode & 0o111) !== 0, 'Advisor controller binary must have executable bit set');
+      const cli = join(packageRoot, 'dist', 'cli', 'evcrate.js');
+      assert.ok(existsSync(cli));
+      assert.ok((statSync(cli).mode & 0o111) !== 0);
     });
   });
 });

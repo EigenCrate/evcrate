@@ -1,12 +1,9 @@
 # EVCrate
 
-EVCrate 2.10.0 is a private Node/TypeScript package that authors one canonical
+EVCrate 2.11.0 is a private Node/TypeScript package that authors one canonical
 agent-harness source tree and builds verified projections for seven targets:
 `antigravity`, `claude`, `codex`, `copilot`, `omp`, `pi`, and `vscode`.
-It publishes managed output with ownership, hashing, locking, and recovery rules,
-and ships one shared checkpoint advisor controller. The former DamHopper plugin
-runtime/package and paired host integration were retired 2026-10-02; current
-native integration does not use this package's former worker or bridge.
+It publishes managed harness output with ownership, hashing, locking, and recovery rules.
 
 ## Download and installation
 
@@ -43,32 +40,15 @@ chmod +x install.sh
 
 ### Linux (x86_64)
 
-Assets:
-
-- `install.sh`
-- `evcrate-v<version>-linux-x64.tar.gz`
-- `evcrate-v<version>-linux-x64.tar.gz.sha256`
-- `evcrate-v<version>.release.json`
-
-Install and verify:
-
-```bash
-chmod +x install.sh
-./install.sh install
-export PATH="$HOME/.local/bin:$PATH"  # if needed for this shell
-evcrate version --json
-evcrate health --json
-```
+Keep `install.sh`, the Linux tarball, its `.sha256` sidecar, and release metadata together.
+`./install.sh install` selects local assets; exact overrides are shown above.
+Then run `evcrate version --json`; add `$HOME/.local/bin` to PATH if needed.
 
 Defaults are launcher `~/.local/bin/evcrate`, data
 `~/.local/share/evcrate/` (or `$XDG_DATA_HOME/evcrate`), and state
 `~/.local/state/evcrate/` (or `$XDG_STATE_HOME/evcrate`).
 
-```bash
-./install.sh repair
-./install.sh rollback <snapshot>
-./install.sh uninstall
-```
+Lifecycle: `./install.sh repair`, `./install.sh rollback <snapshot>`, `./install.sh uninstall`.
 
 Installer `rollback`/`uninstall` touch only installer-owned launcher, unpack
 data, and state. Harness publication journals and output are managed separately
@@ -76,26 +56,10 @@ by `evcrate publish` and `evcrate recover`.
 
 ### Windows (x64)
 
-Assets:
-
-- `install.ps1`
-- `evcrate-v<version>-windows-x64.zip`
-- `evcrate-v<version>-windows-x64.zip.sha256`
-- `evcrate-v<version>.release.json`
-
-From PowerShell, run:
-
-```powershell
-.\install.ps1 install
-```
-
-The installer writes the bin directory to the **User** `PATH`
-(`EnvironmentVariableTarget.User`). Open a new terminal, or restart the current
-session, before invoking the launcher:
-
-```powershell
-evcrate version --json
-```
+Keep `install.ps1`, the Windows ZIP, its `.sha256` sidecar, and release metadata together.
+Run `.\install.ps1 install` in PowerShell (or exact asset overrides above).
+The installer updates **User** PATH (`EnvironmentVariableTarget.User`).
+Open a new terminal/restart the session, then run `evcrate version --json`.
 
 Default locations:
 
@@ -105,39 +69,22 @@ Default locations:
 - Versions: `%LOCALAPPDATA%\EVCrate\versions\<snapshot>`
 - Current pointer: `%LOCALAPPDATA%\EVCrate\current.json`
 
-Lifecycle:
+Lifecycle: `.\install.ps1 repair`, `.\install.ps1 rollback <snapshot>`, `.\install.ps1 uninstall`.
 
-```powershell
-.\install.ps1 repair
-.\install.ps1 rollback <snapshot>
-.\install.ps1 uninstall
-```
+Options accept PowerShell/GNU spelling: `-RootDir`/`--root-dir`,
+`-DataDir`/`--data-dir`, `-StateDir`/`--state-dir`, `-BinDir`/`--bin-dir`,
+`-Archive`/`--archive`, `-Checksum`/`--checksum`, `-Metadata`/`--metadata`.
+Asset overrides require Archive/Checksum/Metadata together. RootDir selects the
+installation root; DataDir is equivalent when RootDir is absent.
 
-The installer accepts each option in PowerShell and GNU-style spelling
-(`-Name` and `--name`), for example `-RootDir`/`--root-dir`:
-
-- `-RootDir` / `--root-dir`
-- `-DataDir` / `--data-dir`
-- `-StateDir` / `--state-dir`
-- `-BinDir` / `--bin-dir`
-- `-Archive` / `--archive`
-- `-Checksum` / `--checksum`
-- `-Metadata` / `--metadata`
-
-When overriding local assets, provide `Archive`, `Checksum`, and `Metadata`
-together. `RootDir` selects the installation root; `DataDir` is an equivalent
-root/data override when `RootDir` is not supplied.
-
-**Bounded Windows support.** The hosted four-row `windows-2025` x64 matrix
-qualifies only standalone installer lifecycle and clean-install `version --json`.
-`publish`, `health`, and general Windows runtime parity remain outside release
-support. Native Windows Advisor Phases 01–04 are complete: Phase 03 observed live
-OMP `ADVICE_READY`; Phase 04 qualified OMP/Codex diagnostics, while Claude/Pi
-remain unverified. The Linux qualification suite passed 400/400 on WSL Ubuntu
-22.04/ext4. Desktop/UAC, SmartScreen, Authenticode, enterprise-policy, ARM64,
-self-hosted-runner, and execution-policy-workaround behavior is not claimed.
-Production HOME publication and release authorization remain operator-gated.
-PR smoke is diagnostic; only the four-row release matrix authorizes publication.
+**Bounded Windows support.** The release qualification boundary is the hosted
+four-row `windows-2025` x64 matrix for standalone installer lifecycle and
+clean-install `version --json`. General Windows runtime parity, desktop/UAC,
+SmartScreen, Authenticode, enterprise-policy, ARM64, self-hosted-runner, and
+execution-policy-workaround behavior is not claimed. Current package/runtime
+qualification must be exercised separately; historical results do not qualify
+this cutover. Production HOME publication and release authorization remain
+operator-gated. PR smoke is diagnostic, not publication authorization.
 
 ## Developer quick start
 
@@ -151,16 +98,15 @@ npm run distribute:check
 node dist/cli/evcrate.js version --json
 ```
 
-`build` compiles the TypeScript control plane and regenerates controller
-inventory. Distribution build/check generates and verifies local projections.
-The compiled CLI is `dist/cli/evcrate.js`; installed packages expose `evcrate`.
+`build` compiles the TypeScript control plane. Distribution build/check generates
+and verifies local projections. The compiled CLI is `dist/cli/evcrate.js`;
+installed packages expose the single `evcrate` binary.
 
 ### CLI reference
 
 ```text
 evcrate distribute build|check|publish|all|recover
 evcrate publish --dry-run|--apply
-evcrate health
 evcrate version
 evcrate resources list|get
 evcrate imports preview|apply
@@ -189,8 +135,7 @@ evcrate recover --scope project --project-root /path/to/project --json
 
 The CLI positional forms are plural: `evcrate resources list`,
 `evcrate imports preview`, `evcrate scopes list`, and `evcrate changes preview`.
-`--target` filters harness projections only; the shared controller is always
-published under `<home>/.evcrate/bin` and never under a project root.
+`--target` selects harness projections within the requested scope.
 
 Current targets: `claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, `vscode`.
 Standalone Gemini is retired; Antigravity still uses its vendor HOME
@@ -198,12 +143,11 @@ Standalone Gemini is retired; Antigravity still uses its vendor HOME
 `.evcrate/source/.claude/AGENTS.md`; generated delivery formats and native
 loader prerequisites are in the [instruction matrix](docs/system-architecture.md#instruction-authority-and-native-delivery).
 
-HOME publication is one atomic transaction. Project publication commits the
-shared HOME controller first, then the project harness under the project lock.
-If the harness fails, only project work is rolled back; shared HOME work is not
-compensated. A successful rollback returns status `partial` and
-`PUBLICATION_FAILED` (exit 5); a failed rollback retains the journal and returns
-`ROLLBACK_FAILED` (exit 5).
+HOME and project publication each run one scoped harness transaction. Project
+publication does not first commit HOME infrastructure or acquire HOME publication
+locks. Failure returns the ordinary structured error result: `PUBLICATION_FAILED`
+(exit 5), or `ROLLBACK_FAILED` (exit 5) if restoration failed. Failed transaction
+evidence is retained for recovery; no successful restoration is claimed on rollback failure.
 
 Publication state is scope-isolated:
 
@@ -221,7 +165,6 @@ interrupted harness transaction. They are not interchangeable.
    - Instructions: `.evcrate/source/.claude/AGENTS.md`
    - Commands: `.evcrate/source/.claude/commands/`
    - Skills: `.evcrate/source/.claude/skills/`
-   - Controller: `.evcrate/source/.evcrate/bin/`
 2. Regenerate and verify all seven target trees:
    ```bash
    npm run distribute:build
@@ -242,40 +185,23 @@ interrupted harness transaction. They are not interchangeable.
    git commit -m "feat(commands): description of your change"
    ```
 
-Generated projections, manifests, registry, and runtime brief artifacts are
-never hand-edited. There is no canonical root `distribute.py`; the TypeScript
-path and `package.json` scripts are authoritative.
+Generated projections, manifests, and registry are never hand-edited.
+There is no canonical root `distribute.py`; TypeScript and `package.json` scripts
+are authoritative.
 
-## Advisor checkpoint
+## Inline interview
 
-Configure the required user-owned policy at
-`$HOME/.evcrate/advisor-routing.json`:
+`/evc-cmd-advise` runs a multi-turn interview in the main session: one substantive
+question per turn, at most eight discovery questions, then a concise reframe for
+explicit confirmation or correction (at most two confirmation cycles). Cancellation,
+interruption, or nonconvergence produces no report. Arguments remain ordinary task data.
 
-```json
-{
-  "version": 2,
-  "advisor": {
-    "primary": {"backend": "codex", "model": "operator-selected", "effort": "high"},
-    "backup": {"backend": "omp", "model": "operator-selected", "effort": "high"}
-  },
-  "wait": {"mode": "until_terminal", "warn_after_ms": 120000, "warn_every_ms": 300000},
-  "history": {"retention_days": 30, "max_bytes": 104857600}
-}
-```
-
-Use distinct routes. Enabled backends are `claude`, `codex`, `pi`, and `omp`;
-`antigravity` is unavailable, standalone Gemini is retired, and Copilot is not a controller backend.
-For existing policy, use `evcrate advisor settings get`, prepare a v2 request,
-then `preview` and `apply`; migration never rewrites HOME automatically.
-
-A final standalone `--advice` token activates formal
-`evcrate-advisor-checkpoint/v2` mentoring for bootstrap, code, cook, and fix
-reviews (up to three correction cycles). `@advisor` remains ordinary task text.
-The documentation-facing `/evc-cmd-advise` workflow is a separate interview path.
-Direct controller invocation requires Node with valid absolute HOME and exact JSON
-on stdin: `node "$HOME/.evcrate/bin/evcrate-advisor" state <operation>` (or empty
-subcommand for checkpoint inference); see [canonical workflow](./.evcrate/source/.claude/workflows/advisor-mentoring.md)
-for authoritative host-aware lifecycle syntax.
+After confirmation, the main session writes a sanitized report of at most 32 KiB
+under repository-relative `plans/reports/`, or an explicitly active plan's `reports/`.
+It inspects paths and ancestors, uses a fresh no-clobber filename
+`advise-YYYYMMDD-HHMM-<uuid>.md`, and reads the report back before linking it.
+If the host cannot safely inspect/create the report, it stops writing and states
+that limitation. Generated prompts are not proof of native interview compliance.
 
 ## Unified Naming, Canonical AGENTS.md, and Migration Contract
 
@@ -284,24 +210,16 @@ Starting in version 3.0.0, EVCrate enforces universal `evc-*` resource naming an
 ### Naming invariants
 - **Universal Commands**: All commands project with prefix `evc-cmd-*` (e.g. `/evc-cmd-code`, `/evc-cmd-plan`).
 - **Nested Commands**: Subcommands use the reserved separator `-x-` (e.g. `/evc-cmd-code-x-auto`, `/evc-cmd-fix-x-hard`). This separator maps reversibly to internal semantic identifiers (`code/auto`, `fix/hard`).
-- **Universal Agents**: All 18 custom agents use prefix `evc-*` (e.g. `evc-planner`, `evc-reviewer`, `evc-debugger`).
+- **Universal Agents**: All 17 canonical custom agents use prefix `evc-*` (e.g. `evc-planner`, `evc-code-reviewer`, `evc-debugger`).
 - **Copilot Skills & Styles**: Copilot ordinary skills are renamed to `evc-<skill>` and styles to `evc-style-<style>`.
 - **Specification**: Charset `^[a-z0-9]+(-[a-z0-9]+)*$`, maximum length 64 characters, no underscores, colons, or double hyphens.
-- **Advisor Stability**: Internal advisor semantic IDs (21 allowlisted IDs, e.g. `code/auto`, `cook/auto`) remain unchanged invariants for fail-closed advisor activation.
 - **VS Code Plugin**: The plugin ID `evcrate-local` is preserved; the `evcrate-local:` qualifier is VS Code's internal namespace disambiguation and is never emitted by EVCrate.
 
-### Canonical instruction authority & delivery matrix
-- **Single Canonical Source**: Canonical instructions are authored only in `.evcrate/source/.claude/AGENTS.md`. Root `.evcrate/source/AGENTS.md` remains distinct as a generated Codex projection.
-- **Claude Native Rules**: Claude publishes unconditional `.claude/rules/AGENTS.md` in both HOME and project scopes; no `.claude/AGENTS.md` duplicate or legacy CLAUDE shim is emitted.
-- **Target Delivery Matrix**:
-  - `codex`: Project root `AGENTS.md` + native HOME `~/.codex/AGENTS.md`
-  - `gemini`: Project root `GEMINI.md` + native HOME `~/.gemini/GEMINI.md`
-  - `antigravity`: Native HOME `~/.gemini/config/AGENTS.md`
-  - `omp`: Bridge payload `AGENTS.md`, native HOME `~/.omp/agent/AGENTS.md`
-  - `pi`: Bridge payload `AGENTS.md` under `~/.pi/agent/evcrate/`
-  - `copilot`: Project `.github/copilot-instructions.md`
-  - `vscode`: Plugin `rules/bootstrap.instructions.md`
-- **Coexistence Profiles**: In mixed setups, Gemini selects GEMINI-only context. Claude users may set `Project instructions = claude-md` in settings to prevent Claude from inadvertently loading Codex's root `AGENTS.md`. User configurations are preserved without automatic mutation.
+### Canonical instruction authority and delivery
+Author only `.evcrate/source/.claude/AGENTS.md`; generated root AGENTS is Codex output.
+Claude publishes `.claude/rules/AGENTS.md` with no duplicate/shim. The
+[seven-target instruction matrix](docs/system-architecture.md#instruction-authority-and-native-delivery)
+specifies project/HOME paths and mixed-install loader profiles (including Claude `claude-md`).
 
 ### Pre-upgrade customization backup warning
 > **CRITICAL WARNING**: Deletion of obsolete artifacts during upgrade is strictly controlled by **recorded ownership**, not file modification timestamps. If you locally edited any managed legacy file (e.g. legacy commands, agents, or instructions like `CLAUDE.md`), **those files will be deleted upon upgrading**. You **MUST** back up your local customizations before running `publish --apply` or upgrading via installers.
@@ -327,61 +245,34 @@ EVCrate provides native support for VS Code Local as an isolated Agent Plugins 1
 ### Separation from Copilot CLI
 
 - **Copilot CLI (`copilot`)**: Publishes Markdown prompt and skill files to `.copilot/` for the standalone CLI.
-- **VS Code Local (`vscode`)**: Publishes a complete Agent Plugins 1.0 bundle to `.evcrate-vscode/`, including `plugin.json`, `hooks.json`, 19 custom agents, 70 commands (mapped as manual skills), 40 skills, 6 styles, and runtime hook closures.
+- **VS Code Local (`vscode`)**: Publishes an Agent Plugins 1.0 bundle to `.evcrate-vscode/`, including `plugin.json`, `hooks.json`, projected agents, commands (mapped as manual skills), skills, styles, and runtime hook closures. Inventories derive from canonical sources, not historical bundle counts.
 
-### Qualified runtime prerequisites
-
-Live native qualification was verified on:
-- **VS Code**: `1.140.0` (commit `07f806f999227108933c2e30515b26eecc1fda74`)
-- **Copilot Chat Extension**: `0.68.0`
-- **Host Platform**: Linux x86_64 (`linux-x64`)
-- **Evidence**: [Qualification Index](plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md) (reconciling C01–C50 across 12 contexts)
+### Native qualification boundary
+Historical Linux x64 VS Code 1.140.0/Copilot Chat 0.68.0
+[receipts](plans/261002-2213-vscode-local-native-support/reports/native-local/qualification-index.md)
+describe their original candidates, not current package/interview qualification.
 
 ### Publishing and activation
 
-Publishing creates or updates the target projection with opt-in, non-destructive `settings.json` registration:
+Publish with `evcrate publish --apply --scope project --project-root /path/to/project --target vscode`
+or `--scope home --target vscode`. Preview with `--dry-run --json`.
 
-```bash
-# Preview publication in project scope (inert; never writes settings)
-evcrate publish --dry-run --scope project --project-root /path/to/project --target vscode --json
+On interactive first use, the CLI asks `Register this plugin in VS Code settings? [y/N]`.
+Confirmation updates only `chat.pluginLocations` in project `.vscode/settings.json`
+or platform User settings, preserving comments, formatting, and unrelated settings.
+Pipes/CI/`--json` do not prompt/register unless `--register-vscode-settings` is supplied;
+`--no-register-vscode-settings` disables detection/registration. Dry-run never writes settings.
+Manual registration uses `"chat.pluginLocations": { "/path/to/project/.evcrate-vscode": true }`.
 
-# Apply publication to project scope (prompts to register in .vscode/settings.json on interactive TTY if absent)
-evcrate publish --apply --scope project --project-root /path/to/project --target vscode
-
-# Explicit automated registration (registers without asking; suitable for scripts and CI)
-evcrate publish --apply --scope project --project-root /path/to/project --target vscode --register-vscode-settings
-
-# Skip settings registration explicitly
-evcrate publish --apply --scope project --project-root /path/to/project --target vscode --no-register-vscode-settings
-
-# Apply publication to user HOME scope (targets platform User settings.json)
-evcrate publish --apply --scope home --target vscode
-```
-
-**Settings registration and activation**:
-- **Interactive First-Time Prompt**: On an interactive terminal, if the published plugin directory is not already registered under `chat.pluginLocations`, the CLI prompts:
-  `Register this plugin in VS Code settings? [y/N]`
-  Confirming writes only `chat.pluginLocations: { "<path>": true }` to `.vscode/settings.json` (for `--scope project`) or User `settings.json` (for `--scope home`), preserving existing comments, formatting, and unrelated settings.
-- **Automated / CI Environments**: In non-interactive environments (pipes, CI, `--json`), the CLI skips the prompt and does not register unless `--register-vscode-settings` is provided. Use `--no-register-vscode-settings` to disable detection and registration entirely.
-- **Manual Registration**: You can also manually add the path to `chat.pluginLocations` in `.vscode/settings.json` (workspace) or user `settings.json`:
-
-```json
-{
-  "chat.pluginLocations": {
-    "/path/to/project/.evcrate-vscode": true
-  }
-}
-```
 ### Coexistence and one-copy policy
 
 - **Single Active Copy**: Do not enable both HOME (`~/.evcrate-vscode`) and project-level (`.evcrate-vscode`) plugin registrations in the same workspace to prevent duplicate command and hook registrations.
 - **Copilot CLI Coexistence**: Project `.copilot` and `.evcrate-vscode` trees operate independently without collision.
 
-### Privacy, policy, and advisor boundaries
+### Privacy and policy boundaries
 
 - **Native Hooks & Policy**: The CommonJS runtime closure inspects 8 lifecycle events (`SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PreCompact`, `SubagentStart`, `SubagentStop`, `Stop`). Heavy build directories (`node_modules/`, `dist/`, `.git/`) are denied by scout policy; sensitive files (`.env`, credentials) require explicit interactive human approval.
 - **Opt-in MCP**: Example configurations in `evcrate/examples/vscode-settings.example.json` are inert templates with pinned versions; no MCP servers are enabled by default.
-- **Advisor Mentoring**: VS Code Local uses direct HOME advisor caller instructions pointing to `$HOME/.evcrate/bin/evcrate-advisor`. Standalone `--agent` relay is rejected with `ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`.
 
 ### Recovery and removal
 
@@ -397,7 +288,7 @@ To deactivate, set `"chat.pluginLocations": { "...": false }` or remove the key 
 
 ## Documentation map
 
-- [System architecture](./docs/system-architecture.md) — distribution, advisor, wire, and publication contracts.
+- [System architecture](./docs/system-architecture.md) — distribution, wire, context, and publication contracts.
 - [Project overview and PDR](./docs/project-overview-pdr.md) — requirements, acceptance criteria, and release gates.
 - [Code standards](./docs/code-standards.md) — implementation and review rules.
 - [Codebase summary](./docs/codebase-summary.md) — source/module map from Repomix.
@@ -405,4 +296,3 @@ To deactivate, set `"chat.pluginLocations": { "...": false }` or remove the key 
 - [Project changelog](./docs/project-changelog.md) — phase evidence and boundaries.
 - [Project changelog archive](./docs/project-changelog-archive.md) — older phase detail.
 - [Pi-native migration](./docs/pi-native-migration.md) — Pi runtime and settings notes.
-- [Advisor integration history](./docs/system-architecture.md#9-historical-damhopper-advisor-plugin-integration-retired-2026-10-02) — former plugin architecture and qualification, retained as historical evidence.

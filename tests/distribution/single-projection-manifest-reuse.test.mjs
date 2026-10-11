@@ -14,7 +14,6 @@ import {
   readBuildManifest,
   runAllManifestsBuild,
   runLocalBuild,
-  stageAdvisorController
 } from '../../dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -36,23 +35,19 @@ afterEach(() => {
 
 describe('Phase 02: Single-Projection Manifest Reuse', () => {
   describe('Metadata derivation unit tests', () => {
-    it('buildTargetPolicies generates mandatory controller policy and target policy entries', () => {
+    it('buildTargetPolicies generates exactly selected target policies', () => {
       const registryPath = join(packageRoot, '.evcrate', 'targets', 'manifest.json');
       const registry = loadTargetManifestRegistry(registryPath);
       const manifests = loadSelectedManifests(registry, ['omp']);
 
       const policy = buildTargetPolicies(manifests);
-      assert.ok(policy['advisor-controller'], 'advisor-controller policy must be present');
-      assert.equal(policy['advisor-controller'].promotion_order, 5);
       assert.ok(policy.omp, 'omp target policy must be present');
-      assert.equal(Object.keys(policy).length, 2, 'Single target policy should have exactly controller + target');
+      assert.equal(Object.keys(policy).length, 1);
     });
 
     it('deriveManifestView excludes .evcrate/targets for single target and includes it for all targets', () => {
       const shared = prepareSharedBuildInputs(packageRoot);
       const stageDir = makeTempDir('evcrate-stage-derivation-');
-      const stageBin = join(stageDir, '.evcrate', 'bin');
-      const controllerMeta = stageAdvisorController(shared.controllerBinSource, stageBin);
       const manifests = loadSelectedManifests(shared.registry, ['omp']);
       const ompManifest = manifests[0];
 
@@ -71,7 +66,7 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
 
 
       // 1. Single target view
-      const singleView = deriveManifestView([mockFact], shared, stageDir, controllerMeta, 'omp');
+      const singleView = deriveManifestView([mockFact], shared, stageDir, 'omp');
       assert.ok(singleView.manifestPath.endsWith('build-manifest-omp.json'));
       const parsedSingle = JSON.parse(new TextDecoder().decode(singleView.manifestData));
       assert.equal(parsedSingle.source_hashes['.evcrate/targets'], undefined, 'Single target manifest must NOT contain .evcrate/targets');
@@ -98,11 +93,11 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
         writeFileSync(join(stageDir, m.name, 'file.txt'), 'data\n');
       }
 
-      const allView = deriveManifestView(allFacts, shared, stageDir, controllerMeta);
+      const allView = deriveManifestView(allFacts, shared, stageDir);
       assert.ok(allView.manifestPath.endsWith('build-manifest.json'));
       const parsedAll = JSON.parse(new TextDecoder().decode(allView.manifestData));
       assert.ok(parsedAll.source_hashes['.evcrate/targets'], 'All-targets manifest MUST contain .evcrate/targets');
-      assert.equal(Object.keys(parsedAll.home_policy).length, PERSISTED_TARGETS.length + 1, 'All targets policy must include controller and every target');
+      assert.equal(Object.keys(parsedAll.home_policy).length, PERSISTED_TARGETS.length);
     });
   });
 

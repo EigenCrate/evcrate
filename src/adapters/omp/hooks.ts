@@ -17,7 +17,7 @@ function scriptTransform(value: string, relative: string): string {
 export function convertHooksAndScripts(context: ProjectionBuildContext): { hooks: string[]; scripts: string[]; modules: string[] } {
   const hooks: string[] = []; const scripts: string[] = [];
   for (const entry of productionFiles(context, 'hooks')) { const rel = relativeTo(entry.path, 'hooks'); if (!rel) continue; copy(context, entry.path, `evcrate/hooks/${rel}`, translateHarnessReferences); hooks.push(rel); }
-  for (const entry of productionFiles(context, 'scripts')) { const rel = relativeTo(entry.path, 'scripts'); if (!rel || rel.includes('advise-state') || rel === 'commands_data.yaml' || rel === 'skills_data.yaml') continue; copy(context, entry.path, `evcrate/scripts/${rel}`, (value) => scriptTransform(value, rel)); scripts.push(rel); }
+  for (const entry of productionFiles(context, 'scripts')) { const rel = relativeTo(entry.path, 'scripts'); if (!rel || rel === 'commands_data.yaml' || rel === 'skills_data.yaml') continue; copy(context, entry.path, `evcrate/scripts/${rel}`, (value) => scriptTransform(value, rel)); scripts.push(rel); }
   scripts.push('commands_data.yaml', 'skills_data.yaml', 'scanner-layout.json');
   copy(context, '.evcrateignore', 'evcrate/.evcrateignore'); copy(context, '.evcrate.json', '.evcrate.json'); copy(context, '.evcrateignore', '.evcrateignore');
   for (const [source, target] of [['settings.json', 'claude-settings.json'], ['.mcp.json.example', '.mcp.json.example'] as const]) if (filesUnder(context, source).length) copy(context, source, `evcrate/source-metadata/${target}`, translateHarnessReferences);
