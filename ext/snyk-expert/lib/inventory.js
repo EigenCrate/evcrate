@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
- * Expected asset inventory relative to .claude/ directory.
+ * Expected asset inventory relative to .agents/ directory.
  */
 export const ASSET_INVENTORY = [
   'agents/snyk-expert.md',
@@ -12,21 +12,24 @@ export const ASSET_INVENTORY = [
   'skills/snyk-fix/SKILL.md',
   'skills/snyk-fix/references/finding-and-owner-contract.md',
   'skills/snyk-fix/references/maven-spring-remediation.md',
-  'skills/snyk-fix/references/verification-and-results.md'
+  'skills/snyk-fix/references/verification-and-results.md',
+  'skills/snyk-fix/references/node-typescript-remediation.md',
+  'skills/snyk-cli/SKILL.md',
+  'skills/snyk-cli/references/cli-workflow.md'
 ];
 
 /**
  * Scan source inventory and verify all required bundle assets exist.
  */
 export function getSourceInventory(sourceDir) {
-  const claudeDir = path.join(sourceDir, '.claude');
-  if (!fs.existsSync(claudeDir) || !fs.statSync(claudeDir).isDirectory()) {
-    throw new Error(`Source bundle .claude directory not found at: ${claudeDir}`);
+  const agentsDir = path.join(sourceDir, '.agents');
+  if (!fs.existsSync(agentsDir) || !fs.statSync(agentsDir).isDirectory()) {
+    throw new Error(`Source bundle .agents directory not found at: ${agentsDir}`);
   }
 
   const inventory = [];
   for (const relPath of ASSET_INVENTORY) {
-    const fullPath = path.join(claudeDir, relPath);
+    const fullPath = path.join(agentsDir, relPath);
     if (!fs.existsSync(fullPath)) {
       throw new Error(`Required bundle asset missing: ${relPath} (expected at ${fullPath})`);
     }

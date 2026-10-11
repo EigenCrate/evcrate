@@ -32,7 +32,7 @@ export function executeInstallation(plan, options = {}) {
     if (!force) {
       const error = new Error(
         `Destination files already exist and differ:\n` +
-        plan.replacements.map(r => `  - .claude/${r.relPath}`).join('\n') +
+        plan.replacements.map(r => `  - .agents/${r.relPath}`).join('\n') +
         `\nUse --force (with --yes or interactive confirmation) to overwrite.`
       );
       error.code = 'ERR_COLLISION_DETECTED';
@@ -101,7 +101,7 @@ export function executeInstallation(plan, options = {}) {
     const error = new Error(
       `Installation failed partway through: ${err.message}.\n` +
       `Committed files (${committed.length}):\n` +
-      committed.map(c => `  - .claude/${c}`).join('\n')
+      committed.map(c => `  - .agents/${c}`).join('\n')
     );
     error.code = 'ERR_INSTALL_FAILED';
     error.committed = committed;
@@ -113,7 +113,7 @@ export function executeInstallation(plan, options = {}) {
     const src = path.join(plan.actions.find(a => a.relPath === relPath).srcPath);
     const dest = path.join(plan.actions.find(a => a.relPath === relPath).destPath);
     if (!fs.readFileSync(src).equals(fs.readFileSync(dest))) {
-      throw new Error(`Post-install verification failed for .claude/${relPath}`);
+      throw new Error(`Post-install verification failed for .agents/${relPath}`);
     }
   }
 

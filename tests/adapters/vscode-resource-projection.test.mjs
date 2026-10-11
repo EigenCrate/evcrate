@@ -69,13 +69,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(gitParsed.fields.model, 'haiku');
     assert.deepEqual(
       [...(gitParsed.fields.tools || [])].sort(),
-      ['file_search', 'grep_search', 'read_file', 'run_in_terminal'].sort()
+      ['read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch'].sort()
     );
     assert.deepEqual(gitParsed.fields.agents, []);
 
-    // TodoWrite is rewritten in tools and prose to VS Code's manage_todo_list
+    // TodoWrite is mapped to frontmatter 'todo' while prose remains manage_todo_list
     const pmParsed = parseFrontmatter(readFileSync(join(stageRoot, 'com.github.copilot/agents/evc-project-manager.agent.md'), 'utf8'));
-    assert.ok(pmParsed.fields.tools.includes('manage_todo_list'));
+    assert.ok(pmParsed.fields.tools.includes('todo'));
     const cmdCodeContent = readFileSync(join(stageRoot, 'skills/cmd-code/SKILL.md'), 'utf8');
     assert.ok(cmdCodeContent.includes('manage_todo_list'));
     assert.ok(!cmdCodeContent.includes('TodoWrite'));
@@ -85,6 +85,38 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.ok(existsSync(reviewerPath), 'evc-code-reviewer.agent.md must exist');
     const reviewerParsed = parseFrontmatter(readFileSync(reviewerPath, 'utf8'));
     assert.equal(reviewerParsed.fields.name, 'evc-code-reviewer');
+
+    // Scout: search/read tools mapped, no edit capability, no task -> agents: [], model: haiku
+    const scoutPath = join(stageRoot, 'com.github.copilot/agents/evc-scout.agent.md');
+    assert.ok(existsSync(scoutPath), 'evc-scout.agent.md must exist');
+    const scoutParsed = parseFrontmatter(readFileSync(scoutPath, 'utf8'));
+    assert.equal(scoutParsed.fields.name, 'evc-scout');
+    assert.equal(scoutParsed.fields.model, 'haiku');
+    assert.deepEqual(
+      [...(scoutParsed.fields.tools || [])].sort(),
+      ['getTerminalOutput', 'killTerminal', 'read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch', 'todo', 'web/fetch'].sort()
+    );
+    assert.deepEqual(scoutParsed.fields.agents, [], 'Scout must have agents: [] to prevent delegation');
+    assert.ok(!scoutParsed.fields.tools.includes('editFiles'), 'Scout must not have editFiles');
+    assert.ok(!scoutParsed.fields.tools.includes('createFile'), 'Scout must not have createFile');
+    assert.ok(!scoutParsed.fields.tools.includes('multiReplaceString'), 'Scout must not have multiReplaceString');
+    assert.ok(!scoutParsed.fields.tools.includes('agent/runSubagent'), 'Scout must not have agent/runSubagent');
+
+    // Planner: tools omitted in source -> tools and agents omitted in frontmatter (intentional host capability inheritance, delegation permitted)
+    const plannerPath = join(stageRoot, 'com.github.copilot/agents/evc-planner.agent.md');
+    assert.ok(existsSync(plannerPath), 'evc-planner.agent.md must exist');
+    const plannerAgentParsed = parseFrontmatter(readFileSync(plannerPath, 'utf8'));
+    assert.equal(plannerAgentParsed.fields.name, 'evc-planner');
+    assert.equal(plannerAgentParsed.fields.tools, undefined, 'Planner must omit tools in frontmatter');
+    assert.equal(plannerAgentParsed.fields.agents, undefined, 'Planner must not restrict agents: []');
+
+    // Docs-manager: tools omitted in source -> tools and agents omitted in frontmatter (intentional host capability inheritance)
+    const docsManagerPath = join(stageRoot, 'com.github.copilot/agents/evc-docs-manager.agent.md');
+    assert.ok(existsSync(docsManagerPath), 'evc-docs-manager.agent.md must exist');
+    const docsManagerParsed = parseFrontmatter(readFileSync(docsManagerPath, 'utf8'));
+    assert.equal(docsManagerParsed.fields.name, 'evc-docs-manager');
+    assert.equal(docsManagerParsed.fields.tools, undefined, 'Docs manager must omit tools in frontmatter');
+    assert.equal(docsManagerParsed.fields.agents, undefined, 'Docs manager must omit agents in frontmatter');
     // 4. Verify commands (70)
     const croCommandPath = join(stageRoot, 'skills/cmd-plan-x-cro/SKILL.md');
     assert.ok(existsSync(croCommandPath), 'cmd-plan-x-cro/SKILL.md must exist');

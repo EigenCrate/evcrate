@@ -213,16 +213,27 @@ export function evaluateLocalPolicies(
   const warnings: string[] = [];
 
   // 2. Scout Policy Evaluation (Precedence 1)
-  // Terminal build commands are exempt from scout directory blocking
+  // Terminal build commands and external web fetch URLs are exempt from local directory blocking
   const isTerminalBuild = operation.kind === 'terminal' && operation.command && isBuildCommand(operation.command);
+  const isWebFetch = operation.kind === 'web';
 
-  if (!isTerminalBuild) {
+  if (!isTerminalBuild && !isWebFetch) {
     for (const operand of operation.operands) {
       const scoutCheck = matchesScoutPattern(operand, compiledScout);
       if (scoutCheck.blocked) {
         return {
           decision: 'deny',
           reason: `Scout policy blocked access to directory operand "${operand}" matching .evcrateignore pattern "${scoutCheck.pattern}"`,
+          warnings: []
+        };
+      }
+    }
+    if (operation.kind === 'search' && operation.pattern) {
+      const patternCheck = matchesScoutPattern(operation.pattern, compiledScout);
+      if (patternCheck.blocked) {
+        return {
+          decision: 'deny',
+          reason: `Scout policy blocked search pattern "${operation.pattern}" matching .evcrateignore pattern "${patternCheck.pattern}"`,
           warnings: []
         };
       }
@@ -243,8 +254,8 @@ export function evaluateLocalPolicies(
     }
   }
 
-  // 3. Privacy Policy Evaluation (Precedence 2)
-  if (config.privacyEnabled !== false) {
+  // 3. Privacy Policy Evaluation (Precedence 2) — applies to local workspace operands, not external web URLs
+  if (config.privacyEnabled !== false && !isWebFetch) {
     for (const operand of operation.operands) {
       if (isPrivacySensitive(operand)) {
         if (operation.kind === 'read' || operation.kind === 'edit') {

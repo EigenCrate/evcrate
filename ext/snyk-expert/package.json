@@ -1,7 +1,7 @@
 {
   "name": "@evcrate/snyk-expert",
   "version": "1.0.0",
-  "description": "Installer and bundle for Snyk specialist agent and skills for Claude Code",
+  "description": "Portable .agents Snyk CLI, Node.js/TypeScript and Maven remediation skills with a project-local installer",
   "type": "module",
   "bin": {
     "snyk-expert-install": "./bin/install.js",
@@ -13,17 +13,17 @@
   "files": [
     "bin",
     "lib",
-    ".claude/agents/snyk-expert.md",
-    ".claude/skills/dependency-upgrade-review",
-    ".claude/skills/snyk-fix",
-    "README.md"
+    ".agents",
+    "docs"
   ],
   "engines": {
     "node": ">=18.0.0"
   },
   "keywords": [
-    "claude",
-    "claude-code",
+    "agents",
+    "nodejs",
+    "typescript",
+    "cli",
     "snyk",
     "agent",
     "skill",

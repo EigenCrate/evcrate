@@ -184,14 +184,25 @@ function evaluateLocalPolicies(operation, config = {}) {
   const warnings = [];
 
   const isTerminalBuild = operation.kind === 'terminal' && operation.command && isBuildCommand(operation.command);
+  const isWebFetch = operation.kind === 'web';
 
-  if (!isTerminalBuild) {
+  if (!isTerminalBuild && !isWebFetch) {
     for (const operand of operation.operands) {
       const scoutCheck = matchesScoutPattern(operand, compiledScout);
       if (scoutCheck.blocked) {
         return {
           decision: 'deny',
           reason: 'Scout policy blocked access to directory operand "' + operand + '" matching .evcrateignore pattern "' + scoutCheck.pattern + '"',
+          warnings: []
+        };
+      }
+    }
+    if (operation.kind === 'search' && operation.pattern) {
+      const patternCheck = matchesScoutPattern(operation.pattern, compiledScout);
+      if (patternCheck.blocked) {
+        return {
+          decision: 'deny',
+          reason: 'Scout policy blocked search pattern "' + operation.pattern + '" matching .evcrateignore pattern "' + patternCheck.pattern + '"',
           warnings: []
         };
       }
@@ -211,7 +222,7 @@ function evaluateLocalPolicies(operation, config = {}) {
     }
   }
 
-  if (config.privacyEnabled !== false) {
+  if (config.privacyEnabled !== false && !isWebFetch) {
     for (const operand of operation.operands) {
       if (isPrivacySensitive(operand)) {
         if (operation.kind === 'read' || operation.kind === 'edit') {

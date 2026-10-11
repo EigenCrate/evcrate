@@ -3,10 +3,13 @@ name: evc-scout-external
 description: Use this agent to locate relevant files across a large codebase with a read-only external search strategy and native repository-tool fallbacks.
 user-invocable: true
 tools:
-  - file_search
-  - grep_search
-  - read_file
-  - run_in_terminal
+  - getTerminalOutput
+  - killTerminal
+  - read/readFile
+  - runInTerminal
+  - search/fileSearch
+  - search/textSearch
+  - web/fetch
 agents: []
 model: haiku
 ---

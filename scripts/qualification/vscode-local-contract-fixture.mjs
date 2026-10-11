@@ -120,14 +120,96 @@ export const FIXTURE_READER_AGENT = `---
 name: contract-reader
 description: "Local qualification agent with read-only tool access"
 user-invocable: true
-disable-model-invocation: true
+disable-model-invocation: false
 tools:
-  - read_file
+  - read/readFile
+  - search/fileSearch
+  - search/textSearch
 agents: []
 ---
 
 You are a read-only test agent for VS Code Local contract qualification.
-You only have read_file access. You must not edit files, run terminal commands, or delegate.
+You only have read and search tool access (read/readFile, search/fileSearch, search/textSearch). You must not edit files, run terminal commands, or delegate.
+`;
+
+export const FIXTURE_NO_CHILD_AGENT = `---
+name: contract-no-child
+description: "Local qualification agent with subagent delegation capability but empty subagent allowlist"
+user-invocable: true
+disable-model-invocation: false
+tools:
+  - agent/runSubagent
+agents: []
+---
+
+You are a test agent for VS Code Local contract qualification.
+You have the subagent runner tool declared (agent/runSubagent), but your subagent allowlist is explicitly empty (agents: []).
+You must not successfully delegate to any child subagents.
+`;
+
+export const FIXTURE_EDITOR_AGENT = `---
+name: contract-editor
+description: "Local qualification agent with explicit edit access to disposable files"
+user-invocable: true
+disable-model-invocation: false
+tools:
+  - editFiles
+  - createFile
+  - multiReplaceString
+agents: []
+---
+
+You are an edit-capable test agent for VS Code Local contract qualification.
+You have explicit edit tool access (editFiles, createFile, multiReplaceString) to disposable files. You must not run terminal commands or delegate.
+`;
+
+export const FIXTURE_COORDINATOR_AGENT = `---
+name: contract-coordinator
+description: "Local qualification coordinator agent with subagent delegation capability and permitted child"
+user-invocable: true
+disable-model-invocation: false
+tools:
+  - agent/runSubagent
+agents:
+  - contract-reader
+  - evc-scout
+---
+
+You are a coordinator test agent for VS Code Local contract qualification.
+You have the subagent runner tool declared (agent/runSubagent) and an allowlist permitting contract-reader and evc-scout.
+You can delegate tasks to permitted subagents.
+`;
+
+export const FIXTURE_TERMINAL_AGENT = `---
+name: contract-terminal
+description: "Local qualification agent with terminal execution capability family"
+user-invocable: true
+disable-model-invocation: false
+tools:
+  - runInTerminal
+  - getTerminalOutput
+  - killTerminal
+agents: []
+---
+
+You are a terminal test agent for VS Code Local contract qualification.
+You have terminal capability family tool access (runInTerminal, getTerminalOutput, killTerminal).
+You must not edit files or delegate.
+`;
+
+export const FIXTURE_TODO_AGENT = `---
+name: contract-todo
+description: "Local qualification agent with todo list tool access"
+user-invocable: true
+disable-model-invocation: false
+tools:
+  - todo
+agents: []
+---
+
+You are a todo test agent for VS Code Local contract qualification.
+You have todo tool access (todo).
+You must not edit files, run terminal commands, or delegate.
 `;
 
 export const FIXTURE_SKILL_ECHO = `---
@@ -354,6 +436,11 @@ export function materializeFixture({ destination, captureDirectory }) {
     { rel: 'skills/contract-auto/SKILL.md', content: FIXTURE_SKILL_AUTO, mode: 0o644 },
     { rel: 'com.github.copilot/agents/contract-deny-all.agent.md', content: FIXTURE_DENY_ALL_AGENT, mode: 0o644 },
     { rel: 'com.github.copilot/agents/contract-reader.agent.md', content: FIXTURE_READER_AGENT, mode: 0o644 },
+    { rel: 'com.github.copilot/agents/contract-no-child.agent.md', content: FIXTURE_NO_CHILD_AGENT, mode: 0o644 },
+    { rel: 'com.github.copilot/agents/contract-editor.agent.md', content: FIXTURE_EDITOR_AGENT, mode: 0o644 },
+    { rel: 'com.github.copilot/agents/contract-coordinator.agent.md', content: FIXTURE_COORDINATOR_AGENT, mode: 0o644 },
+    { rel: 'com.github.copilot/agents/contract-terminal.agent.md', content: FIXTURE_TERMINAL_AGENT, mode: 0o644 },
+    { rel: 'com.github.copilot/agents/contract-todo.agent.md', content: FIXTURE_TODO_AGENT, mode: 0o644 },
     { rel: 'com.github.copilot/rules/bootstrap.instructions.md', content: FIXTURE_BOOTSTRAP_INSTRUCTIONS, mode: 0o644 },
     { rel: 'com.github.copilot/hooks/hooks.json', content: JSON.stringify(FIXTURE_HOOKS_JSON, null, 2) + '\n', mode: 0o644 },
     { rel: 'evcrate/capture-hook.cjs', content: FIXTURE_CAPTURE_HOOK_CJS, mode: 0o755 }
@@ -391,12 +478,15 @@ export function materializeWorkspace({ destination }) {
   const files = [
     { rel: 'fixture.env', content: 'QUALIFICATION_VAR=harmless_value\nSENTINEL=EVCRATE_SAFE\n' },
     { rel: 'sample.txt', content: 'Safe synthetic text for read/search test.\n' },
-    { rel: 'edit-target.txt', content: 'Original line to be replaced in edit test.\n' }
+    { rel: 'edit-target.txt', content: 'Original line to be replaced in edit test.\n' },
+    { rel: 'scout-slice-a/document-alpha.txt', content: 'Deterministic fixture slice alpha: AlphaSectionToken:7719\n' },
+    { rel: 'scout-slice-b/document-beta.txt', content: 'Deterministic fixture slice beta: BetaSectionToken:4432\n' }
   ];
 
   const manifest = [];
   for (const f of files) {
     const fullPath = path.join(dest, f.rel);
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
     fs.writeFileSync(fullPath, f.content, { mode: 0o644 });
     manifest.push({
       path: f.rel,

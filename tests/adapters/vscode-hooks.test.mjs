@@ -310,6 +310,105 @@ test('vscode-hooks: subprocess execution of local-hook-bridge.cjs', () => {
     assert.equal(resDup.status, 2);
     assert.equal(resDup.stdout, '');
     assert.ok(resDup.stderr.includes('Duplicate JSON object key'));
+
+    // Scenario H: Native host readFile with filePath permitted
+    const resHostReadAllow = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+      input: JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'readFile',
+        tool_input: { filePath: 'src/main.ts' }
+      }),
+      encoding: 'utf8'
+    });
+    assert.equal(resHostReadAllow.status, 0);
+    const outHostReadAllow = JSON.parse(resHostReadAllow.stdout);
+    assert.equal(outHostReadAllow.continue, true);
+    assert.equal(outHostReadAllow.hookSpecificOutput?.permissionDecision, undefined);
+
+    // Scenario I: Native host readFile with filePath Scout blocked
+    const resHostReadDeny = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+      input: JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'read/readFile',
+        tool_input: { filePath: 'node_modules/lodash/index.js' }
+      }),
+      encoding: 'utf8'
+    });
+    assert.equal(resHostReadDeny.status, 0);
+    const outHostReadDeny = JSON.parse(resHostReadDeny.stdout);
+    assert.equal(outHostReadDeny.continue, true);
+    assert.equal(outHostReadDeny.hookSpecificOutput.permissionDecision, 'deny');
+    assert.ok(outHostReadDeny.hookSpecificOutput.permissionDecisionReason.includes('Scout policy blocked'));
+
+    // Scenario J: Native host createFile with filePath permitted
+    const resHostCreateAllow = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+      input: JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'createFile',
+        tool_input: { filePath: 'src/new-feature.ts' }
+      }),
+      encoding: 'utf8'
+    });
+    assert.equal(resHostCreateAllow.status, 0);
+    const outHostCreateAllow = JSON.parse(resHostCreateAllow.stdout);
+    assert.equal(outHostCreateAllow.continue, true);
+
+    // Scenario K: Native host replaceString with filePath Scout blocked
+    const resHostReplaceDeny = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+      input: JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'replaceString',
+        tool_input: { filePath: '.git/config' }
+      }),
+      encoding: 'utf8'
+    });
+    assert.equal(resHostReplaceDeny.status, 0);
+    const outHostReplaceDeny = JSON.parse(resHostReplaceDeny.stdout);
+    assert.equal(outHostReplaceDeny.continue, true);
+    assert.equal(outHostReplaceDeny.hookSpecificOutput.permissionDecision, 'deny');
+
+    // Scenario L: Native host replaceString with filePath privacy-sensitive ask
+    const resHostReplaceAsk = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+      input: JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'replaceString',
+        tool_input: { filePath: '.env.local' }
+      }),
+      encoding: 'utf8'
+    });
+    assert.equal(resHostReplaceAsk.status, 0);
+    const outHostReplaceAsk = JSON.parse(resHostReplaceAsk.stdout);
+    assert.equal(outHostReplaceAsk.continue, true);
+    assert.equal(outHostReplaceAsk.hookSpecificOutput.permissionDecision, 'ask');
+
+    // Scenario M: Native host listDirectory on blocked path
+    const resHostListDeny = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+      input: JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'listDirectory',
+        tool_input: { path: 'node_modules' }
+      }),
+      encoding: 'utf8'
+    });
+    assert.equal(resHostListDeny.status, 0);
+    const outHostListDeny = JSON.parse(resHostListDeny.stdout);
+    assert.equal(outHostListDeny.continue, true);
+    assert.equal(outHostListDeny.hookSpecificOutput.permissionDecision, 'deny');
+
+    // Scenario N: Native host unqualified tool fails closed with deny
+    const resHostUnqualified = spawnSync(process.execPath, [bridgeScript, 'PreToolUse'], {
+      input: JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        tool_name: 'unknown_host_tool',
+        tool_input: { foo: 'bar' }
+      }),
+      encoding: 'utf8'
+    });
+    assert.equal(resHostUnqualified.status, 0);
+    const outHostUnqualified = JSON.parse(resHostUnqualified.stdout);
+    assert.equal(outHostUnqualified.continue, true);
+    assert.equal(outHostUnqualified.hookSpecificOutput.permissionDecision, 'deny');
+    assert.ok(outHostUnqualified.hookSpecificOutput.permissionDecisionReason.includes('unqualified tool'));
   } finally {
     stage.cleanup();
   }

@@ -57,9 +57,12 @@ export function runWrongHarnessScenario() {
     fs.mkdirSync(projectDir, { recursive: true });
     fs.cpSync(path.join(REPO_ROOT, '.evcrate/source/.evcrate-vscode'), pluginDir, { recursive: true });
 
-    const adviseSkillPath = path.join(pluginDir, 'skills/cmd-advise/SKILL.md');
+    const adviseSkillPath = [
+      path.join(pluginDir, 'skills/evc-cmd-advise/SKILL.md'),
+      path.join(pluginDir, 'skills/cmd-advise/SKILL.md')
+    ].find((p) => fs.existsSync(p));
     const adviseWorkflowPath = path.join(pluginDir, 'evcrate/workflows/advisory-interview.md');
-    const hasSkillRule = fs.existsSync(adviseSkillPath) && fs.readFileSync(adviseSkillPath, 'utf8').includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE');
+    const hasSkillRule = Boolean(adviseSkillPath && fs.readFileSync(adviseSkillPath, 'utf8').includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE'));
     const hasWorkflowRule = fs.existsSync(adviseWorkflowPath) && fs.readFileSync(adviseWorkflowPath, 'utf8').includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE');
 
     // Calculate exact runtime session state path from production session context module

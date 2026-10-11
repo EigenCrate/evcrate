@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const cjsToolInputs = require('../../.evcrate/source/.evcrate-vscode/evcrate/runtime/local-tool-inputs.cjs');
+const cjsPolicy = require('../../.evcrate/source/.evcrate-vscode/evcrate/runtime/local-policy.cjs');
 
 import {
   normalizeLocalTool,
@@ -27,6 +32,15 @@ test('tool-inputs: normalizes read operations and aliases', () => {
   assert.equal(norm2.kind, 'read');
   assert.deepEqual(norm2.operands, ['docs/readme.md']);
 
+  // Host native filePath parameter
+  const norm3 = normalizeLocalTool('read/readFile', { filePath: 'src/index.ts' });
+  assert.equal(norm3.kind, 'read');
+  assert.deepEqual(norm3.operands, ['src/index.ts']);
+
+  const norm4 = normalizeLocalTool('readFile', { FilePath: 'src/config.ts' });
+  assert.equal(norm4.kind, 'read');
+  assert.deepEqual(norm4.operands, ['src/config.ts']);
+
   // Missing path returns unqualified
   const unq = normalizeLocalTool('read_file', {});
   assert.equal(unq.kind, 'unqualified');
@@ -47,6 +61,25 @@ test('tool-inputs: normalizes edit operations including batch and patch forms', 
   });
   assert.equal(multi.kind, 'edit');
   assert.deepEqual(multi.operands, ['src/a.ts', 'src/b.ts']);
+
+  // Host concrete createFile and replaceString with filePath
+  const cf = normalizeLocalTool('createFile', { filePath: 'src/new-file.ts' });
+  assert.equal(cf.kind, 'edit');
+  assert.deepEqual(cf.operands, ['src/new-file.ts']);
+
+  const rs = normalizeLocalTool('replaceString', { filePath: 'src/existing.ts' });
+  assert.equal(rs.kind, 'edit');
+  assert.deepEqual(rs.operands, ['src/existing.ts']);
+
+  // Host multiReplaceString with replacements array containing filePath
+  const mrs = normalizeLocalTool('multiReplaceString', {
+    replacements: [
+      { filePath: 'src/mod-a.ts' },
+      { filePath: 'src/mod-b.ts' }
+    ]
+  });
+  assert.equal(mrs.kind, 'edit');
+  assert.deepEqual(mrs.operands, ['src/mod-a.ts', 'src/mod-b.ts']);
 
   // Patch header extraction
   const patch = normalizeLocalTool('apply_patch', {
@@ -78,6 +111,12 @@ test('tool-inputs: normalizes search, subagent, and unrelated tools', () => {
   assert.equal(glob.kind, 'search');
   assert.equal(glob.pattern, '**/*.ts');
   assert.deepEqual(glob.operands, ['tests']);
+
+  // Host directory listing
+  const listDir = normalizeLocalTool('search/listDirectory', { path: 'src/adapters' });
+  assert.equal(listDir.kind, 'search');
+  assert.equal(listDir.pattern, '*');
+  assert.deepEqual(listDir.operands, ['src/adapters']);
 
   // Subagent
   const sub = normalizeLocalTool('runSubagent', { agentName: 'evc-planner', prompt: 'plan something' });
@@ -269,4 +308,289 @@ test('policy: unqualified tool fails closed with deny', () => {
   const pol = evaluateLocalPolicies(op);
   assert.equal(pol.decision, 'deny');
   assert.ok(pol.reason.includes('PreToolUse security policy denied unqualified tool'));
+});
+
+test('policy: paired regressions for native host tool permissions and policy gates', () => {
+  // 1. Native readFile with filePath variants
+  const readPermitted = evaluateLocalPolicies(normalizeLocalTool('readFile', { filePath: 'src/utils/math.ts' }));
+  assert.equal(readPermitted.decision, 'none');
+
+  const readScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('readFile', { filePath: 'node_modules/lodash/index.js' }));
+  assert.equal(readScoutBlocked.decision, 'deny');
+  assert.ok(readScoutBlocked.reason.includes('Scout policy blocked'));
+
+  const readPrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('read/readFile', { FilePath: '.env.local' }));
+  assert.equal(readPrivacyAsk.decision, 'ask');
+  assert.ok(readPrivacyAsk.reason.includes('privacy-sensitive'));
+
+  // 2. Native createFile and replaceString with filePath
+  const createPermitted = evaluateLocalPolicies(normalizeLocalTool('createFile', { filePath: 'src/components/card.tsx' }));
+  assert.equal(createPermitted.decision, 'none');
+
+  const createScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('createFile', { filePath: '.git/hooks/pre-commit' }));
+  assert.equal(createScoutBlocked.decision, 'deny');
+
+  const replacePrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('replaceString', { filePath: 'config/master.key' }));
+  assert.equal(replacePrivacyAsk.decision, 'ask');
+
+  // 3. Native multiReplaceString multi-operand denial
+  const multiAllPermitted = evaluateLocalPolicies(normalizeLocalTool('multiReplaceString', {
+    replacements: [{ filePath: 'src/a.ts' }, { filePath: 'src/b.ts' }]
+  }));
+  assert.equal(multiAllPermitted.decision, 'none');
+
+  const multiOneBlocked = evaluateLocalPolicies(normalizeLocalTool('multiReplaceString', {
+    replacements: [{ filePath: 'src/a.ts' }, { filePath: 'vendor/cache/pkg.json' }]
+  }));
+  assert.equal(multiOneBlocked.decision, 'deny');
+
+  // 4. Native listDirectory with path
+  const listPermitted = evaluateLocalPolicies(normalizeLocalTool('listDirectory', { path: 'src/services' }));
+  assert.equal(listPermitted.decision, 'none');
+
+  const listScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('listDirectory', { path: 'node_modules' }));
+  assert.equal(listScoutBlocked.decision, 'deny');
+});
+
+test('policy: native search parameters normalize scope and block protected directories', () => {
+  // P2 regression: search/textSearch with includePattern targeting node_modules/** and includeIgnoredFiles
+  const textSearchBlocked = evaluateLocalPolicies(normalizeLocalTool('search/textSearch', {
+    query: 'API_KEY',
+    includePattern: 'node_modules/**',
+    includeIgnoredFiles: true
+  }));
+  assert.equal(textSearchBlocked.decision, 'deny');
+  assert.ok(textSearchBlocked.reason.includes('Scout policy blocked'));
+
+  // search/textSearch with array of includePatterns containing blocked directory
+  const textSearchArrayBlocked = evaluateLocalPolicies(normalizeLocalTool('search/textSearch', {
+    query: 'secret',
+    includePattern: ['src/**', 'node_modules/**']
+  }));
+  assert.equal(textSearchArrayBlocked.decision, 'deny');
+
+  // search/textSearch with permitted includePattern
+  const textSearchPermitted = evaluateLocalPolicies(normalizeLocalTool('search/textSearch', {
+    query: 'export function',
+    folder: 'src',
+    includePattern: '**/*.ts'
+  }));
+  assert.equal(textSearchPermitted.decision, 'none');
+
+  // P2 regression: search/fileSearch with query glob targeting node_modules/**
+  const fileSearchBlocked = evaluateLocalPolicies(normalizeLocalTool('search/fileSearch', {
+    query: 'node_modules/**'
+  }));
+  assert.equal(fileSearchBlocked.decision, 'deny');
+  assert.ok(fileSearchBlocked.reason.includes('Scout policy blocked'));
+
+  // search/fileSearch with query targeting .git/
+  const fileSearchGitBlocked = evaluateLocalPolicies(normalizeLocalTool('search/fileSearch', {
+    query: '.git/config'
+  }));
+  assert.equal(fileSearchGitBlocked.decision, 'deny');
+
+  // search/fileSearch with permitted query in specific folder
+  const fileSearchPermitted = evaluateLocalPolicies(normalizeLocalTool('search/fileSearch', {
+    query: '*.ts',
+    folder: 'src/adapters'
+  }));
+  assert.equal(fileSearchPermitted.decision, 'none');
+});
+
+test('policy: web fetch tools validate HTTP(S) URLs and exempt remote URLs from local directory/privacy blocks', () => {
+  // Allowed external web fetch with valid urls array and query
+  const webAllowed = evaluateLocalPolicies(normalizeLocalTool('web/fetch', {
+    urls: ['https://code.visualstudio.com/docs'],
+    query: 'API reference'
+  }));
+  assert.equal(webAllowed.decision, 'none');
+
+  // P1 regression: remote URLs containing /dist/, /build/, or /.env are NOT blocked or prompted by local workspace rules
+  const webDistAndEnvAllowed = evaluateLocalPolicies(normalizeLocalTool('web/fetch', {
+    urls: [
+      'https://nodejs.org/dist/v20.0.0/',
+      'https://example.com/build/artifacts',
+      'https://example.com/docs/.env/configuration'
+    ],
+    query: 'Node release and environment docs'
+  }));
+  assert.equal(webDistAndEnvAllowed.decision, 'none');
+
+  // P2 regression: non-HTTP(S) scheme (file://) fails closed as unqualified and is denied
+  const webFileScheme = normalizeLocalTool('web/fetch', {
+    urls: ['file:///etc/passwd'],
+    query: 'content'
+  });
+  assert.equal(webFileScheme.kind, 'unqualified');
+  assert.ok(webFileScheme.reason.includes('only permits http: or https: protocols'));
+  assert.equal(evaluateLocalPolicies(webFileScheme).decision, 'deny');
+
+  // P2 regression: relative local path fails closed as unqualified and is denied
+  const webRelativePath = normalizeLocalTool('web/fetch', {
+    urls: ['node_modules/express/README.md'],
+    query: 'express docs'
+  });
+  assert.equal(webRelativePath.kind, 'unqualified');
+  assert.equal(evaluateLocalPolicies(webRelativePath).decision, 'deny');
+
+  // P2 regression: single url string without urls array fails closed as unqualified
+  const webSingleUrl = normalizeLocalTool('copilot_fetchWebPage', {
+    url: 'https://github.com/microsoft/vscode',
+    query: 'README'
+  });
+  assert.equal(webSingleUrl.kind, 'unqualified');
+  assert.ok(webSingleUrl.reason.includes('non-empty urls array'));
+
+  // P2 regression: missing query fails closed as unqualified
+  const webMissingQuery = normalizeLocalTool('web/fetch', {
+    urls: ['https://code.visualstudio.com/docs']
+  });
+  assert.equal(webMissingQuery.kind, 'unqualified');
+  assert.ok(webMissingQuery.reason.includes('non-empty query string'));
+
+  // Missing urls fails closed as unqualified
+  const webMissingUrls = normalizeLocalTool('web/fetch', { query: 'test' });
+  assert.equal(webMissingUrls.kind, 'unqualified');
+});
+
+test('policy: notebook edit and summary tools enforce file policies and valid editType', () => {
+  // Allowed notebook edit with valid native editType ('edit', 'insert', 'delete')
+  for (const editType of ['edit', 'insert', 'delete']) {
+    const nbEditAllowed = evaluateLocalPolicies(normalizeLocalTool('edit/editNotebook', {
+      filePath: 'notebooks/pipeline.ipynb',
+      editType,
+      cellId: 'cell-0',
+      newCode: 'print(1)'
+    }));
+    assert.equal(nbEditAllowed.decision, 'none');
+  }
+
+  // P2 regression: invalid editType ('replace') fails closed as unqualified and is denied
+  const nbInvalidEditType = normalizeLocalTool('edit/editNotebook', {
+    filePath: 'notebooks/pipeline.ipynb',
+    editType: 'replace',
+    cellId: 'cell-0'
+  });
+  assert.equal(nbInvalidEditType.kind, 'unqualified');
+  assert.ok(nbInvalidEditType.reason.includes('editType to be "insert", "edit", or "delete"'));
+  assert.equal(evaluateLocalPolicies(nbInvalidEditType).decision, 'deny');
+  // P2 regression: Object.prototype property names ('constructor', 'toString', '__proto__') must be rejected as editType
+  for (const protoKey of ['constructor', 'toString', '__proto__', 'valueOf', 'hasOwnProperty']) {
+    const nbProtoEditType = normalizeLocalTool('edit/editNotebook', {
+      filePath: 'notebooks/report.ipynb',
+      editType: protoKey,
+      cellId: 'cell-0'
+    });
+    assert.equal(nbProtoEditType.kind, 'unqualified');
+    assert.ok(nbProtoEditType.reason.includes('editType to be "insert", "edit", or "delete"'));
+    assert.equal(evaluateLocalPolicies(nbProtoEditType).decision, 'deny');
+
+    // P2 regression: Object.prototype property names as toolName must fail closed as unrecognized tool schema
+    const protoTool = normalizeLocalTool(protoKey, {
+      filePath: 'src/index.ts',
+      editType: 'edit',
+      cellId: 'cell-0'
+    });
+    assert.equal(protoTool.kind, 'unqualified');
+    assert.ok(protoTool.reason.includes('Unrecognized or unqualified tool schema'));
+    assert.equal(evaluateLocalPolicies(protoTool).decision, 'deny');
+  }
+
+  // P2 regression: Object.prototype tokens in terminal commands must not match CANONICAL_BLOCKED_DIR_NAMES
+  assert.deepEqual(extractCommandOperands('echo constructor toString valueOf hasOwnProperty'), []);
+
+  // P3 regression: missing editType or missing/empty cellId fails closed as unqualified
+  const nbMissingEditType = normalizeLocalTool('edit/editNotebook', {
+    filePath: 'notebooks/report.ipynb'
+  });
+  assert.equal(nbMissingEditType.kind, 'unqualified');
+  assert.ok(nbMissingEditType.reason.includes('editType to be "insert", "edit", or "delete"'));
+  assert.equal(evaluateLocalPolicies(nbMissingEditType).decision, 'deny');
+
+  const nbMissingCellId = normalizeLocalTool('edit/editNotebook', {
+    filePath: 'notebooks/report.ipynb',
+    editType: 'edit'
+  });
+  assert.equal(nbMissingCellId.kind, 'unqualified');
+  assert.ok(nbMissingCellId.reason.includes('non-empty cellId string'));
+  assert.equal(evaluateLocalPolicies(nbMissingCellId).decision, 'deny');
+
+  const nbEmptyCellId = normalizeLocalTool('copilot_editNotebook', {
+    filePath: 'notebooks/report.ipynb',
+    editType: 'insert',
+    cellId: '   '
+  });
+  assert.equal(nbEmptyCellId.kind, 'unqualified');
+  assert.ok(nbEmptyCellId.reason.includes('non-empty cellId string'));
+  assert.equal(evaluateLocalPolicies(nbEmptyCellId).decision, 'deny');
+
+  const nbMissingFilePath = normalizeLocalTool('edit/editNotebook', {
+    editType: 'delete',
+    cellId: 'cell-0',
+    files: [{ filePath: 'notebooks/report.ipynb' }]
+  });
+  assert.equal(nbMissingFilePath.kind, 'unqualified');
+  assert.ok(nbMissingFilePath.reason.includes('non-empty filePath string'));
+  assert.equal(evaluateLocalPolicies(nbMissingFilePath).decision, 'deny');
+  // Allowed notebook summary read
+  const nbSummaryAllowed = evaluateLocalPolicies(normalizeLocalTool('read/getNotebookSummary', {
+    filePath: 'notebooks/pipeline.ipynb'
+  }));
+  assert.equal(nbSummaryAllowed.decision, 'none');
+
+  // Scout-blocked notebook edit
+  const nbEditBlocked = evaluateLocalPolicies(normalizeLocalTool('copilot_editNotebook', {
+    filePath: 'node_modules/demo/notebook.ipynb',
+    editType: 'insert',
+    cellId: 'cell-0'
+  }));
+  assert.equal(nbEditBlocked.decision, 'deny');
+  assert.ok(nbEditBlocked.reason.includes('Scout policy blocked'));
+
+  // Privacy ask for sensitive notebook or config
+  const nbPrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('getNotebookSummary', {
+    filePath: '.env.local'
+  }));
+  assert.equal(nbPrivacyAsk.decision, 'ask');
+  assert.ok(nbPrivacyAsk.reason.includes('privacy-sensitive'));
+});
+
+test('policy: TypeScript and generated CommonJS runtime maintain exact fallback and normalization parity', () => {
+  const testCases = [
+    // P3 regression: empty string on earlier property must not fall through via || when TS uses ??
+    ['read/readFile', { filePath: '', path: 'src/fallback.ts' }],
+    ['editFiles', { filePath: '', path: 'src/fallback.ts' }],
+    ['search/textSearch', { query: 'test', path: '', folder: 'src' }],
+    ['search/fileSearch', { pattern: '', query: 'src/**/*.ts' }],
+    // WebFetch cases
+    ['web/fetch', { urls: ['https://nodejs.org/dist/v20.0.0/'], query: 'Node 20' }],
+    ['web/fetch', { urls: ['file:///etc/passwd'], query: 'passwd' }],
+    ['web/fetch', { url: 'https://example.com', query: 'single' }],
+    ['web/fetch', { urls: ['https://example.com'] }],
+    // Notebook cases
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'replace', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'constructor', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'toString', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: '__proto__', cellId: 'c1' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit' }],
+    ['edit/editNotebook', { filePath: 'notebooks/a.ipynb', editType: 'edit', cellId: '' }],
+    ['edit/editNotebook', { editType: 'edit', cellId: 'c1' }],
+    ['read/getNotebookSummary', { filePath: 'notebooks/a.ipynb' }],
+    ['constructor', { filePath: 'src/index.ts', editType: 'edit', cellId: 'c1' }],
+    ['toString', { filePath: 'src/index.ts' }],
+    ['__proto__', { filePath: 'src/index.ts' }]
+  ];
+
+  for (const [toolName, input] of testCases) {
+    const tsNorm = normalizeLocalTool(toolName, input);
+    const cjsNorm = cjsToolInputs.normalizeLocalTool(toolName, input);
+    assert.deepEqual(cjsNorm, tsNorm, `Normalization parity mismatch for ${toolName} with ${JSON.stringify(input)}`);
+
+    const tsPol = evaluateLocalPolicies(tsNorm);
+    const cjsPol = cjsPolicy.evaluateLocalPolicies(cjsNorm);
+    assert.deepEqual(cjsPol, tsPol, `Policy parity mismatch for ${toolName} with ${JSON.stringify(input)}`);
+  }
 });

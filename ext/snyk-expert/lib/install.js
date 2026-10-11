@@ -11,7 +11,6 @@ export {
 export {
   planInstallation
 } from './install-planner.js';
-
 export {
   executeInstallation
 } from './install-executor.js';
