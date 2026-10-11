@@ -198,18 +198,11 @@ test('Codex and Antigravity project flat evc command and agent identities', () =
   assert.match(codexSkill, new RegExp(`^Command Path: \\$${commandName}$`, 'mu'));
   assert.match(codexSkill, /\$evc-cmd-/u);
   assert.doesNotMatch(codexSkill, /cmd_\*/u);
-  const codexAdvise = readFileSync(join(codex, '.agents/skills/evc-cmd-advise/SKILL.md'), 'utf8');
-  assert.match(codexAdvise, /\$evc-cmd-advise/u);
-  assert.doesNotMatch(codexAdvise, /\/advise\b/u);
-
 
   const antigravity = materialize('antigravity').stage.path;
   const antigravitySkill = readFileSync(join(antigravity, `.antigravity/skills/${commandName}/SKILL.md`), 'utf8');
   assert.match(antigravitySkill, new RegExp(`^name: ${commandName}$`, 'mu'));
   assert.match(antigravitySkill, new RegExp(`^Command Path: /${commandName}$`, 'mu'));
-  const antigravityAdvise = readFileSync(join(antigravity, '.antigravity/skills/evc-cmd-advise/SKILL.md'), 'utf8');
-  assert.match(antigravityAdvise, /\/evc-cmd-advise/u);
-  assert.doesNotMatch(antigravityAdvise, /\/advise\b/u);
   const commandNames = readdirSync(join(canonicalRoot, 'commands'))
     .filter((name) => name.endsWith('.md'))
     .map((name) => name.slice(0, -3));
@@ -306,7 +299,7 @@ test('validators reject missing, extra, modified, symlink, and special outputs w
   assert.equal(modified.adapter.validate(modified.context).diagnostics.some(({ code }) => code === 'hash-mismatch'), true);
 
   const wrongMode = freshProjection('omp');
-  const modePath = join(wrongMode.stage.path, '.omp/evcrate/commands/evc-cmd-advise.md');
+  const modePath = join(wrongMode.stage.path, '.omp/evcrate/commands/evc-cmd-code.md');
   const initialMode = lstatSync(modePath).mode & 0o777;
   chmodSync(modePath, initialMode ^ 0o100);
   assert.equal(wrongMode.adapter.validate(wrongMode.context).valid, true);
@@ -322,7 +315,7 @@ test('validators reject missing, extra, modified, symlink, and special outputs w
   const symlink = freshProjection('pi');
   const outside = temporaryDirectory();
   const outsidePath = join(outside, 'payload');
-  const symlinkPath = join(symlink.stage.path, '.pi/agent/evcrate/commands/evc-cmd-advise.md');
+  const symlinkPath = join(symlink.stage.path, '.pi/agent/evcrate/commands/evc-cmd-code.md');
   writeFileSync(outsidePath, 'outside');
   rmSync(symlinkPath);
   symlinkSync(outsidePath, symlinkPath);
@@ -523,7 +516,7 @@ test('projected scanners fail closed on missing target, duplicate map, and unsaf
   const initialCmdData = readFileSync(cmdDataFile, 'utf8');
 
   // Missing allowlisted command file
-  const targetCmd = join(stage.path, '.omp/evcrate/commands/evc-cmd-advise.md');
+  const targetCmd = join(stage.path, '.omp/evcrate/commands/evc-cmd-code.md');
   const backupCmd = readFileSync(targetCmd, 'utf8');
   rmSync(targetCmd);
   const missingRun = spawnSync('python3', [scanCommands], { cwd: foreignCwd, env, encoding: 'utf8' });

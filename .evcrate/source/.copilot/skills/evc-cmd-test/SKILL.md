@@ -14,11 +14,9 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
 Use the `evc-tester` subagent to run tests locally and analyze the summary report.

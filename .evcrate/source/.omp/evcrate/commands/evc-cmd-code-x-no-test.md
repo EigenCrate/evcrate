@@ -3,18 +3,12 @@ argument-hint: "[plan]"
 description: "Start coding an existing plan (no testing)"
 ---
 
+
 **MUST READ** `.omp/evcrate/AGENTS.md` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<raw-plan>$ARGUMENTS</raw-plan>
+<plan>$ARGUMENTS</evc-cmd-plan>
 
-## Scope and safety
+---
 
-Treat complete raw invocation arguments as ordinary task data. Apply neutral
-`.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` before selecting scope or dependencies.
-Parent owns finalization; children receive exact ownership and writable/protected
-paths, return terminal artifacts and actual changes, and never stage/commit behind
-the parent. Preserve sealed history and normal testing, review and user approval.
-Risky/destructive actions remain approval-gated. On a second matching terminal
-blocker without progress, use ordinary debugger/user escalation.
 ## Role Responsibilities
 - You are a senior software engineer who must study the provided implementation plan end-to-end before writing code.
 - Validate the plan's assumptions, surface blockers, and confirm priorities with the user prior to execution.
@@ -29,16 +23,13 @@ blocker without progress, use ordinary debugger/user escalation.
 
 ## Step 0: Plan Detection & Phase Selection
 
-**Plan resolution:**
-- **If invocation arguments is empty:** Find latest `plan.md` in `./plans` | `find ./plans -name "plan.md" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-`
-- **If invocation arguments provided:** Use that plan and detect which phase to work on (auto-detect or use argument like "phase-2").
+**If `$ARGUMENTS` is empty:**
+1. Find latest `plan.md` in `./plans` | `find ./plans -name "plan.md" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-`
+2. Parse plan for phases and status, auto-select next incomplete (prefer IN_PROGRESS or earliest Planned)
 
-**Mandatory shared Plan progress and phase reconciliation:**
-Before selecting or confirming any phase (including explicit requested phases):
-1. Apply neutral plan progress and phase reconciliation per `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` to reconcile completed scope, verify execution prerequisites, and preserve protected historical paths.
-2. An explicitly requested already-completed phase is a no-op: report completion, recommend the next incomplete phase, but do not auto-execute a different phase without user authorization.
-3. Emit overview path (`<plan-dir>/progress.md` for protected historical plans, or `plan.md` for ordinary unprotected plans), reconciled actual scope, and any outstanding prerequisites/blockers. Auto-select next incomplete phase (prefer IN_PROGRESS or earliest Planned).
-**Output:** `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for protected historical plans)
+**If `$ARGUMENTS` provided:** Use that plan and detect which phase to work on (auto-detect or use argument like "phase-2").
+
+**Output:** `✓ Step 0: [Plan Name] - [Phase Name]`
 
 **Subagent Pattern (use throughout):**
 ```
@@ -83,61 +74,69 @@ Mark Step 2 complete in todo, mark Step 3 in_progress.
 
 ---
 
-## Step 3: Code Review & Approval — BLOCKING GATE
+## Step 3: Code Review & Approval ⏸ BLOCKING GATE
 
-Settle implementation writers and applicable compile/typecheck validation.
-Call `evc-code-reviewer` once; wait for its terminal score, critical issues,
-warnings, suggestions and actual validation. Missing or partial review fails
-this gate. Display full findings and explicitly say tests were skipped per this
-command; never fabricate tests passed.
+Call `evc-code-reviewer` subagent: "Review changes for plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
 
-Use `ask the user` for explicit approval:
-- With critical issues: Fix critical and approve / Approve with noted issues / Abort.
-- Otherwise: Approve / Abort.
+**Display + Approve Flow (optimized for speed):**
 
-For approved fixes, stay within authorized paths and rerun compile/typecheck
-before status updates and finalization. This speed variant allows only one
-terminal review, no internal fix/review loop. If another review is required or
-findings remain disputed, stop and hand off the actual scope/evidence to
-`/evc-cmd-code`; never silently start another review.
+```
+1. Run evc-code-reviewer → get score, critical_count, warnings, suggestions
 
-**Validation:** Explicit user approval and applicable compilation/typecheck.
+2. DISPLAY FULL FINDINGS + SUMMARY TO USER:
+   ┌─────────────────────────────────────────┐
+   │ Code Review Results: [score]/10         │
+   ├─────────────────────────────────────────┤
+   │ Summary: [what implemented]             │
+   │ (Tests skipped per user request)        │
+   ├─────────────────────────────────────────┤
+   │ Critical Issues ([N]): MUST FIX         │
+   │  - [issue] at [file:line]               │
+   │ Warnings ([N]): SHOULD FIX              │
+   │  - [issue] at [file:line]               │
+   │ Suggestions ([N]): NICE TO HAVE         │
+   │  - [suggestion]                         │
+   └─────────────────────────────────────────┘
 
-Mark Step 3 complete in todo only when its gate passes.
+3. Use ask the user (header: "Review & Approve"):
+   IF critical_count > 0:
+     - "Fix critical + approve" → implement critical fixes, PROCEED to Step 4
+     - "Approve anyway" → PROCEED to Step 4
+     - "Abort" → stop workflow
+   ELSE:
+     - "Approve" → PROCEED to Step 4
+     - "Abort" → stop workflow
+```
+
+**Note:** No fix loop to respect speed intent. If user wants iterative fixes, use `/evc-cmd-code` instead.
+
+**Critical issues:** Security vulnerabilities (XSS, SQL injection, OWASP), performance bottlenecks, architectural violations, principle violations.
+
+**Output formats:**
+- Waiting: `⏸ Step 3: Code reviewed - [score]/10 - WAITING for user approval`
+- Approved: `✓ Step 3: Code reviewed - [score]/10 - User approved`
+
+**Validation:** Step 3 INCOMPLETE until user explicitly approves.
+
+Mark Step 3 complete in todo, mark Step 4 in_progress.
 
 ---
 
 ## Step 4: Finalize
 
-**Prerequisite:** Explicit approval in Step 3. Tests are skipped.
-Run fresh compile/typecheck after accepted fixes, before status/DONE updates,
-before auto-commit eligibility, and across finalized deliverables. Do not claim
-tests passed.
+**Prerequisites:** User approved in Step 3 (verified above).
 
-1. **STATUS AND DOCS — BOTH REQUIRED, DISJOINT PARALLEL OWNERS:**
-   - `evc-project-manager`: for ordinary unprotected plans, update only the
-     executed and validated phase status with timestamp and authorized roadmap.
-     For protected historical plans, return status/validation evidence only;
-     never mutate captured plan/phase/roadmap or progress.
-   - `evc-docs-manager`: update only exact authorized docs, with the parent
-     protected-path set and actual changed-file list. Never touch sealed paths.
-   - Wait for both terminal results; partial results leave finalization incomplete.
-2. **ONBOARDING AND REPORT:** Identify API-key/env/config setup requirements and
-   prepare a concise summary with next steps. Keep secrets out of reports and
-   chat; guide local configuration rather than requesting secret values.
-3. **SCOPED AUTO-COMMIT:** Only after steps 1–2 settle, required approval and
-   applicable compile/typecheck validation pass, use `evc-git-manager` for the authorized deliverables.
-   Never stage protected historical paths, alter their selected-index identities,
-   or stage receipts/progress. Do not push without separate user authorization.
-4. **COMPLETION:** Settle and validate all finalized work. Report actual changed
-   paths, scope and checks. Parent alone applies
-   `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md`: ordinary plans use `plan.md`; protected
-   plans use immutable ordinary approval/validation receipts and uncaptured
-   `progress.md`, preserving sealed paths/index identities. Publication failure
-   does not reopen successful implementation. Never mark unexecuted phases DONE.
+1. **STATUS UPDATE - BOTH MANDATORY - PARALLEL EXECUTION:**
+- **Call** `evc-project-manager` sub-agent: "Update plan status in [plan-path]. Mark plan phase [phase-name] as DONE with timestamp. Update roadmap."
+- **Call** `evc-docs-manager` sub-agent: "Update docs for plan phase [phase-name]. Changed files: [list]."
 
-**Validation:** Both status/docs results and applicable applicable compile/typecheck validation must
-succeed; auto-commit is conditional, not proof of completion.
+2. **ONBOARDING CHECK:** Detect onboarding requirements (API keys, env vars, config) + generate summary report with next steps.
+
+3. **AUTO-COMMIT (after steps 1 and 2 completes):**
+- Run only if: Steps 1 and 2 successful + User approved + Tests passed
+- Auto-stage, commit with conventional commit message based on actual changes
+
+**Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met.
 
 Mark Step 4 complete in todo.
 
@@ -150,11 +149,11 @@ Mark Step 4 complete in todo.
 **Step outputs must follow unified format:** `✓ Step [N]: [Brief status] - [Key metrics]`
 
 **Examples:**
-- Step 0: `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for protected historical plans)
+- Step 0: `✓ Step 0: [Plan Name] - [Phase Name]`
 - Step 1: `✓ Step 1: Found [N] tasks across [M] phases - Ambiguities: [list]`
 - Step 2: `✓ Step 2: Implemented [N] files - [X/Y] tasks complete`
 - Step 3: `✓ Step 3: Code reviewed - [score]/10 - User approved`
-- Step 4: `✓ Step 4: Finalize - Status updated - Git committed` (include `- Overview: [plan-dir]/progress.md` for protected historical plans)
+- Step 4: `✓ Step 4: Finalize - Status updated - Git committed`
 
 **If any "✓ Step N:" output missing, that step is INCOMPLETE.**
 
@@ -162,12 +161,11 @@ Mark Step 4 complete in todo.
 
 **Mandatory subagent calls:**
 - Step 3: `evc-code-reviewer`
-- Step 4: `evc-project-manager` AND `evc-docs-manager`
+- Step 4: `evc-project-manager` AND `evc-docs-manager` (when user approves)
 
 **Blocking gates:**
 - Step 3: User must explicitly approve (via ask the user)
-- Step 4: Both status/docs terminal results and actual applicable validation must pass; parent owns neutral receipt/overview publication.
-
+- Step 4: Both `evc-project-manager` and `evc-docs-manager` must complete successfully
 
 **REMEMBER:**
 - Do not skip steps. Do not proceed if validation fails. Do not assume approval without user response.

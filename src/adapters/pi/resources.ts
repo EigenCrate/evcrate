@@ -7,7 +7,6 @@ import type { ProjectionBuildContext } from '../types.js';
 import { normalizeLf, validateSkillFrontmatter } from './frontmatter.js';
 import { parseCommandName } from '../resource-naming.js';
 import { renderHarnessScriptReferences, translatePiSkill, translatePrompt } from './transforms.js';
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from '../advisory.js';
 
 export interface ResourceInventory {
   readonly commands: readonly string[];
@@ -59,10 +58,7 @@ export function copyCommandsAndWorkflows(context: ProjectionBuildContext, resour
     const prefix = path.startsWith('commands/') ? 'commands' : 'workflows';
     const destination = `.pi/agent/evcrate/${prefix}/${relativeName(path, prefix)}`;
     const sourceText = normalizeLf(text(context, path));
-    let value = sourceText;
-    if (path === 'commands/evc-cmd-advise.md') value = renderInlineAdviseCommand(value, 'ask_user_question');
-    if (path === 'workflows/advisory-interview.md') value = renderAdvisoryInterviewWorkflow(value);
-    value = translatePrompt(value, resources.commands);
+    const value = translatePrompt(sourceText, resources.commands);
     writeProjectionFile(context, destination, new TextEncoder().encode(value));
   }
 }

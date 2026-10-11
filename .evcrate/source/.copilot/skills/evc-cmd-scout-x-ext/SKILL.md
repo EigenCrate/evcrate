@@ -14,11 +14,9 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
 ## Purpose
@@ -37,7 +35,7 @@ RELEVANT_FILE_OUTPUT_DIR: Use `Report:` from `## Naming` section
   - `opencode run "[prompt]" --model opencode/grok-code` (if count > 3 and count < 6)
   - if count >= 6, spawn `Explore` subagents to search the codebase in parallel
 
-The parent agent must wait for all requested evc-scout agents or external searches to return terminal results before synthesizing the report. Missing, interrupted, timed-out, or partial results do not satisfy the scout gate.
+The parent agent must wait for all requested scout agents or external searches to return terminal results before synthesizing the report. Missing, interrupted, timed-out, or partial results do not satisfy the scout gate.
 
 **Why use external agentic tools?**
 - External agentic tools are faster and more efficient when using LLMs with large context windows (1M+ tokens).

@@ -14,11 +14,9 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
 Use `evc-git-manager` agent to stage all files, create a meaningful commit based on the changes and push to remote repository.

@@ -17,14 +17,6 @@
     {
       "classification": "command-prose",
       "kind": "command-prose",
-      "source": "evc-cmd-advise.md",
-      "status": "migrated",
-      "target": ".agents/skills/evc-cmd-advise/SKILL.md",
-      "target_name": "evc-cmd-advise"
-    },
-    {
-      "classification": "command-prose",
-      "kind": "command-prose",
       "source": "evc-cmd-ask.md",
       "status": "migrated",
       "target": ".agents/skills/evc-cmd-ask/SKILL.md",

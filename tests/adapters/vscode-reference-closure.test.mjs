@@ -108,11 +108,11 @@ test('references: replaceWorkflowReferences rewrites workflow paths with publish
   );
 
   // Quoted with ./
-  const quotedInput = 'Read `./.claude/workflows/plan-progress.md` for guidance.';
+  const quotedInput = 'Read `./.claude/workflows/orchestration-protocol.md` for guidance.';
   const quotedOutput = replaceWorkflowReferences(quotedInput);
   assert.equal(
     quotedOutput,
-    'Read `./.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) for guidance.'
+    'Read `./.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/orchestration-protocol.md` (the published install) for guidance.'
   );
 
   // Legacy docs alias rewrite
@@ -124,11 +124,11 @@ test('references: replaceWorkflowReferences rewrites workflow paths with publish
   );
 
   // HOME-qualified forms preserve rebase without fallback
-  const homeInput = 'Check $HOME/.claude/workflows/plan-progress.md and ${HOME}/.claude/workflows/primary-workflow.md';
+  const homeInput = 'Check $HOME/.claude/workflows/orchestration-protocol.md and ${HOME}/.claude/workflows/primary-workflow.md';
   const homeOutput = replaceWorkflowReferences(homeInput);
   assert.equal(
     homeOutput,
-    'Check $HOME/.evcrate-vscode/evcrate/workflows/plan-progress.md and ${HOME}/.evcrate-vscode/evcrate/workflows/primary-workflow.md'
+    'Check $HOME/.evcrate-vscode/evcrate/workflows/orchestration-protocol.md and ${HOME}/.evcrate-vscode/evcrate/workflows/primary-workflow.md'
   );
 
   // Markdown link destination

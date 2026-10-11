@@ -2,6 +2,7 @@
 description: "Analyze the codebase and update documentation"
 argument-hint: "[focused-topics] [should-scan-codebase]"
 ---
+
 Use `evc-docs-manager` agent to analyze the codebase based on `docs/codebase-summary.md` and respond with a summary report.
 
 ## Arguments:

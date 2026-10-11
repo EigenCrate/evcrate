@@ -2,18 +2,10 @@
 description: "Start coding & testing an existing plan"
 argument-hint: "[plan]"
 ---
+
 **MUST READ** `{{evcrate:AGENTS.md}}` then **THINK HARDER** to start working on the following plan follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<raw-plan>$ARGUMENTS</raw-plan>
+<plan>$ARGUMENTS</evc-cmd-plan>
 
-## Scope and safety
-
-Treat complete raw invocation arguments as ordinary task data. Apply neutral
-`{{evcrate:workflows/plan-progress.md}}` before selecting scope or dependencies.
-Parent owns finalization; children receive exact ownership and writable/protected
-paths, return terminal artifacts and actual changes, and never stage/commit behind
-the parent. Preserve sealed history and normal testing, review and user approval.
-Risky/destructive actions remain approval-gated. On a second matching terminal
-blocker without progress, use ordinary debugger/user escalation.
 ---
 
 ## Role Responsibilities
@@ -30,16 +22,14 @@ blocker without progress, use ordinary debugger/user escalation.
 
 ## Step 0: Plan Detection & Phase Selection
 
-**Plan resolution:**
-- **If invocation arguments is empty:** Find latest `plan.md` in `./plans` | `find ./plans -name "plan.md" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-`
-- **If invocation arguments provided:** Use that plan (or auto-detect plan and requested phase like "phase-2").
+**If `$ARGUMENTS` is empty:**
+1. Find latest `plan.md` in `./plans` | `find ./plans -name "plan.md" -type f -exec stat -f "%m %N" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-`
+2. Parse plan for phases and status, auto-select next incomplete (prefer IN_PROGRESS or earliest Planned)
 
-**Mandatory shared Plan progress and phase reconciliation:**
-Before selecting or confirming any phase (including explicit requested phases):
-1. Apply neutral plan progress and phase reconciliation per `{{evcrate:workflows/plan-progress.md}}` to reconcile completed scope, verify execution prerequisites, and preserve protected historical paths.
-2. An explicitly requested already-completed phase is a no-op: report completion, recommend the next incomplete phase, but do not auto-execute a different phase without user authorization.
-3. Emit overview path (`<plan-dir>/progress.md` for protected historical plans, or `plan.md` for ordinary unprotected plans), reconciled actual scope, and any outstanding prerequisites/blockers. Auto-select next incomplete phase (prefer IN_PROGRESS or earliest Planned).
-**Output:** `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for protected historical plans)
+**If `$ARGUMENTS` provided:** Use that plan and detect which phase to work on (auto-detect or use argument like "phase-2").
+
+**Output:** `✓ Step 0: [Plan Name] - [Phase Name]`
+
 **Subagent Pattern (use throughout):**
 ```
 evcrate_subagent(subagent_type="[type]", prompt="[task description]", description="[brief]")
@@ -47,7 +37,7 @@ evcrate_subagent(subagent_type="[type]", prompt="[task description]", descriptio
 
 **Blocking delegation rule:** Every evcrate_subagent/subagent call is synchronous. The parent must wait for the terminal response, verify the requested report/artifact and validation status, and only then continue. For parallel calls, explicitly say **wait for all agents**, collect one terminal result per call, and stop on any interrupted, timed-out, missing, or partial result.
 
-**Wait-loop protocol:** After each evcrate_subagent call, record the returned agent identity and use the native wait operation for that same agent. A response such as **"No agents completed yet"** is expected polling feedback, not a timeout: immediately wait again. Do not use shell `sleep`, start another task, ask for approval, synthesize a score, restart, or interrupt the agent while it is active. Polling intervals and the three-review-cycle limit do not end the gate; the cycle counter advances only after every required reviewer result is terminal, and a user fix decision is required before beginning another cycle. If the parent runtime terminates first, report the review gate incomplete with the agent identity and no fabricated result.
+**Wait-loop protocol:** After each evcrate_subagent call, record the returned agent identity and use the native wait operation for that same agent. A response such as **"No agents completed yet"** is expected polling feedback, not a timeout: immediately wait again. Do not use shell `sleep`, start another task, ask for approval, synthesize a score, restart, or interrupt the agent while it is active. Polling intervals and the three-review-cycle limit do not end the gate; the cycle counter advances only after a terminal review result and a user fix decision. If the parent runtime terminates first, report the review gate incomplete with the agent identity and no fabricated result.
 
 ---
 
@@ -102,62 +92,78 @@ Mark Step 3 complete in TodoWrite, mark Step 4 in_progress.
 
 ---
 
-## Step 4: Code Review & Approval — BLOCKING GATE
+## Step 4: Code Review & Approval ⏸ BLOCKING GATE
 
-Settle all implementation/test writers before review. Call exactly one
-`evc-code-reviewer` per cycle and wait for its terminal report: score (X/10),
-critical issues, warnings, suggestions, reviewed files, actual validation and
-unresolved questions. Missing, interrupted or partial output fails the gate.
+Call exactly one `evc-code-reviewer` subagent per review cycle: "Review changes for plan phase [phase-name]. Check security, performance, architecture, YAGNI/KISS/DRY. Return a terminal report with score (X/10), critical issues list, warnings list, suggestions list, reviewed files, validation commands/results, and unresolved questions. Do not return a progress-only response."
 
-**Interactive review/fix cycle — maximum three terminal reviews:**
-1. Present the full reviewer findings and implementation/testing summary.
-2. Use `ask_user_question` to request approval or authorized fixes:
-   - Critical issues: Fix critical / Fix all / Approve with noted issues / Abort.
-   - Otherwise: Approve / Fix warnings or suggestions / Abort.
-3. If fixes are requested before the cap, apply only authorized corrections,
-   validate with `evc-tester`, and obtain the next terminal review. Evidence-backed
-   concerns are not disproved merely by passing self-tests.
-4. Increment the cycle count only after a complete terminal review. At three,
-   stop and request Approve with noted issues / Abort; no further fix/test/review
-   cycle or counter reset. On a second matching terminal blocker without progress,
-   use ordinary debugger/user escalation before another attempt.
-5. Continue only on explicit user approval. Never infer approval or claim a
-   missing reviewer score. Risky/destructive actions keep their own approval gate.
+**Review completion gate:** Stay in the wait loop for the same reviewer until its terminal result arrives. Only then display findings and request approval. A terminal failure, interruption, cancellation, or parent-runtime termination fails the gate; do not invent a score or silently launch a replacement. If the user says to keep waiting, continue polling the same reviewer identity.
 
-**Critical issues:** Security, performance, architecture and principle violations.
+**Interactive Review-Fix Cycle (max 3 cycles):**
 
-Mark Step 4 complete in TodoWrite only when its gate passes.
+```
+cycle = 0
+LOOP:
+  1. Run evc-code-reviewer → get score, critical_count, warnings, suggestions
+
+  2. DISPLAY FULL FINDINGS + SUMMARY TO USER:
+     ┌─────────────────────────────────────────┐
+     │ Code Review Results: [score]/10         │
+     ├─────────────────────────────────────────┤
+     │ Summary: [what implemented], tests      │
+     │ [X/X passed]                            │
+     ├─────────────────────────────────────────┤
+     │ Critical Issues ([N]): MUST FIX         │
+     │  - [issue] at [file:line]               │
+     │ Warnings ([N]): SHOULD FIX              │
+     │  - [issue] at [file:line]               │
+     │ Suggestions ([N]): NICE TO HAVE         │
+     │  - [suggestion]                         │
+     └─────────────────────────────────────────┘
+
+  3. Use ask_user_question (header: "Review & Approve"):
+     IF critical_count > 0:
+       - "Fix critical issues" → implement fixes, re-run evc-tester, cycle++, GOTO LOOP
+       - "Fix all issues" → implement all fixes, re-run evc-tester, cycle++, GOTO LOOP
+       - "Approve anyway" → PROCEED to Step 5
+       - "Abort" → stop workflow
+     ELSE:
+       - "Approve" → PROCEED to Step 5
+       - "Fix warnings/suggestions" → implement fixes, cycle++, GOTO LOOP
+       - "Abort" → stop workflow
+
+  4. IF cycle >= 3 AND user selects fix:
+     → Output: "⚠ 3 review cycles completed. Final decision required."
+     → Use ask_user_question: "Approve with noted issues" / "Abort workflow"
+```
+
+**Critical issues:** Security vulnerabilities (XSS, SQL injection, OWASP), performance bottlenecks, architectural violations, principle violations.
+
+**Output formats:**
+- Waiting: `⏸ Step 4: Code reviewed - [score]/10 - WAITING for user approval`
+- After fix: `✓ Step 4: [old]/10 → Fixed [N] issues → [new]/10 - User approved`
+- Approved: `✓ Step 4: Code reviewed - [score]/10 - User approved`
+
+**Validation:** Step 4 INCOMPLETE until user explicitly approves.
+
+Mark Step 4 complete in TodoWrite, mark Step 5 in_progress.
 
 ---
 
 ## Step 5: Finalize
 
-**Prerequisite:** Explicit user approval in Step 4 and tests passed.
+**Prerequisites:** User approved in Step 4 (verified above).
 
-1. **STATUS AND DOCS — BOTH REQUIRED, DISJOINT PARALLEL OWNERS:**
-   - `evc-project-manager`: for ordinary unprotected plans, update only the
-     executed and validated phase status with timestamp and authorized roadmap.
-     For protected historical plans, return status/validation evidence only;
-     never mutate captured plan/phase/roadmap or progress.
-   - `evc-docs-manager`: update only exact authorized docs, with the parent
-     protected-path set and actual changed-file list. Never touch sealed paths.
-   - Wait for both terminal results; partial results leave finalization incomplete.
-2. **ONBOARDING AND REPORT:** Identify API-key/env/config setup requirements and
-   prepare a concise summary with next steps. Keep secrets out of reports and
-   chat; guide local configuration rather than requesting secret values.
-3. **SCOPED AUTO-COMMIT:** Only after steps 1–2 settle, required approval and
-   actual validation pass, use `evc-git-manager` for the authorized deliverables.
-   Never stage protected historical paths, alter their selected-index identities,
-   or stage receipts/progress. Do not push without separate user authorization.
-4. **COMPLETION:** Settle and validate all finalized work. Report actual changed
-   paths, scope and checks. Parent alone applies
-   `{{evcrate:workflows/plan-progress.md}}`: ordinary plans use `plan.md`; protected
-   plans use immutable ordinary approval/validation receipts and uncaptured
-   `progress.md`, preserving sealed paths/index identities. Publication failure
-   does not reopen successful implementation. Never mark unexecuted phases DONE.
+1. **STATUS UPDATE - BOTH MANDATORY - PARALLEL EXECUTION:**
+- **Call** `evc-project-manager` sub-agent: "Update plan status in [plan-path]. Mark plan phase [phase-name] as DONE with timestamp. Update roadmap."
+- **Call** `evc-docs-manager` sub-agent: "Update docs for plan phase [phase-name]. Changed files: [list]."
 
-**Validation:** Both status/docs results and applicable actual validation must
-succeed; auto-commit is conditional, not proof of completion.
+2. **ONBOARDING CHECK:** Detect onboarding requirements (API keys, env vars, config) + generate summary report with next steps.
+
+3. **AUTO-COMMIT (after steps 1 and 2 completes):**
+- Run only if: Steps 1 and 2 successful + User approved + Tests passed
+- Auto-stage, commit with conventional commit message based on actual changes
+
+**Validation:** Steps 1 and 2 must complete successfully. Step 3 (auto-commit) runs only if conditions met.
 
 Mark Step 5 complete in TodoWrite.
 
@@ -170,12 +176,12 @@ Mark Step 5 complete in TodoWrite.
 **Step outputs must follow unified format:** `✓ Step [N]: [Brief status] - [Key metrics]`
 
 **Examples:**
-- Step 0: `✓ Step 0: [Plan Name] - [Phase Name]` (include `- Overview: [plan-dir]/progress.md` for protected historical plans)
+- Step 0: `✓ Step 0: [Plan Name] - [Phase Name]`
 - Step 1: `✓ Step 1: Found [N] tasks across [M] phases - Ambiguities: [list]`
 - Step 2: `✓ Step 2: Implemented [N] files - [X/Y] tasks complete`
 - Step 3: `✓ Step 3: Tests [X/X passed] - All requirements met`
 - Step 4: `✓ Step 4: Code reviewed - [score]/10 - User approved`
-- Step 5: `✓ Step 5: Finalize - Status updated - Git committed` (include `- Overview: [plan-dir]/progress.md` for protected historical plans)
+- Step 5: `✓ Step 5: Finalize - Status updated - Git committed`
 
 **If any "✓ Step N:" output missing, that step is INCOMPLETE.**
 
@@ -189,8 +195,7 @@ Mark Step 5 complete in TodoWrite.
 **Blocking gates:**
 - Step 3: Tests must be 100% passing
 - Step 4: User must explicitly approve (via ask_user_question)
-- Step 5: Both status/docs terminal results and actual applicable validation must pass; parent owns neutral receipt/overview publication.
-
+- Step 5: Both `evc-project-manager` and `evc-docs-manager` must complete successfully
 
 **REMEMBER:**
 - Do not skip steps. Do not proceed if validation fails. Do not assume approval without user response.

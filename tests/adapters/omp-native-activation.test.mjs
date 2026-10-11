@@ -92,7 +92,7 @@ test('positional, sliced and default substitutions use parsed args without resca
   assert.equal(body.slice(body.indexOf('\n\n') + 2), '$ARGUMENTS|two|two three|three|raw $1 --advice');
 });
 
-for (const resource of ['commands/evc-cmd-code.md', 'workflows/plan-progress.md', 'workflows/documentation-management.md']) {
+for (const resource of ['commands/evc-cmd-code.md', 'workflows/documentation-management.md']) {
   test(`missing installed ${resource} cannot fall back to cwd or HOME`, async (t) => {
     const f = await fixture(t);
     for (const foreign of [f.home, f.project]) {
@@ -120,7 +120,7 @@ for (const [name, arrange] of [
   ['oversize', (file) => writeFileSync(file, 'x'.repeat(1024 * 1024 + 1))],
   ['invalid UTF-8', (file) => writeFileSync(file, Buffer.from([0xff]))],
   ['directory', (file) => { rmSync(file); mkdirSync(file); }],
-  ['symlink', (file, f) => { rmSync(file); symlinkSync(join(f.resources, 'workflows/plan-progress.md'), file); }],
+  ['symlink', (file, f) => { rmSync(file); symlinkSync(join(f.resources, 'workflows/documentation-management.md'), file); }],
 ]) {
   test(`${name} command resource fails with a bounded privacy-safe notice`, async (t) => {
     const f = await fixture(t);
@@ -133,7 +133,7 @@ test('symlinked installed resource ancestor cannot redirect admission', async (t
   const f = await fixture(t);
   const foreign = join(f.project, 'foreign workflows');
   mkdirSync(foreign);
-  writeFileSync(join(foreign, 'plan-progress.md'), 'foreign');
+
   writeFileSync(join(foreign, 'documentation-management.md'), 'foreign');
   rmSync(join(f.resources, 'workflows'), { recursive: true });
   symlinkSync(foreign, join(f.resources, 'workflows'), 'dir');

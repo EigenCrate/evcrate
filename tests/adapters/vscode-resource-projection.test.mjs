@@ -143,7 +143,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const commandsDataPath = join(stageRoot, 'evcrate/scripts/commands_data.yaml');
     assert.ok(existsSync(commandsDataPath), 'commands_data.yaml must exist');
     const commandsData = parseCatalogYaml(readFileSync(commandsDataPath, 'utf8'));
-    assert.equal(commandsData.length, 70, 'All 70 commands must be in commands_data.yaml');
+    assert.equal(commandsData.length, 69, 'All 69 commands must be in commands_data.yaml');
     const croCatalogItem = commandsData.find((c) => c.source === 'evc-cmd-plan-x-cro.md');
     assert.ok(croCatalogItem);
     assert.equal(croCatalogItem.name, '/evc:cmd-plan-x-cro');
@@ -166,13 +166,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const commandMapPath = join(stageRoot, 'evcrate/command-name-map.json');
     assert.ok(existsSync(commandMapPath));
     const commandMapJson = JSON.parse(readFileSync(commandMapPath, 'utf8'));
-    assert.equal(commandMapJson.commands.length, 70);
+    assert.equal(commandMapJson.commands.length, 69);
     assert.equal(commandMapJson.schema, 'evcrate-vscode-command-name-map-v1');
     assert.equal(commandMapJson.plugin_id, 'evc');
     for (const [canonicalName, semanticId, localName] of [
       ['evc-cmd-plan-x-cro', 'plan/cro', 'cmd-plan-x-cro'],
       ['evc-cmd-code-x-auto', 'code/auto', 'cmd-code-x-auto'],
-      ['evc-cmd-advise', 'advise', 'cmd-advise']
+      ['evc-cmd-ask', 'ask', 'cmd-ask']
     ]) {
       const entry = commandMapJson.commands.find((command) => command.localName === localName);
       assert.ok(entry);
@@ -269,16 +269,9 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(modelMap.mappings.sonnet.nativeModel, 'claude-3.5-sonnet');
     assert.equal(modelMap.mappings.haiku.nativeModel, 'claude-3.5-haiku');
 
-    // 11. Verify canonical inline command and workflow delivery.
-    const cmdAdvisePath = join(stageRoot, 'skills/cmd-advise/SKILL.md');
-    assert.ok(existsSync(cmdAdvisePath));
-    const cmdAdviseContent = readFileSync(cmdAdvisePath, 'utf8');
-    assert.ok(cmdAdviseContent.includes('advise-inline/v1'));
-
-    const adviseInterviewWorkflowPath = join(stageRoot, 'evcrate/workflows/advisory-interview.md');
-    assert.ok(existsSync(adviseInterviewWorkflowPath));
-    const adviseInterviewContent = readFileSync(adviseInterviewWorkflowPath, 'utf8');
-    assert.ok(adviseInterviewContent.includes('vscode/askQuestions'));
+    // 11. Verify canonical command delivery.
+    const cmdAskPath = join(stageRoot, 'skills/cmd-ask/SKILL.md');
+    assert.ok(existsSync(cmdAskPath));
 
     // 12. Verify workflow fallback in staged instructions, agents, and skills
     assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/primary-workflow.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/primary-workflow.md` (the published install)'));

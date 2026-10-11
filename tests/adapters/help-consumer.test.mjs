@@ -100,8 +100,8 @@ for (const target of targets) {
       assert.equal(detail.status, 0, detail.stderr + detail.stdout);
       assert.ok(detail.stdout.includes(sentinel), detail.stdout);
       assert.ok(!detail.stdout.includes('Foreign catalog'), detail.stdout);
-      const advice = invoke(script, ['advise'], foreign, install);
-      assert.equal(advice.status, 0, advice.stderr + advice.stdout);
+      const askCmd = invoke(script, ['ask'], foreign, install);
+      assert.equal(askCmd.status, 0, askCmd.stderr + askCmd.stdout);
       if (target === 'vscode') {
         assert.ok(overview.stdout.includes('/evc:cmd-plan'), overview.stdout);
         assert.ok(overview.stdout.includes('/evc:cmd-code'), overview.stdout);
@@ -112,8 +112,8 @@ for (const target of targets) {
         assert.ok(!categoryGuide.stdout.includes('/evc-cmd-'), categoryGuide.stdout);
         assert.ok(detail.stdout.includes('/evc:cmd-plan-x-fast'), detail.stdout);
         assert.ok(!detail.stdout.includes('/evc-cmd-'), detail.stdout);
-        assert.ok(advice.stdout.includes('/evc:cmd-advise'), advice.stdout);
-        assert.ok(!advice.stdout.includes('/evc-cmd-'), advice.stdout);
+        assert.ok(askCmd.stdout.includes('/evc:cmd-ask'), askCmd.stdout);
+        assert.ok(!askCmd.stdout.includes('/evc-cmd-'), askCmd.stdout);
       } else {
         assert.ok(overview.stdout.includes('/evc-cmd-plan'), overview.stdout);
         assert.ok(overview.stdout.includes('/evc-cmd-code'), overview.stdout);
@@ -121,12 +121,12 @@ for (const target of targets) {
         assert.ok(categoryGuide.stdout.includes('/evc-cmd-plan-x-fast'), categoryGuide.stdout);
         assert.ok(!categoryGuide.stdout.includes('/evc:cmd-'), categoryGuide.stdout);
         assert.ok(detail.stdout.includes('/evc-cmd-plan-x-fast'), detail.stdout);
-        assert.ok(advice.stdout.includes('/evc-cmd-advise'), advice.stdout);
+        assert.ok(askCmd.stdout.includes('/evc-cmd-ask'), askCmd.stdout);
       }
-      assert.doesNotMatch(advice.stdout, /gemini/iu);
+      assert.doesNotMatch(askCmd.stdout, /gemini/iu);
 
       renameSync(commands, `${commands}.unavailable`);
-      for (const args of [[], ['advise']]) {
+      for (const args of [[], ['ask']]) {
         const missing = invoke(script, args, foreign, install);
         assert.notEqual(missing.status, 0, 'Another installed/caller catalog must not hide a missing own catalog');
         assert.ok(missing.stdout.includes(commands), missing.stdout);

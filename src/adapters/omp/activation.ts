@@ -107,7 +107,6 @@ export function createCommand(metadata: Metadata, moduleUrl: string) {
         if (!(await stat(projectRoot)).isDirectory()) return reportError(ctx, "the project cwd is not a directory");
       } catch { return reportError(ctx, "the project cwd is not a directory"); }
       try {
-        await readResource(resources, "workflows/plan-progress.md");
         await readResource(resources, "workflows/documentation-management.md");
         const template = commandBody(await readResource(resources, path.join("commands", metadata.template)));
         const context: CommandContext = { project_root: projectRoot, command: metadata.canonicalName,

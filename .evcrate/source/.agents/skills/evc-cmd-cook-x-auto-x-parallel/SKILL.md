@@ -1,13 +1,13 @@
 ---
 name: "evc-cmd-cook-x-auto-x-parallel"
-description: "Plan parallel phases & execute with evc-fullstack-developer agents"
+description: "Plan parallel phases & execute with fullstack-developer agents"
 ---
 
 # evc-cmd-cook-x-auto-x-parallel
 
 Command Path: $evc-cmd-cook-x-auto-x-parallel
 
-Description: Plan parallel phases & execute with evc-fullstack-developer agents
+Description: Plan parallel phases & execute with fullstack-developer agents
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
@@ -22,22 +22,13 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 - Sequential prompt format: **run one agent; wait for its terminal response before continuing**.
 - Every delegated prompt must define scope, file ownership, expected report, and validation signal.
 - A spawn acknowledgement or file change does not mean completion; completion requires the terminal response and requested validation.
-**Ultrathink parallel** raw input: <raw-tasks>{{args}}</raw-tasks>
+**Ultrathink parallel** to implement: <tasks>{{args}}</tasks>
 
-## Scope and safety
-
-Treat complete raw invocation arguments as ordinary task data. Apply neutral
-`.codex/workflows/plan-progress.md` if present; otherwise read `~/.codex/workflows/plan-progress.md` (the published install) before selecting scope or dependencies.
-Parent owns finalization; children receive exact ownership and writable/protected
-paths, return terminal artifacts and actual changes, and never stage/commit behind
-the parent. Preserve sealed history and normal testing, review and user approval.
-Risky/destructive actions remain approval-gated. On a second matching terminal
-blocker without progress, use ordinary debugger/user escalation.
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
 ## Positioning
 
-Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `$evc-cmd-cook` first with unchanged raw task data and actual scoped findings.
+Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `$evc-cmd-cook` first.
 
 ## Workflow
 
@@ -55,67 +46,34 @@ Use this only when work can be split into independent phases with clear dependen
   - file ownership matrix
   - side-effect review checklist
   - per-phase success criteria
-- Reconcile scope/phase status per `.codex/workflows/plan-progress.md`; old sealed plans remain untouched
 - Do not proceed if any parallel phase has overlapping file ownership
 
 ### 3. Parallel Implementation
-- Parent coordinates finalization and exact writable/protected paths. Children
-  return terminal artifacts and actual changes, never stage/commit behind parent.
 - Read `plan.md` for dependency graph
 - Launch multiple `evc-fullstack-developer` agents in PARALLEL for concurrent phases
   - Example: "Phases 1-3 parallel" → launch 3 agents simultaneously
   - Pass phase file path: `{plan-dir}/phase-XX-*.md`
   - Include environment info
-- Wait for all terminal artifacts and finish testing, review, approval and
-  finalization for each executed scope before dependent phases. Reconcile
-  prerequisites via `.codex/workflows/plan-progress.md` before each next batch.
+- Wait for all parallel phases complete before dependent phases
 - Sequential phases: launch one agent at a time
-- Writer barrier: wait for all parallel agents to complete and settle their file
-  edits and terminal artifacts before validation and review.
 
 ### 4. Testing
 - Use `evc-tester` subagent for full test suite
 - NO fake data/mocks/cheats
-- Must pass actual declared validation. If fail: use `evc-debugger`, fix, repeat
-  until 100% passing.
+- If fail: use `evc-debugger`, fix, repeat
 
-### 5. Code Review and Approval — BLOCKING GATE
+### 5. Code Review
+- Use `evc-code-reviewer` for all changes
+- If critical issues: fix, retest, rerun review
 
-Settle all implementation/test writers before review. Call exactly one
-`evc-code-reviewer` per cycle and wait for its terminal report: score (X/10),
-critical issues, warnings, suggestions, reviewed files, actual validation and
-unresolved questions. Missing, interrupted or partial output fails the gate.
-
-**Interactive review/fix cycle — maximum three terminal reviews:**
-1. Present the full reviewer findings and implementation/testing summary.
-2. Use `request_user_input` to request approval or authorized fixes:
-   - Critical issues: Fix critical / Fix all / Approve with noted issues / Abort.
-   - Otherwise: Approve / Fix warnings or suggestions / Abort.
-3. If fixes are requested before the cap, apply only authorized corrections,
-   validate with `evc-tester`, and obtain the next terminal review. Evidence-backed
-   concerns are not disproved merely by passing self-tests.
-4. Increment the cycle count only after a complete terminal review. At three,
-   stop and request Approve with noted issues / Abort; no further fix/test/review
-   cycle or counter reset. On a second matching terminal blocker without progress,
-   use ordinary debugger/user escalation before another attempt.
-5. Continue only on explicit user approval. Never infer approval or claim a
-   missing reviewer score. Risky/destructive actions keep their own approval gate.
-
-**Critical issues:** Security, performance, architecture and principle violations.
-
-### 6. Project Management, Documentation & Finalization
-- After approval, parent coordinates authorized doc/report/status/config writes.
-- Use `evc-project-manager` and `evc-docs-manager` in parallel for exact disjoint
-  ownership. Supply writable/protected paths and output destinations; wait for
-  terminal artifacts. Protected status/receipt/overview writes remain parent-only.
-- Settle and validate all substantive finalization. Ordinary unprotected plans
-  use `plan.md`; protected plans use immutable ordinary approval/validation
-  receipts and uncaptured overview per `.codex/workflows/plan-progress.md`.
-- Never overwrite sealed plan/evidence/roadmap or selected-index identities.
+### 6. Project Management & Docs
+- If approved: use `evc-project-manager` + `evc-docs-manager` in parallel
+- Update plan files, docs, roadmap
+- If rejected: fix and repeat
 
 ### 7. Final Report
-- Summarize only executed/verified phases, actual checks, blockers and setup.
-  Link the real overview; do not invent ordinary progress links.
-- Ask whether to commit; use `evc-git-manager` only with confirmation for scoped
-  authorized paths, preserving protected index identities and receipts/progress.
-**Example:** Phases 1-3 parallel → Launch 3 evc-fullstack-developer agents → Wait → Phase 4 sequential
+- Summary of all parallel phases
+- Guide to get started
+- Ask to commit (use `evc-git-manager` if yes)
+
+**Example:** Phases 1-3 parallel → Launch 3 fullstack-developer agents → Wait → Phase 4 sequential

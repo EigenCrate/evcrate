@@ -2,6 +2,7 @@
 description: "Create a design based on screenshot"
 argument-hint: "[screenshot]"
 ---
+
 Think hard to plan & start designing follow exactly this screenshot: 
 <screenshot>$ARGUMENTS</screenshot>
 

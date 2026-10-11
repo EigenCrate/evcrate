@@ -14,101 +14,103 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
-Raw implementation input: <raw-plan>$ARGUMENTS</raw-plan>
+Execute plan: <plan>$ARGUMENTS</evc-cmd-plan>
 
-## Scope and safety
-
-Treat complete raw invocation arguments as ordinary task data. Apply neutral
-`.copilot/evcrate/workflows/plan-progress.md` before selecting scope or dependencies.
-Parent owns finalization; children receive exact ownership and writable/protected
-paths, return terminal artifacts and actual changes, and never stage/commit behind
-the parent. Preserve sealed history and normal testing, review and user approval.
-Risky/destructive actions remain approval-gated. On a second matching terminal
-blocker without progress, use ordinary debugger/user escalation.
 **IMPORTANT:** Activate needed skills. Ensure token efficiency. Sacrifice grammar for concision.
 
 ## Workflow
 
-### 1. Plan Analysis & Reconciliation
+### 1. Plan Analysis
 - Read `plan.md` from given path
 - **Check for:** Dependency graph, Execution strategy, Parallelization Info, File Ownership matrix
-- **Mandatory shared Plan progress and phase reconciliation:**
-  Before selecting phases, forming parallel dependency batches, or launching execution:
-  1. Apply neutral plan progress and phase reconciliation per `.copilot/evcrate/workflows/plan-progress.md` to reconcile completed scope, verify execution prerequisites, and preserve protected historical paths.
-  2. An explicitly requested already-completed phase is a no-op: report completion, recommend the next incomplete phase, but do not auto-execute a different phase without user authorization.
-  3. Emit overview path (`<plan-dir>/progress.md` for protected historical plans, or `plan.md` for ordinary unprotected plans), reconciled actual scope, and any outstanding prerequisites/blockers.
-- **Decision:** Group incomplete phases into dependency batches. Only phases whose prerequisites are already established and verified with completion evidence belong to the ready batch. IF parallel-executable → Step 2A, ELSE → Step 2B
+- **Decision:** IF parallel-executable → Step 2A, ELSE → Step 2B
 
 ### 2A. Parallel Execution
-1. Parse execution strategy (which phases concurrent in the ready batch, file ownership)
-2. Launch multiple `evc-fullstack-developer` agents simultaneously for parallel phases in the ready batch
+1. Parse execution strategy (which phases concurrent/sequential, file ownership)
+2. Launch multiple `evc-fullstack-developer` agents simultaneously for parallel phases
    - Pass: phase file path, environment info, file ownership boundaries
-   - Child subagents report terminal artifacts and actual changed files back to the parent; child agents never stage/commit behind the parent
-3. Wait for parallel group completion, verify no conflicts; parent retains each phase scope and evidence
-4. The ready batch must finish validation (Step 3), review & approval (Step 4), and finalization/completion (Steps 5–7) with phase-scoped completion evidence BEFORE dispatching dependent phases. Each batch records completion strictly for its own executed and verified phases; never claim all plan phases complete from a narrower batch run.
-5. Before dispatching any dependent batch, re-run neutral reconciliation per `.copilot/evcrate/workflows/plan-progress.md` to verify qualified prerequisites; block unavailable or conflicting prerequisites
+3. Wait for parallel group completion, verify no conflicts
+4. Execute sequential phases (one agent per phase after dependencies)
+5. Proceed to Step 3
 
 ### 2B. Sequential Execution
 Follow `./.copilot/evcrate/workflows/primary-workflow.md`:
-1. Use main agent phase by phase
-2. Read `plan.md`, implement current phase
-3. If using `evc-project-manager` for status reporting, child must be strictly report-only carrying parent protected path set (prior sealed paths) without mutating `plan.md`, roadmap, or `progress.md`; ordinary DONE updates and administrative progress publication remain reserved to the parent after required testing, review, and approval gates
+1. Use main agent step by step
+2. Read `plan.md`, implement phases one by one
+3. Use `evc-project-manager` for progress updates
 4. Use `evc-ui-ux-designer` for frontend
-5. Run type checking after implementation
-6. Complete validation (Step 3), review & approval (Step 4), and finalization/completion (Steps 5–7) with phase-scoped completion evidence before proceeding to next sequential phase
+5. Run type checking after each phase
+6. Proceed to Step 3
+
 ### 3. Testing
 - Use `evc-tester` for full suite (NO fake data/mocks)
 - If fail: `evc-debugger` → fix → repeat
 
-### 4. Code Review and Approval
+### 4. Code Review (Interactive Cycle)
 
-Settle all implementation/test writers before review. Call exactly one
-`evc-code-reviewer` per cycle and wait for its terminal report: score (X/10),
-critical issues, warnings, suggestions, reviewed files, actual validation and
-unresolved questions. Missing, interrupted or partial output fails the gate.
+Call `evc-code-reviewer` subagent: "Review all changes from parallel/sequential execution. Check security, performance, architecture, YAGNI/KISS/DRY. Return score (X/10), critical issues list, warnings list, suggestions list."
 
-**Interactive review/fix cycle — maximum three terminal reviews:**
-1. Present the full reviewer findings and implementation/testing summary.
-2. Use `user input` to request approval or authorized fixes:
-   - Critical issues: Fix critical / Fix all / Approve with noted issues / Abort.
-   - Otherwise: Approve / Fix warnings or suggestions / Abort.
-3. If fixes are requested before the cap, apply only authorized corrections,
-   validate with `evc-tester`, and obtain the next terminal review. Evidence-backed
-   concerns are not disproved merely by passing self-tests.
-4. Increment the cycle count only after a complete terminal review. At three,
-   stop and request Approve with noted issues / Abort; no further fix/test/review
-   cycle or counter reset. On a second matching terminal blocker without progress,
-   use ordinary debugger/user escalation before another attempt.
-5. Continue only on explicit user approval. Never infer approval or claim a
-   missing reviewer score. Risky/destructive actions keep their own approval gate.
+**Interactive Review-Fix Cycle (max 3 cycles):**
 
-**Critical issues:** Security, performance, architecture and principle violations.
+```
+cycle = 0
+LOOP:
+  1. Run evc-code-reviewer → get score, critical_count, warnings, suggestions
+
+  2. DISPLAY FULL FINDINGS TO USER:
+     ┌─────────────────────────────────────────┐
+     │ Code Review Results: [score]/10         │
+     ├─────────────────────────────────────────┤
+     │ Critical Issues ([N]): MUST FIX         │
+     │  - [issue] at [file:line]               │
+     │ Warnings ([N]): SHOULD FIX              │
+     │  - [issue] at [file:line]               │
+     │ Suggestions ([N]): NICE TO HAVE         │
+     │  - [suggestion]                         │
+     └─────────────────────────────────────────┘
+
+  3. Use user input (header: "Review"):
+     IF critical_count > 0:
+       - "Fix critical issues" → implement critical fixes, re-run evc-tester
+       - "Fix all issues" → implement all fixes, re-run evc-tester
+       - "Approve anyway" → proceed with noted issues
+       - "Abort" → stop workflow
+     ELSE:
+       - "Fix warnings/suggestions" → implement selected fixes
+       - "Approve" → proceed
+       - "Abort" → stop workflow
+
+  4. IF user selects fix option AND cycle < 3:
+     → Implement requested fixes
+     → Re-run evc-tester to verify no regressions
+     → cycle++
+     → GOTO LOOP (re-run evc-code-reviewer)
+
+  5. IF cycle >= 3 AND still has issues:
+     → Output: "⚠ 3 review cycles completed. Final decision required."
+     → Use user input:
+       - "Approve with noted issues"
+       - "Abort workflow"
+
+  6. ON APPROVE: PROCEED to Step 5
+```
 
 ### 5. Project Management & Docs
-- After approval, run `evc-project-manager` and `evc-docs-manager` in parallel
-  with disjoint exact ownership and protected paths. Ordinary status updates
-  cover only executed/verified phases. Protected status is report-only for the
-  parent, who owns receipt/overview publication. Wait for both terminal artifacts.
+- If approved: `evc-project-manager` + `evc-docs-manager` in parallel (update plans, docs, roadmap)
+- If rejected: fix → repeat
 
 ### 6. Onboarding
-- Guide local configuration one question at a time; never request secrets in chat.
+- Guide user step by step (1 question at a time)
 
-### 7. Final Report and Completion
-- Ask whether to commit; use `evc-git-manager` only if authorized, staging only
-  approved deliverables, never sealed paths or receipts/progress.
-- Settle finalization and actual validation for each executed phase. Parent alone
-  publishes ordinary status or neutral protected receipts/uncaptured overview
-  under `.copilot/evcrate/workflows/plan-progress.md`. Preserve historical index identities.
-- Report summary, checks, blockers and next steps. Never claim unexecuted or
-  dependent phases complete; reconcile prerequisites before the next batch.
+### 7. Final Report
+- Summary, guide, next steps
+- Ask to commit (use `evc-git-manager` if yes)
 
 **Examples:**
-- Parallel: "Phases 1-3 parallel, then 4" → Launch ready phases 1–3 → validate/review/finalize each scope → reconcile dependencies → launch 4.
-- Sequential: "Phase 1 → 2 → 3" → implement, validate/review/finalize, then reconcile before each next phase.
+- Parallel: "Phases 1-3 parallel, then 4" → Launch 3 agents → Wait → Launch 1 agent
+- Sequential: "Phase 1 → 2 → 3" → Main agent implements each phase

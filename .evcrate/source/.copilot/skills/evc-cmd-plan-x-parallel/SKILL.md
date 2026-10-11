@@ -14,11 +14,9 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
 Think strategically about parallelization.
@@ -57,7 +55,7 @@ After plan creation, offer validation interview to confirm decisions before impl
 
 ## Special Requirements for Parallel Execution
 
-**CRITICAL:** The evc-planner subagent must create phases that:
+**CRITICAL:** The planner subagent must create phases that:
 1. **Can be executed independently** - Each phase should be self-contained with no runtime dependencies on other phases
 2. **Have clear boundaries** - No file overlap between phases (each file should only be modified in ONE phase)
 3. **Separate concerns logically** - Group by architectural layer, feature domain, or technology stack
@@ -115,7 +113,7 @@ Phase 04: Integration Tests (depends on 01, 02, 03)
   created: {YYYY-MM-DD}
   ---
   ```
-- Save the overview access point at `{plan-dir}/plan.md`. Keep it generic, under 80 lines, and list each implementation phase with status, progress, parallelization group, and links to phase files.
+- Save the overview access point at `{plan-dir}/evc-cmd-plan.md`. Keep it generic, under 80 lines, and list each implementation phase with status, progress, parallelization group, and links to phase files.
 - For each phase, create `{plan-dir}/phase-XX-phase-name-here.md` containing the following sections in order:
   - Context links (reference parent plan, dependencies, docs)
   - **Parallelization Info** (which phases can run concurrently, which must wait)

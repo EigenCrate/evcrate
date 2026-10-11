@@ -104,12 +104,12 @@ test('installed Pi copies reject missing or symlinked resources without cwd/HOME
   for (const destination of [f.home, f.project]) {
     const root = join(destination, '.pi/agent');
     const { expandManagedCommand, findManagedCommand } = await import(pathToFileURL(join(root, 'extensions/evcrate/commands.js')).href);
-    const command = findManagedCommand('evc-cmd-code-x-auto', root);
+    const command = findManagedCommand('evc-cmd-code-x-parallel', root);
     assert.ok(command);
     copies.push({ root, expand: () => expandManagedCommand(command, rawCases[0], { cwd: f.foreign }, { agentRoot: root, env: { HOME: f.home } }) });
   }
   for (const [index, copy] of copies.entries()) {
-    for (const name of ['plan-progress']) {
+    for (const name of ['primary-workflow']) {
       const resource = join(copy.root, 'evcrate/workflows', `${name}.md`);
       const unavailable = `${resource}.unavailable`;
       const rogue = join(f.foreign, 'evcrate/workflows', `${name}.md`);
@@ -151,7 +151,7 @@ for (const scope of ['home', 'project']) {
       assert.ok(body.includes('.omp'));
     }
     assert.equal(notices.length, 0);
-    for (const resource of ['plan-progress.md', 'documentation-management.md']) {
+    for (const resource of ['documentation-management.md']) {
       const path = join(ompRoot, 'evcrate/workflows', resource);
       renameSync(path, `${path}.unavailable`);
       try { assert.equal(await command.execute([], ctx, 'private task must not echo'), undefined); }
@@ -159,7 +159,7 @@ for (const scope of ['home', 'project']) {
     }
     assert.equal(await command.execute([], ctx), undefined);
     assert.equal(await command.execute([], { ...ctx, cwd: join(f.root, 'missing cwd') }, 'private task must not echo'), undefined);
-    assert.equal(notices.length, 4);
+    assert.equal(notices.length, 3);
     assert.ok(notices.every((notice) => Buffer.byteLength(notice) <= 256 && !notice.includes('private task')));
     preserved(f);
   });

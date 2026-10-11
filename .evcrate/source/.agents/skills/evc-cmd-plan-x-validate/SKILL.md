@@ -49,15 +49,6 @@ Read the plan directory:
 - `phase-*.md` - All phase files
 - Look for decision points, assumptions, risks, tradeoffs
 
-Apply neutral plan progress and phase reconciliation in
-`.codex/workflows/plan-progress.md` if present; otherwise read `~/.codex/workflows/plan-progress.md` (the published install) before interpreting current status.
-For protected historical plans, read uncaptured `progress.md` and immutable receipts
-to reconcile exact scope; do not offer or perform in-place frontmatter/summary edits
-on sealed historical plans, and record proposed answers in a separately authorized
-uncaptured document or terminal output.
-The live progress overview is not a place to amend scope or acceptance criteria.
-Ordinary uncaptured plans retain the normal persistence choices below.
-
 ### Step 2: Extract Question Topics
 
 Scan plan content for:

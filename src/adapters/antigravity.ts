@@ -11,7 +11,6 @@ import {
   validateProjection
 } from './projection-utils.js';
 import { escapeYamlString, projectCatalogDataAndLayout } from './catalog-data.js';
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from './advisory.js';
 import type { ResourceGraphFile } from './resource-graph.js';
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from './types.js';
 import { assertAgentName, assertUniqueNames, commandNameFromSourcePath } from './resource-naming.js';
@@ -91,9 +90,6 @@ function description(content: string): string {
   return 'Migrated command from .claude';
 }
 function workflowFallback(text: string): string {
-  for (const name of ['plan-progress.md', 'advisory-interview.md']) {
-    text = text.replaceAll(`\`.antigravity/workflows/${name}\``, `\`.antigravity/workflows/${name}\` if present; otherwise read \`~/.gemini/config/workflows/${name}\` (the published install)`);
-  }
   return text;
 }
 function renderResourcePath(scope: 'global' | 'local', suffix: string): string {
@@ -520,11 +516,6 @@ function build(context: ProjectionBuildContext): void {
   writeProjectionFile(context, '.antigravity/AGENTS.md', textBytes(graphText(context, 'AGENTS.md')));
   for (const file of context.resources.files) if (shouldCopy(file.path)) writeProjectionFile(context, `.antigravity/${file.path}`, file.bytes, file.executable ?? false);
   const hookBehaviors = extractHooks(context);
-  const workflow = context.resources.files.find((file) => file.path === 'workflows/advisory-interview.md');
-  if (workflow) {
-    const content = decode(workflow.bytes);
-    writeProjectionFile(context, '.antigravity/workflows/advisory-interview.md', textBytes(renderAdvisoryInterviewWorkflow(content).replaceAll('AskUserQuestion', 'ask_user')));
-  }
   for (const file of sourceFiles(context, 'commands')) {
     if (!file.path.endsWith('.md')) continue;
     const identity = commandNameFromSourcePath(file.path);
@@ -534,10 +525,7 @@ function build(context: ProjectionBuildContext): void {
     let body = content.replaceAll('python .claude/scripts/ev-help.py', 'python .antigravity/scripts/ev-help.py')
       .replaceAll('.claude/workflows/', '.antigravity/workflows/');
     body = workflowFallback(body);
-    const commandDescription = identity.semanticId === 'advise'
-      ? 'Interview-first technical advice in the main session'
-      : description(body);
-    if (identity.semanticId === 'advise') body = renderInlineAdviseCommand(body, 'ask_user');
+    const commandDescription = description(body);
     const text = `---
 name: ${name}
 description: ${escapeYamlString(commandDescription)}

@@ -12,6 +12,7 @@ Description: Run UI tests on a website & generate a detailed report.
 description: "Run UI tests on a website & generate a detailed report."
 argument-hint: "[url] [options]"
 ---
+
 Activate the chrome-devtools skill.
 
 ## Purpose

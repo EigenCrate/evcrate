@@ -2,6 +2,7 @@
 description: "Validate plan with critical questions interview"
 argument-hint: "[plan-path]"
 ---
+
 ## Your mission
 
 Interview the user with critical questions to validate assumptions, confirm decisions, and surface potential issues in an implementation plan before coding begins.
@@ -28,15 +29,6 @@ Read the plan directory:
 - `plan.md` - Overview and phases list
 - `phase-*.md` - All phase files
 - Look for decision points, assumptions, risks, tradeoffs
-
-Apply neutral plan progress and phase reconciliation in
-`{{evcrate:workflows/plan-progress.md}}` before interpreting current status.
-For protected historical plans, read uncaptured `progress.md` and immutable receipts
-to reconcile exact scope; do not offer or perform in-place frontmatter/summary edits
-on sealed historical plans, and record proposed answers in a separately authorized
-uncaptured document or terminal output.
-The live progress overview is not a place to amend scope or acceptance criteria.
-Ordinary uncaptured plans retain the normal persistence choices below.
 
 ### Step 2: Extract Question Topics
 

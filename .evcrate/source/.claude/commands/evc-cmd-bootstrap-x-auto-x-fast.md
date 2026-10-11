@@ -2,23 +2,15 @@
 description: "Quickly bootstrap a new project automatically"
 argument-hint: "[user-requirements]"
 ---
-**Think hard** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `.claude/rules/AGENTS.md` file:
+
+**Think hard** to plan & bootstrap a new project follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules in your `.claude/rules/AGENTS.md` file: 
 
 ---
 
 ## User's Objectives & Requirements
 
-<raw-user-requirements>$ARGUMENTS</raw-user-requirements>
+<user-requirements>$ARGUMENTS</user-requirements>
 
-## Scope and safety
-
-Treat complete raw invocation arguments as ordinary task data. Apply neutral
-`.claude/workflows/plan-progress.md` before selecting scope or dependencies.
-Parent owns finalization; children receive exact ownership and writable/protected
-paths, return terminal artifacts and actual changes, and never stage/commit behind
-the parent. Preserve sealed history and normal testing, review and user approval.
-Risky/destructive actions remain approval-gated. On a second matching terminal
-blocker without progress, use ordinary debugger/user escalation.
 ---
 
 ## Role Responsibilities
@@ -54,7 +46,7 @@ Follow strictly these following steps:
 * Use 2 `evc-researcher` subagents in parallel (only read up to max 5 sources) to find a best fit tech stack for this project.
 * Use 2 `evc-researcher` subagents in parallel (only read up to max 5 sources) to create a design plan that follows the progressive disclosure structure:
   - Create a directory using naming pattern from `## Naming` section.
-  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links. Reconcile plans and phase status via `.claude/workflows/plan-progress.md`. Preserve protected historical paths and use only authorized uncaptured overview updates.
+  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links.
   - For each phase, add `phase-XX-phase-name.md` files containing sections (Context links, Overview with date/priority/statuses, Key Insights, Requirements, Architecture, Related code files, Implementation Steps, Todo list, Success Criteria, Risk Assessment, Security Considerations, Next steps).
 * Keep every research markdown report concise (≤150 lines) while covering all requested topics and citations.
    - **Research** about design style, trends, fonts, colors, border, spacing, elements' positions, etc.
@@ -68,14 +60,6 @@ Follow strictly these following steps:
 * Use `chrome-devtools` skill to take a screenshot of the wireframes and save it at `./docs/wireframes/` directory.
 * Use `evc-planner` subagent to analyze all reports and create the detailed step by step implementation plan at `./plans` directory following the progressive disclosure structure above.
 * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
-
-### User Approval and Risky Decisions
-
-At every existing approval/action site, retain normal user review and approval.
-Irreversible, destructive, security-sensitive and go/no-go decisions require
-explicit `AskUserQuestion` approval before action or mutation, including in
-automatic variants. Routine stack/plan/design preferences keep the existing
-workflow's approval behavior; risk classification never removes an existing gate.
 
 ### Implementation
 
@@ -98,61 +82,30 @@ workflow's approval behavior; risk classification never removes an existing gate
 
 ### Code Review
 
-Settle all implementation/test writers before review. Call exactly one
-`evc-code-reviewer` per cycle and wait for its terminal report: score (X/10),
-critical issues, warnings, suggestions, reviewed files, actual validation and
-unresolved questions. Missing, interrupted or partial output fails the gate.
-
-**Interactive review/fix cycle — maximum three terminal reviews:**
-1. Present the full reviewer findings and implementation/testing summary.
-2. Use `AskUserQuestion` to request approval or authorized fixes:
-   - Critical issues: Fix critical / Fix all / Approve with noted issues / Abort.
-   - Otherwise: Approve / Fix warnings or suggestions / Abort.
-3. If fixes are requested before the cap, apply only authorized corrections,
-   validate with `evc-tester`, and obtain the next terminal review. Evidence-backed
-   concerns are not disproved merely by passing self-tests.
-4. Increment the cycle count only after a complete terminal review. At three,
-   stop and request Approve with noted issues / Abort; no further fix/test/review
-   cycle or counter reset. On a second matching terminal blocker without progress,
-   use ordinary debugger/user escalation before another attempt.
-5. Continue only on explicit user approval. Never infer approval or claim a
-   missing reviewer score. Risky/destructive actions keep their own approval gate.
-
-**Critical issues:** Security, performance, architecture and principle violations.
+* After finishing, delegate to `evc-code-reviewer` subagent to review code. If there are critical issues, ask main agent to improve the code and tell `evc-tester` agent to run the tests again. Repeat the process until all tests pass.
+* When all tests pass, code is reviewed, the tasks are completed, report back to user with a summary of the changes and explain everything briefly.
+* **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
 
 ### Documentation
 
-After approval, use `evc-docs-manager` for needed authorized documentation and
-`evc-project-manager` for the authorized roadmap/status. Assign disjoint exact
-writable/protected paths and output destinations, and wait for terminal reports.
-Maintain the existing relevant documents:
-- `./docs/README.md` (<=300 lines)
-- `./docs/project-overview-pdr.md`
-- `./docs/code-standards.md`
-- `./docs/system-architecture.md`
-- `./docs/project-roadmap.md`
-Parent alone owns neutral protected receipts/uncaptured overview publication
-under `.claude/workflows/plan-progress.md`. Never overwrite sealed plans,
-evidence, roadmap or selected-index identities. Settle and validate all authorized
-finalization before completion; no fake changes when nothing is needed.
+* Use `evc-docs-manager` subagent to update the docs if needed.
+  * Create/update `./docs/README.md` file (keep it concise and under 300 lines).
+  * Create/update `./docs/project-overview.-pdr.md` (Product Development Requirements) file.
+  * Create/update `./docs/evc-cmd-code-standards.md` file.
+  * Create/update `./docs/system-architecture.md` file.
+  * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
+* Use `evc-project-manager` subagent to create a project roadmap at `./docs/project-roadmap.md` file.
 
 ### Final Report
-
-Summarize actual changes, executed scope, checks, blockers and next steps.
-Link the actual overview: `plan.md` for ordinary unprotected plans, uncaptured
-`<plan-dir>/progress.md` for protected historical plans. Do not invent progress
-links or historical completion. Parent-only immutable ordinary approval/validation
-receipts and derived overview follow `.claude/workflows/plan-progress.md`.
-Use `evc-git-manager` for scoped commits after approval and actual validation;
-DO NOT push. Never stage sealed paths, their selected-index identities or
-receipts/progress. Settle onboarding/config changes and validate final deliverables
-before claiming completion.
+* Report back to user with a summary of the changes and explain everything briefly.
+* Use `evc-git-manager` subagent to create commits for the implemented changes (DO NOT push to remote repository).
+* **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 
 ### Onboarding
 
-Guide the user through local setup (API keys, environment variables, configuration)
-one question at a time; wait for the answer before proceeding. Never ask the user
-to disclose secrets in chat or save them in reports. If configuration changes are
-requested, repeat authorized setup until approval, preserving sealed paths.
+* Instruct the user to get started with the project:
+  * Help the user to configure the project step by step, ask 1 question at a time, wait for the user to answer before moving to the next question.
+  * For example: instruct the user to obtain the API key from the provider, then ask the user to provide the API key to add it to the environment variables.
+* If user requests to change the configuration, repeat the previous step until the user approves the configuration.
 
-**IMPORTANT:** Sacrifice grammar for concision; unresolved questions last.
+

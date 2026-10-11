@@ -3,18 +3,10 @@ argument-hint: "[tasks]"
 description: "Implement a feature [step by step]"
 ---
 
+
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<raw-tasks>$ARGUMENTS</raw-tasks>
+<tasks>$ARGUMENTS</tasks>
 
-## Scope and safety
-
-Treat complete raw invocation arguments as ordinary task data. Apply neutral
-`.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md` before selecting scope or dependencies.
-Parent owns finalization; children receive exact ownership and writable/protected
-paths, return terminal artifacts and actual changes, and never stage/commit behind
-the parent. Preserve sealed history and normal testing, review and user approval.
-Risky/destructive actions remain approval-gated. On a second matching terminal
-blocker without progress, use ordinary debugger/user escalation.
 ---
 
 ## Role Responsibilities
@@ -44,13 +36,9 @@ blocker without progress, use ordinary debugger/user escalation.
 
 **Boundary:**
 - `/evc-cmd-cook` owns discovery, preflight, research, planning, and handoff.
-- `/evc-cmd-code` owns implementation and finalization: code edits,
-  compile/typecheck, tests, review, approval and authorized project/docs updates.
-- Do not edit code directly from `/evc-cmd-cook`; execute `/evc-cmd-code <plan-path>`
-  after planning. Pass onboarding, configuration and selected Git preferences
-  before delegation; do not duplicate implementation or finalization.
-- Preserve sealed historical paths/index identities under neutral
-  `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md`.
+- `/evc-cmd-code` owns file edits, compile/typecheck, tests, code review, approval, docs/project updates, and finalization.
+- Do not edit code directly from `/evc-cmd-cook`. Use `/evc-cmd-code <plan-path>` after the plan is ready.
+
 **Subagent synchronization:** Treat every planner, researcher, scout, tester, debugger, reviewer, project-manager, or docs-manager delegation as a blocking call. Wait for the terminal result, verify the requested report/artifact, and do not hand off, continue, or finalize from partial output. For parallel work, wait for every requested agent and require one result per agent.
 
 ## Workflow
@@ -97,9 +85,10 @@ Do not hand off to `/evc-cmd-code` until the preflight contract and plan are cle
 
 * Use `evc-planner` subagent to analyze the preflight contract, research reports, and scout reports to create an implementation plan using the progressive disclosure structure:
   - Create a directory using naming pattern from `## Naming` section.
-  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links. Reconcile scope via `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md`; old sealed plans remain untouched.
+  - Save the overview access point at `plan.md`, keep it generic, under 80 lines, and list each phase with status/progress and links.
   - For each phase, add `phase-XX-phase-name.md` files containing sections (Context links, Overview with date/priority/statuses, Key Insights, Requirements, Architecture, Related code files, Implementation Steps, Todo list, Success Criteria, Risk Assessment, Security Considerations, Next steps).
   - Include the preflight contract and side-effect review checklist in the plan.
+
 ### 6. Side-Effect Review Checklist
 
 Before handoff, verify the plan accounts for:
@@ -114,17 +103,14 @@ Before handoff, verify the plan accounts for:
 
 ### 7. Implementation Handoff
 
-* Execute `/evc-cmd-code <plan-path>` with the actual plan, preflight, scoped
-  findings and unresolved questions. Preserve task data and wait for its terminal
-  result; a route selection or partial delegation is not completion.
-* Pass requirements for testing, code review, user approval/rejection and bounded
-  fixes; onboarding/configuration and Git choices belong to its finalization.
-* Frontend work uses `evc-ui-ux-designer` and `./docs/design-guidelines.md`.
-* Include `ai-multimodal` and `media-processing` for visual assets when needed.
+* Use `/evc-cmd-code <plan-path>` Slash Command to implement the plan step by step.
+* Pass the plan path and any unresolved questions to `/evc-cmd-code`.
+* If the plan includes frontend work, ensure the `/evc-cmd-code` handoff calls `evc-ui-ux-designer` and follows `./docs/design-guidelines.md`.
+* If the plan needs visual assets, include `ai-multimodal` and `media-processing` requirements in the plan.
 
-### 8. Quality Gates & Finalization Ownership
+### 8. Quality Gates
 
-`/evc-cmd-code` owns and enforces:
+`/evc-cmd-code` must enforce:
 
 * Compile/typecheck has no syntax errors.
 * Tests cover happy path, edge cases, and error cases.
@@ -133,37 +119,31 @@ Before handoff, verify the plan accounts for:
 * `evc-debugger` subagent investigates failures, then fixes are retested.
 * `evc-code-reviewer` subagent reviews security, performance, architecture, and YAGNI/KISS/DRY.
 * Critical review issues are fixed and retested before completion unless user explicitly approves otherwise.
-* Terminal writer/artifact barriers, actual finalized validation, authorized documentation/status updates and neutral historical protection.
 
 ### 9. Project Management & Documentation
 
-* `/evc-cmd-code` owns authorized project status, docs, roadmap and finalization.
-  This router does not duplicate publication. Child writers follow exact
-  ownership and writable/protected paths; wait for all terminal artifacts.
-* Protected historical paths/index identities stay immutable. Parent-only
-  ordinary approval/validation receipts and uncaptured overview publication
-  follow `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md`; captured destinations block writes.
-* If the user rejects implementation, route the actual plan, findings and scope
-  back to `/evc-cmd-code` for bounded fixes and renewed validation/approval,
-  never rerun already-completed historical scope for display repair.
+**If user approves the changes:**
+* Use `evc-project-manager` and `evc-docs-manager` subagents in parallel to update the project progress and documentation:
+  * Use `evc-project-manager` subagent to update the project progress and task status in the given plan file.
+  * Use `evc-docs-manager` subagent to update the docs in `./docs` directory if needed.
+  * Use `evc-project-manager` subagent to create a project roadmap at `./docs/project-roadmap.md` file.
+* **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
+
+**If user rejects the changes:**
+* Ask user to explain the issues and ask main agent to fix all of them and repeat the process.
 
 ### 10. Onboarding
 
-* Guide local API-key/env/config setup step by step, one question at a time and
-  wait for the answer. Never ask the user to disclose secrets in chat.
-* If configuration changes are requested, obtain approval and pass authorized
-  changes to the implementation owner; preserve sealed paths.
+* Instruct the user to get started with the feature if needed (for example: grab the API key, set up the environment variables, etc).
+* Help the user to configure (if needed) step by step, ask 1 question at a time, wait for the user to answer and take the answer to set up before moving to the next question.
+* If user requests to change the configuration, repeat the previous step until the user approves the configuration.
 
 ### 11. Final Report
-
-* Summarize actual changes, validation, blockers and next steps. Protected plans
-  link uncaptured `<plan-dir>/progress.md`; ordinary plans use their actual
-  overview and do not require nonexistent progress links.
-* Ask whether the user wants to commit/push. Use `evc-git-manager` only with
-  explicit confirmation for that scoped action. Do not duplicate a commit already
-  performed by the implementation owner or stage protected paths/receipts.
+* Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
+* Ask the user if they want to commit and push to git repository, if yes, use `evc-git-manager` subagent to commit and push to git repository.
 - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
 - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
+
 **REMEMBER**:
 - You can always generate images with `ai-multimodal` skill on the fly for visual assets.
 - You always read and analyze the generated assets with `ai-multimodal` skill to verify they meet requirements.

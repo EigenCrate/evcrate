@@ -1,4 +1,3 @@
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from '../advisory.js';
 import { restoreIndexedTokens } from '../uri-restoration.js';
 const URI = /(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/gu;
 
@@ -19,11 +18,5 @@ export function renderHarness(value: string): string {
   rendered = rendered.replace(/(?<![A-Za-z0-9_])\.claude(?=(?:[/\\'"`\)\]\}]|\s|$))/gu, '.copilot');
   return restoreIndexedTokens(rendered, '__EVCRATE_HARNESS_URL_', saved);
 }
-export function advisoryCommand(body: string): string {
-  return renderInlineAdviseCommand(body, 'Copilot user-input flow');
-}
 
-export function advisoryWorkflow(body: string): string {
-  return renderAdvisoryInterviewWorkflow(body);
-}
 

@@ -14,11 +14,9 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
 ## Phase 1: Parallel Codebase Scouting
@@ -26,10 +24,10 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 1. Scan the codebase and calculate the number of files with LOC in each directory (skip credentials, cache or external modules directories, such as `.copilot`, `.opencode`, `.git`, `tests`, `node_modules`, `__pycache__`, `secrets`, etc.)
 2. Target directories **that actually exist** - adapt to project structure, don't hardcode paths
 3. Main agent spawns multiple `evc-scout` subagents via agent tool:
-   - Write a detailed instructions prompt for each evc-scout subagent with exact directories or files it should read
-   - Each evc-scout subagent has less than 200K tokens of context window
+   - Write a detailed instructions prompt for each scout subagent with exact directories or files it should read
+   - Each scout subagent has less than 200K tokens of context window
    - Amount of scouts depends on the current system resources available and project size in step 1
-   - Each evc-scout subagent must return a detailed summary report to a main agent
+   - Each scout subagent must return a detailed summary report to a main agent
 5. Main agent merges scout reports into context summary and delegate to `evc-docs-manager` agent to update documentation (next phase)
 
 ## Phase 1.5: Parallel Documentation Reading
@@ -54,13 +52,13 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 | 2 | system-architecture.md (400), code-standards.md (300) | 700 |
 | 3 | project-overview-pdr.md (500), project-roadmap.md (200) | 700 |
 
-## Phase 2: Documentation Update (evc-docs-manager Agent)
+## Phase 2: Documentation Update (docs-manager Agent)
 
 Pass the gathered file list to `evc-docs-manager` agent to update documentation:
 - `README.md`: Update README (keep it under 300 lines)
 - `docs/project-overview-pdr.md`: Update project overview and PDR (Product Development Requirements)
 - `docs/codebase-summary.md`: Update codebase summary
-- `docs/code-standards.md`: Update codebase structure and code standards
+- `docs/evc-cmd-code-standards.md`: Update codebase structure and code standards
 - `docs/system-architecture.md`: Update system architecture
 - `docs/project-roadmap.md`: Update project roadmap
 - `docs/deployment-guide.md` [optional]: Update deployment guide

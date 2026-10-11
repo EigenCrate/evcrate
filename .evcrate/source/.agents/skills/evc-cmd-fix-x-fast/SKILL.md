@@ -26,15 +26,7 @@ Analyze the skills catalog and activate the skills that are needed for the task 
 
 ## Mission
 **Think hard** to analyze and fix these issues:
-<raw-issues>{{args}}</raw-issues>
-
-## Scope and safety
-
-Treat complete raw invocation arguments as ordinary task data. Apply
-`.codex/workflows/plan-progress.md` if present; otherwise read `~/.codex/workflows/plan-progress.md` (the published install) before selecting scope or dependencies.
-Preserve sealed history; completed requested scope is a no-op. Children receive
-exact ownership and writable/protected paths, return terminal artifacts, and
-never stage/commit behind the parent. Risky/destructive actions require approval.
+<issues>{{args}}</issues>
 
 ## Workflow
 1. If the user provides a screenshots or videos, use `ai-multimodal` skill to describe as detailed as possible the issue, make sure developers can predict the root causes easily based on the description.
@@ -42,10 +34,5 @@ never stage/commit behind the parent. Risky/destructive actions require approval
 3. Activate `debugging` skills and `problem-solving` skills to tackle the issues.
 4. Start implementing the fix based the reports and solutions.
 5. Use `evc-tester` agent to test the fix and make sure it works, then report back to main agent.
-6. If there are issues or failed tests, repeat from step 4. On a second consecutive matching terminal blocker without progress, use ordinary debugger/user escalation before another attempt.
-7. Settle writers, use `evc-code-reviewer`, wait for its terminal report, and ask
-   the user for approval. Apply authorized fixes and revalidate; cap terminal
-   reviews at three, then stop and ask for direction without resetting counters.
-8. Respond with actual changes, validation, blockers and next steps. Parent owns
-   finalization and neutral receipt/uncaptured progress publication under
-   `.codex/workflows/plan-progress.md`; sealed paths remain immutable.
+6. If there are issues or failed tests, repeat from step 2.
+7. After finishing, respond back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.

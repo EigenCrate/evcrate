@@ -25,4 +25,3 @@ export * from './lifecycle.js';
 export * from './support.js';
 export * from './models.js';
 export * from './configuration.js';
-export { renderVscodeAdvisoryCapabilities, renderVscodeInlineAdviseCommand, renderVscodeAdvisoryInterviewWorkflow } from './advisory.js';

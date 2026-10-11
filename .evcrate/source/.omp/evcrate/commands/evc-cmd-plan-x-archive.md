@@ -3,6 +3,7 @@ argument-hint: "[path-to-plan] (default: all plans)"
 description: "Write journal entries and archive specific plans or all plans"
 ---
 
+
 ## Your mission
 Read and analyze the plans, then write journal entries and archive specific plans or all plans in the `plans` directory.
 
@@ -17,14 +18,6 @@ Read and analyze the plans, then write journal entries and archive specific plan
 Read the plan directory:
 - `plan.md` - Overview and phases list
 - `phase-*.md` - 20 first lines of each phase file to understand the progress and status
-
-Before interpreting completion, apply `Plan progress and phase reconciliation`
-in `.omp/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.omp/agent/evcrate/workflows/plan-progress.md`.
-For protected historical plans, read uncaptured `progress.md` and immutable
-receipts to reconcile exact scope; do not infer completion from frozen headers.
-Do not move, delete, rewrite or stage captured plans/evidence or their immutable receipts: exclude those
-plans from the archive candidates and provide read-only links instead. Ordinary
-uncaptured plans retain the confirmation and archive behavior below.
 
 ### Step 2: Summarize the plans and document them with `/evc-cmd-journal` slash command
 Use `ask the user` tool to ask if user wants to document journal entries or not.

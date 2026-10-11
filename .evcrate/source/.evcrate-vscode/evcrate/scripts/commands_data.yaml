@@ -1,9 +1,3 @@
-- source: evc-cmd-advise.md
-  name: '/evc:cmd-advise'
-  path: cmd-advise/SKILL.md
-  description: Interview-first technical advice in the main session.
-  argument_hint: '[prompt-or-url]'
-  category: core
 - source: evc-cmd-ask.md
   name: '/evc:cmd-ask'
   path: cmd-ask/SKILL.md
@@ -103,7 +97,7 @@
 - source: evc-cmd-cook-x-auto.md
   name: '/evc:cmd-cook-x-auto'
   path: cmd-cook-x-auto/SKILL.md
-  description: Implement a feature automatically with plan and quality gates
+  description: Implement a feature automatically (\"trust me bro\")
   argument_hint: '[tasks]'
   category: cook
 - source: evc-cmd-cook-x-auto-x-fast.md
@@ -115,7 +109,7 @@
 - source: evc-cmd-cook-x-auto-x-parallel.md
   name: '/evc:cmd-cook-x-auto-x-parallel'
   path: cmd-cook-x-auto-x-parallel/SKILL.md
-  description: Plan parallel phases & execute with evc-fullstack-developer agents
+  description: Plan parallel phases & execute with fullstack-developer agents
   argument_hint: '[tasks]'
   category: cook
 - source: evc-cmd-debug.md
@@ -211,7 +205,7 @@
 - source: evc-cmd-fix-x-parallel.md
   name: '/evc:cmd-fix-x-parallel'
   path: cmd-fix-x-parallel/SKILL.md
-  description: Analyze & fix issues with parallel evc-fullstack-developer agents
+  description: Analyze & fix issues with parallel fullstack-developer agents
   argument_hint: '[issues]'
   category: fix
 - source: evc-cmd-fix-x-test.md
@@ -224,7 +218,7 @@
   name: '/evc:cmd-fix-x-types'
   path: cmd-fix-x-types/SKILL.md
   description: Fix type errors
-  argument_hint: '[options]'
+  argument_hint: ''
   category: fix
 - source: evc-cmd-fix-x-ui.md
   name: '/evc:cmd-fix-x-ui'
@@ -416,5 +410,5 @@
   name: '/evc:cmd-worktree'
   path: cmd-worktree/SKILL.md
   description: Create isolated git worktree for parallel development
-  argument_hint: '[feature-description] OR [project] [feature] (monorepo) [--base <branch>] [--plan <path>]'
+  argument_hint: '[feature-description] OR [project] [feature] (monorepo)'
   category: core

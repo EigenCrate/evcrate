@@ -69,14 +69,6 @@
     },
     {
       "kind": "command-prose",
-      "source": "evc-cmd-advise.md",
-      "classification": "command-prose",
-      "status": "migrated",
-      "target": "evc-cmd-advise/SKILL.md",
-      "target_name": "evc-cmd-advise"
-    },
-    {
-      "kind": "command-prose",
       "source": "evc-cmd-ask.md",
       "classification": "command-prose",
       "status": "migrated",

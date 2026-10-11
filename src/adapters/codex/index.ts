@@ -1,7 +1,7 @@
 import type { ProjectionAdapter, ProjectionBuildContext, ProjectionValidation } from '../types.js';
 import { ensureProjectionDirectory, graphText, validateProjection, writeProjectionFile, textBytes, isProductionArtifact } from '../projection-utils.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
-import { applyReplacements, addWorkflowFallback, canonicalCommandPath, isBinary, markdownFrontmatter, MODEL_MAP, normalizeDescription, parseFrontmatter, renderAdvisoryInterview, renderHarnessScriptReferences, renderInlineAdvise, rewriteCommandGuidance, SUBAGENT_WAIT_CONTRACT, tomlValue, transformResourceText } from './transforms.js';
+import { applyReplacements, addWorkflowFallback, canonicalCommandPath, isBinary, markdownFrontmatter, MODEL_MAP, normalizeDescription, parseFrontmatter, renderHarnessScriptReferences, rewriteCommandGuidance, SUBAGENT_WAIT_CONTRACT, tomlValue, transformResourceText } from './transforms.js';
 import { contextBridge, hooksJson, permissionHook, pretoolBridge, runMcpPackage, runNodeHook } from './hooks.js';
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { projectCatalogDataAndLayout } from '../catalog-data.js';
@@ -110,8 +110,7 @@ function copyAgents(context: ProjectionBuildContext): void {
 function copyWorkflows(context: ProjectionBuildContext): void {
   const known = knownCommands(context);
   for (const file of filesUnder(context, 'workflows')) if (!file.path.slice('workflows/'.length).includes('/')) {
-    let body = new TextDecoder().decode(file.bytes);
-    if (file.path.endsWith('/advisory-interview.md')) body = renderAdvisoryInterview(body);
+    const body = new TextDecoder().decode(file.bytes);
     writeText(context, `.codex/workflows/${file.path.slice('workflows/'.length)}`, addWorkflowFallback(rewriteCommandGuidance(applyReplacements(body), known)));
   }
 }
@@ -219,9 +218,8 @@ function commands(context: ProjectionBuildContext): void {
     const command = commandNameFromSourcePath(file.path);
     const parsed = parseFrontmatter(new TextDecoder().decode(file.bytes));
     const commandPath = `$${command.name}`;
-    let body = transformResourceText(command.semanticId === 'advise' ? renderInlineAdvise(parsed.body) : parsed.body, known).trim();
+    let body = transformResourceText(parsed.body, known).trim();
     let description = normalizeDescription(typeof parsed.metadata.description === 'string' ? parsed.metadata.description : undefined, body, `Run the $${command.name} command workflow.`);
-    if (command.semanticId === 'advise') description = 'Interview-first technical advice in the main session.';
     if (command.semanticId === 'coding-level') {
       const marker = '1. Set ' + String.fromCharCode(96) + 'codingLevel' + String.fromCharCode(96) + ' in .codex/.evcrate.json';
       body = body.replace(marker, marker + '.\n   This file is materialized from the canonical EVCrate source; update that source before regenerating to persist changes');

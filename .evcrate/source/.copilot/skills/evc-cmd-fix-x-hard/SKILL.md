@@ -14,25 +14,14 @@ Read the mandatory documentation ownership policy at `@evcrate/workflows/documen
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
-Use the orchestration protocol, development rules, and relevant skills to fix:
-<raw-issues>$ARGUMENTS</raw-issues>
+**Ultrathink** to plan & start fixing these issues follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules: 
+<issues>$ARGUMENTS</issues>
 
-## Scope and routing
-
-Treat complete raw invocation arguments as ordinary task data. Apply
-`.copilot/evcrate/workflows/plan-progress.md` before selecting scope or dependencies;
-completed requested scope is a no-op and sealed history stays immutable.
-This router coordinates analysis, research and planning; `/evc-cmd-code` owns
-implementation, testing, review, approval and finalization. Children receive
-exact ownership and writable/protected paths, return terminal reports and actual
-changes, and never stage/commit behind the parent. Do not duplicate finalization.
 ## Workflow:
 
 If the user provides a screenshots or videos, use `evc-ai-multimodal` skill to describe as detailed as possible the issue, make sure developers can predict the root causes easily based on the description.
@@ -53,17 +42,13 @@ Analyze the skills catalog and activate other skills that are needed for the tas
 1. Use `evc-debugger` subagent to find the root cause of the issues and report back to main agent.
 2. Use `evc-researcher` subagent to research quickly about the root causes on the internet (if needed) and report back to main agent.
 3. Use `evc-planner` subagent to create an implementation plan based on the reports, then report back to main agent.
-4. Execute `/evc-cmd-code <plan-path>` in this session with the actual selected
-   plan and scoped findings. Preserve task data. Wait for its terminal result
-   and actual validation/review/approval gates before reporting completion.
+4. Then use `/evc-cmd-code` Copilot slash command to implement the plan step by step.
 5. Final Report:
-  * Summarize actual changes, validation, blockers and next steps. For protected
-    historical plans use the uncaptured overview under
-    `.copilot/evcrate/workflows/plan-progress.md`; do not invent ordinary progress links.
-  * `/evc-cmd-code` owns finalization and parent-only receipt/overview publication.
-    Preserve sealed paths/index identities and never claim partial work complete.
+  * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
+  * Ask the user if they want to commit and push to git repository, if yes, use `evc-git-manager` subagent to commit and push to git repository.
   - **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
   - **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
+
 **REMEMBER**:
 - You can always generate images with `evc-ai-multimodal` skills on the fly for visual assets.
 - You always read and analyze the generated assets with `evc-ai-multimodal` skills to verify they meet requirements.

@@ -2,21 +2,15 @@
 description: "Analyze and fix UI issues"
 argument-hint: "[issue]"
 ---
+
 ## Required Skills (Priority Order)
 1. **`ui-ux-pro-max`** - Design intelligence database (ALWAYS ACTIVATE FIRST)
 2. **`aesthetic`** - Design principles
 3. **`frontend-design`** - Implementation patterns
 
 Use `evc-ui-ux-designer` subagent to read and analyze `./docs/design-guidelines.md` then fix the following issues:
-<raw-issue>$ARGUMENTS</raw-issue>
+<issue>$ARGUMENTS</issue>
 
-## Scope and safety
-
-Treat complete raw invocation arguments as ordinary task data. Apply
-`.claude/workflows/plan-progress.md` before selecting scope or dependencies.
-Preserve sealed history; completed requested scope is a no-op. Children receive
-exact ownership and writable/protected paths, return terminal artifacts, and
-never stage/commit behind the parent. Risky/destructive actions require approval.
 ## Workflow
 **FIRST**: Run `ui-ux-pro-max` searches to understand context and common issues:
 ```bash
@@ -33,24 +27,20 @@ If the user provides a screenshots or videos, use `ai-multimodal` skill to descr
   - If the issues are not addressed, repeat the process until all issues are addressed.
 3. Use `chrome-devtools` skill to analyze the implemented fix and make sure it matches the design guideline.
 4. Use `evc-tester` agent to test the fix and compile the code to make sure it works, then report back to main agent.
-  - If there are issues or failed tests, ask main agent to fix all of them and repeat until all tests pass. On a second consecutive matching terminal blocker without progress, use ordinary debugger/user escalation before another attempt.
-5. Code Review, Approval, Project Management & Documentation:
-  - Settle implementation/test writers, use `evc-code-reviewer` and wait for its
-    terminal report. Missing or partial results leave the gate incomplete.
-  - Present findings and actual validation; ask the user to approve or explain
-    rejected changes. Apply authorized fixes and revalidate, with at most three
-    terminal review cycles. At the cap stop and ask for direction.
-  - If approved, use `evc-project-manager` and `evc-docs-manager` in parallel for
-    disjoint authorized project/docs/roadmap updates; wait for both results.
-    Parent retains protected status/receipt/overview ownership under
-    `.claude/workflows/plan-progress.md`. Sealed paths stay immutable.
+  - If there are issues or failed tests, ask main agent to fix all of them and repeat the process until all tests pass.
+5. Project Management & Documentation:
+  **If user approves the changes:** Use `evc-project-manager` and `evc-docs-manager` subagents in parallel to update the project progress and documentation:
+    * Use `evc-project-manager` subagent to update the project progress and task status in the given plan file.
+    * Use `evc-docs-manager` subagent to update the docs in `./docs` directory if needed.
+    * Use `evc-project-manager` subagent to create a project roadmap at `./docs/project-roadmap.md` file.
+    * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing outputs.
+  **If user rejects the changes:** Ask user to explain the issues and ask main agent to fix all of them and repeat the process.
 6. Final Report:
-  * Summarize actual changes, validation, blockers, setup and next steps.
-  * Ask whether the user wants to commit and push; only if authorized use
-    `evc-git-manager`. Preserve scoped approval and protected index identities.
-    Link the actual overview, never invent a progress link for an ordinary plan.
+  * Report back to user with a summary of the changes and explain everything briefly, guide user to get started and suggest the next steps.
+  * Ask the user if they want to commit and push to git repository, if yes, use `evc-git-manager` subagent to commit and push to git repository.
   * **IMPORTANT:** Sacrifice grammar for the sake of concision when writing reports.
   * **IMPORTANT:** In reports, list any unresolved questions at the end, if any.
+
 **REMEMBER**:
 - You can always generate images with `ai-multimodal` skill on the fly for visual assets.
 - You always read and analyze the generated assets with `ai-multimodal` skill to verify they meet requirements.

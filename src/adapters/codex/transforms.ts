@@ -1,4 +1,3 @@
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from '../advisory.js';
 import { restoreIndexedTokens } from '../uri-restoration.js';
 import type { ResourceGraphFile } from '../resource-graph.js';
 
@@ -116,12 +115,7 @@ export function rewriteCommandGuidance(text: string, known: ReadonlySet<string>)
 }
 
 export function addWorkflowFallback(text: string): string {
-  let result = text;
-  for (const name of ['plan-progress.md', 'advisory-interview.md']) {
-    const local = `.codex/workflows/${name}`; const home = `~/.codex/workflows/${name}`;
-    const marker = `\`${local}\``; if (!result.includes(`${marker} if present`)) result = result.replace(marker, `${marker} if present; otherwise read \`${home}\` (the published install)`);
-  }
-  return result;
+  return text;
 }
 
 export function renderHarnessScriptReferences(text: string): string {
@@ -149,11 +143,4 @@ export function transformResourceText(text: string, known: ReadonlySet<string>):
 }
 
 
-export function renderInlineAdvise(body: string): string {
-  return renderInlineAdviseCommand(body, 'request_user_input');
-}
-
-export function renderAdvisoryInterview(body: string): string {
-  return renderAdvisoryInterviewWorkflow(body).replaceAll('AskUserQuestion', 'request_user_input');
-}
 export function isBinary(file: ResourceGraphFile): boolean { return file.bytes.slice(0, 1024).includes(0) || /\.(?:coverage|dll|dylib|exe|gif|gz|jpeg|jpg|pdf|png|pyc|pyo|so|tar|zip)$/iu.test(file.path); }

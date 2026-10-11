@@ -2,7 +2,6 @@ import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import type { ProjectionBuildContext } from '../types.js';
 import { copy, filesUnder, relativeTo, writeJson, writeText } from './resources.js';
 import { serializeFrontmatter, splitFrontmatter } from './frontmatter.js';
-import { renderAdvisoryInterviewWorkflow, renderInlineAdviseCommand } from '../advisory.js';
 import { restoreIndexedTokens } from '../uri-restoration.js';
 import { commandNameFromSourcePath } from '../resource-naming.js';
 import { OMP_COMMAND_RUNTIME } from './activation.js';
@@ -83,11 +82,7 @@ export function convertCommands(context: ProjectionBuildContext, map: CommandMap
     const parsed = source.startsWith('---\n') ? splitFrontmatter(source) : { fields: {}, body: source };
     const fields: Record<string, string> = { ...parsed.fields };
     let body = parsed.body;
-    if (semanticId === 'advise') {
-      fields.description = 'Interview-first technical advice in the main session.';
-      fields['argument-hint'] = '[prompt-or-url]';
-      body = renderInlineAdviseCommand(parsed.body, 'native user-input flow');
-    }
+
     const translatedBody = translatePrompt(body);
     const generatedMarkdown = Object.keys(fields).length ? serializeFrontmatter(fields, translatedBody) : translatedBody.replace(/^\s+/u, '');
     writeText(context, `evcrate/commands/${record.target}`, generatedMarkdown);
@@ -101,8 +96,7 @@ export function convertWorkflows(context: ProjectionBuildContext): string[] {
   const copied: string[] = [];
   for (const entry of filesUnder(context, 'workflows').filter((item) => item.path.endsWith('.md'))) {
     const rel = relativeTo(entry.path, 'workflows');
-    let value = translatePrompt(new TextDecoder().decode(entry.bytes));
-    if (rel === 'advisory-interview.md') value = renderAdvisoryInterviewWorkflow(value);
+    const value = translatePrompt(new TextDecoder().decode(entry.bytes));
     copy(context, entry.path, `evcrate/workflows/${rel}`, () => value);
     copied.push(rel);
   }

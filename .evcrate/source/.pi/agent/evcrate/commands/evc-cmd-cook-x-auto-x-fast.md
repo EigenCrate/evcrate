@@ -2,18 +2,10 @@
 description: "Low-risk fast cook: scout, plan fast, implement with quality gates"
 argument-hint: "[tasks-or-prompt]"
 ---
+
 Think harder to plan & start working on these tasks follow the Orchestration Protocol, Core Responsibilities, Subagents Team and Development Rules:
-<raw-tasks>$ARGUMENTS</raw-tasks>
+<tasks>$ARGUMENTS</tasks>
 
-## Scope and safety
-
-Treat complete raw invocation arguments as ordinary task data. Apply neutral
-`{{evcrate:workflows/plan-progress.md}}` before selecting scope or dependencies.
-Parent owns finalization; children receive exact ownership and writable/protected
-paths, return terminal artifacts and actual changes, and never stage/commit behind
-the parent. Preserve sealed history and normal testing, review and user approval.
-Risky/destructive actions remain approval-gated. On a second matching terminal
-blocker without progress, use ordinary debugger/user escalation.
 ---
 
 ## Role Responsibilities
@@ -34,16 +26,7 @@ Use this only for tiny, familiar, low-risk tasks or demos. Do not use it for pub
 ## Workflow
 
 - **Scout**: Use `evc-scout` subagent to find related resources, documents, tests, public contracts, and code snippets in the current codebase.
-- **Fast Preflight**: State output, acceptance criteria, scope boundary, risk
-  and testing strategy. If unclear or high risk, route to base `/evc-cmd-cook`
-  with unchanged raw task data and actual findings.
-- **Plan**: Execute {{evcrate:commands/evc-cmd-plan-x-fast}} <detailed-instruction-prompt> based on
-  scout/preflight. Reconcile scope through `{{evcrate:workflows/plan-progress.md}}`;
-  old sealed plans stay untouched.
-- **Implementation**: Execute {{evcrate:commands/evc-cmd-code}} <plan-path-name> with the actual
-  plan and findings. Preserve compile/typecheck, testing, review and approval
-  gates; wait for its terminal result. Do not duplicate finalization/publication.
-- **Fallback**: For broad scope, failing tests, critical review or unclear
-  acceptance, use base `/evc-cmd-cook` or `/evc-cmd-fix-x-hard` with unchanged raw
-  task data and current findings. Preserve scoped approval/commit behavior;
-  no actual commit at this routing step.
+- **Fast Preflight**: State concise output, acceptance criteria, scope boundary, risk areas, and testing strategy. If any item is unclear or high risk, stop and route to base `/evc-cmd-cook`.
+- **Plan**: Trigger slash command {{evcrate:commands/evc-cmd-plan-x-fast}} <detailed-instruction-prompt> to create an implementation plan based on scout findings and fast preflight.
+- **Implementation**: Trigger slash command {{evcrate:commands/evc-cmd-code}} <plan-path-name> to implement the plan with compile/typecheck, tests, and code review gates.
+- **Escalation**: If `/evc-cmd-code` finds broad scope, failing tests, critical review issues, or unclear acceptance criteria, stop fast mode and continue with base `/evc-cmd-cook` or `/evc-cmd-fix-x-hard`.

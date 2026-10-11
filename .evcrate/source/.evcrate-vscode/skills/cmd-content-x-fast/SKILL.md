@@ -6,6 +6,7 @@ disable-model-invocation: true
 argument-hint: "[user-request]"
 ---
 
+
 Write creative & smart copy for this user request:
 <user_request>$ARGUMENTS</user_request>
 

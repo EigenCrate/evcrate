@@ -6,6 +6,7 @@ disable-model-invocation: true
 argument-hint: "[task]"
 ---
 
+
 Think harder.
 Activate `planning` skill.
 

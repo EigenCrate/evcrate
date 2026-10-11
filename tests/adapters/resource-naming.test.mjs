@@ -13,7 +13,6 @@ import {
 } from '../../dist/adapters/resource-naming.js';
 
 const MAPPED_COMMAND_NAMES = [
-  'evc-cmd-advise',
   'evc-cmd-ask',
   'evc-cmd-bootstrap',
   'evc-cmd-bootstrap-x-auto',
@@ -87,8 +86,8 @@ const MAPPED_COMMAND_NAMES = [
 
 const validationInvalid = { name: 'ControlPlaneError', code: 'VALIDATION_INVALID' };
 
-test('all 70 mapped command names round-trip through parse/format', () => {
-  assert.equal(MAPPED_COMMAND_NAMES.length, 70);
+test('all 69 mapped command names round-trip through parse/format', () => {
+  assert.equal(MAPPED_COMMAND_NAMES.length, 69);
   for (const name of MAPPED_COMMAND_NAMES) {
     const parsed = parseCommandName(name);
     assert.equal(formatCommandName(parsed.segments), name);
