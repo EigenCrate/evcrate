@@ -227,16 +227,6 @@ export function evaluateLocalPolicies(
         };
       }
     }
-    if (operation.kind === 'search' && operation.pattern) {
-      const patternCheck = matchesScoutPattern(operation.pattern, compiledScout);
-      if (patternCheck.blocked) {
-        return {
-          decision: 'deny',
-          reason: `Scout policy blocked search pattern "${operation.pattern}" matching .evcrateignore pattern "${patternCheck.pattern}"`,
-          warnings: []
-        };
-      }
-    }
   }
 
   // Broad search pattern check

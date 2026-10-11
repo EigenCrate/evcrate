@@ -2,15 +2,6 @@
 
 Historical phase entries moved from [project-changelog.md](./project-changelog.md) to keep the maintained phase mirror below the repository's 800-line documentation limit. Paths and evidence are preserved; current Phase 09 milestone status remains in the main changelog.
 
-### 2026-09-13 — docs(distribution): post-verification operator and architecture documentation (Phase 09)
-
-- Reconciled code and design contracts against Phase 08 evidence. [Phase 09 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-09-post-verification-operator-documentation.md).
-- Updated `README.md`, `docs/system-architecture.md`, `docs/project-overview-pdr.md` (FR-10), `docs/code-standards.md`, `docs/codebase-summary.md`, `docs/pi-native-migration.md`, `docs/project-roadmap.md`, and `docs/project-changelog.md` with two-phase transaction execution, HOME-then-project lock ordering, schema-2 state roots, scope-isolated recovery, and `npm test` (512/512) verification (review 10/10).
-
-### 2026-09-13 — feat(distribution): installed Linux release fixtures and regeneration (Phase 08)
-
-- Extended `verifyInstalledLauncherAndInvariance` and modularized `scripts/release/installed-lifecycle-assertions.cjs` (< 200 LOC) to verify HOME non-mutation on install, all-seven HOME publication, project publication isolation, partial failure rollback, and snapshot byte invariance (`test:release` 10/10, `test:installer:linux` 15/15, `test:validation-rollout` 6/6, `test:distribution:rollout` 5/5, `npm test` 512/512). [Phase 08 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-08-installed-release-fixtures-and-regeneration.md).
-
 ### Advisor mentoring, recovery, and audit — Phase 01
 
 **Updated:** 2026-09-07  

@@ -2,15 +2,9 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-11
-**Status:** Core package `evcrate` 3.0.0; VS Code subagent frontmatter tool-reference correction and Linux candidate handoff complete (Phases 01–07; Windows native qualification and deployment blocked); Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
+**Updated:** 2026-10-10
+**Status:** Core package `evcrate` 3.0.0; Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
 
-### 2026-10-11 — fix(vscode): correct subagent frontmatter tool references and qualify Linux candidate handoff (Phases 01–07)
-
-- Repaired VS Code adapter frontmatter projection in `src/adapters/vscode/metadata-tools.ts` (`VSCODE_LOCAL_TOOL_MAP` and `mapAgentTools`) for pinned VS Code `1.140.0` (`07f806f999227108933c2e30515b26eecc1fda74`) and GitHub Copilot Chat `0.68.0` (`read/readFile`, `search/fileSearch`, `search/textSearch`, `search/listDirectory`, `runInTerminal`, `getTerminalOutput`, `killTerminal`, `agent/runSubagent`, `todo`, `editFiles`, `createFile`, `multiReplaceString`). Separated frontmatter references from model-facing (`copilot_readFile`, `manage_todo_list`) and hook event namespaces; preserved `tools: []` deny-all, omitted-tool inheritance, `Task`-derived `canDelegate` (`agents: ['*']` vs. leaf `agents: []`), and expected Local child-subagent `todo` restriction without claiming a VS Code host defect.
-- Paired `filePath`/`FilePath` operand normalization in `src/adapters/vscode/tool-inputs.ts`, `src/adapters/vscode/runtime-sources.ts` (`LOCAL_TOOL_INPUTS_SOURCE`), and emitted `evcrate/runtime/local-tool-inputs.cjs` across read, edit (`files[]` and `replacements[]`), and search/glob operations while preserving Scout heavy-directory blocks and `.env` privacy prompts.
-- Regenerated VS Code projection and manifests (`.evcrate/build-manifest-vscode.json` SHA-256 `eb1597b4...`, `agent-tool-audit.json` SHA-256 `d0ec26b8...`, immutable candidate plugin tree `81792bf29a3233edce95a2e604e7596064b4127d75d8792e5af7a0ff8ccd680b` across 761 files).
-- Qualified on Linux x64: Phase 05 native delegation/permissions ([native-qualification.md](../plans/261010-1552-vscode-subagent-tool-references/reports/native-qualification.md), 11/11 PASS: `N01`–`N10`, `W04`) and Phase 06 documentation workflow ([docs-workflow-qualification.md](../plans/261010-1552-vscode-subagent-tool-references/reports/docs-workflow-qualification.md), 3/3 PASS: `W01`–`W03`, including `Explore` fallback to `evc-scout`). Delivered reviewed-candidate handoff ([candidate-handoff.md](../plans/261010-1552-vscode-subagent-tool-references/reports/candidate-handoff.md)); Windows Local qualification, incident closure, and production rollout remain explicitly blocked pending affected-host verification and operator deployment approval.
 ### 2026-10-10 — fix(distribution): recover retired cleanup and authenticate stable approval
 
 - Retired Gemini cleanup carries an explicit schema-3 journal discriminator, validated against exact predecessor ownership and delete-only historical paths without adding retired targets to active publication metadata.
@@ -756,6 +750,20 @@ and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-determini
   CLI flags, and cleanup of partial output on failure.
 - Focused Phase 04, release, and Linux installer suites pass 39/39 (100%).
   This deterministic Linux evidence does not qualify native Windows runtime.
+
+### 2026-09-13 — docs(distribution): post-verification operator and architecture documentation (Phase 09)
+
+- Reconciled code and design contracts against Phase 08 evidence. [Phase 09 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-09-post-verification-operator-documentation.md).
+- Updated `README.md` with operator CLI examples (`--scope home|project`, `--home`, `--project-root`, `--target`, recovery), seven-target destination matrix, shared controller HOME invariant, partial failure semantics (`PUBLICATION_FAILED`/`ROLLBACK_FAILED`, exit 5), quiescence runbook, and standalone installer rollback distinction (`install.sh rollback`).
+- Updated `docs/system-architecture.md` with build-to-publication dataflow diagram, two-phase transaction execution, HOME-then-project lock ordering, preflight-before-mutation checks, schema-2 state roots, and scope-isolated recovery.
+- Updated `docs/project-overview-pdr.md` (FR-10), `docs/code-standards.md`, `docs/codebase-summary.md`, `docs/pi-native-migration.md`, `docs/project-roadmap.md`, and `docs/project-changelog.md`.
+- Verification: Cycle 2 validation records `npm run build`, `npm run distribute:check`, and `npm test` (512/512) passing; review approved at 10/10.
+
+### 2026-09-13 — feat(distribution): installed Linux release fixtures and regeneration (Phase 08)
+
+- Extended `verifyInstalledLauncherAndInvariance` to prove HOME non-mutation on install, all-seven HOME publication with shared controller, project publication to separate project directory without project controller, runtime entrypoint execution across all seven targets from third workspace, partial failure rollback and recovery isolation, and package snapshot byte invariance throughout. [Phase 08 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-08-installed-release-fixtures-and-regeneration.md).
+- Modularized installed assertions into `scripts/release/installed-lifecycle-assertions.cjs` (< 200 LOC).
+- All release gates passed sequentially: `npm run distribute:build`, `generate:registry`, `generate:manifests`, `distribute:check`, `test:release` (10/10), `test:installer:linux` (15/15), `test:validation-rollout` (6/6), `test:distribution:rollout` (5/5), and full test suite (512/512). Review PASS.
 
 ### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
 

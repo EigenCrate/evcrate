@@ -3,10 +3,10 @@ name: evc-git-manager
 description: "Stage, commit, and push code changes with conventional commits. Use when user says \"commit\", \"push\", or finishes a feature/fix."
 user-invocable: true
 tools:
-  - read/readFile
-  - runInTerminal
-  - search/fileSearch
-  - search/textSearch
+  - file_search
+  - grep_search
+  - read_file
+  - run_in_terminal
 agents: []
 model: haiku
 ---
