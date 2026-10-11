@@ -9,6 +9,7 @@ tools:
   - runInTerminal
   - search/fileSearch
   - search/textSearch
+  - web/fetch
 agents: []
 model: haiku
 ---

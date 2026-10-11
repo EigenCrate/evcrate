@@ -31,7 +31,9 @@ export const VSCODE_LOCAL_TOOL_MAP: Readonly<Record<string, readonly string[]>> 
   glob: Object.freeze(['search/fileSearch']),
   ls: Object.freeze(['search/listDirectory']),
   task: Object.freeze(['agent/runSubagent']),
-  todowrite: Object.freeze(['todo'])
+  todowrite: Object.freeze(['todo']),
+  webfetch: Object.freeze(['web/fetch']),
+  notebookedit: Object.freeze(['edit/editNotebook'])
 });
 
 export interface ToolMappingResult {

@@ -175,13 +175,28 @@ test('metadata: mapAgentTools allows delegation only when Task is present', () =
 });
 
 test('metadata: mapAgentTools records dropped tools faithfully', () => {
-  const res = mapAgentTools('Read, Grep, WebFetch, NotebookEdit, UnknownCustom');
+  const res = mapAgentTools('Read, Grep, WebSearch, UnknownCustom');
   assert.deepEqual([...res.mapped].sort(), ['read/readFile', 'search/textSearch'].sort());
   assert.deepEqual(
     [...res.dropped].sort(),
-    ['NotebookEdit', 'UnknownCustom', 'WebFetch'].sort()
+    ['UnknownCustom', 'WebSearch'].sort()
   );
   assert.equal(res.canDelegate, false);
+});
+
+test('metadata: mapAgentTools maps WebFetch and NotebookEdit to pinned host references', () => {
+  const resWebFetch = mapAgentTools('WebFetch');
+  assert.deepEqual([...resWebFetch.mapped], ['web/fetch']);
+  assert.deepEqual(resWebFetch.dropped, []);
+
+  const resNotebook = mapAgentTools('NotebookEdit');
+  assert.deepEqual([...resNotebook.mapped], ['edit/editNotebook']);
+  assert.deepEqual(resNotebook.dropped, []);
+
+  // WebSearch remains unsupported/dropped
+  const resWebSearch = mapAgentTools('WebSearch');
+  assert.deepEqual([...resWebSearch.mapped], []);
+  assert.deepEqual(resWebSearch.dropped, ['WebSearch']);
 });
 
 test('metadata: capability contract cases match independently recorded host references', () => {
@@ -220,23 +235,23 @@ test('metadata: capability contract cases match independently recorded host refe
 });
 
 test('metadata: security boundary - unsupported-only explicit tools remain empty without fallback to inheritance', () => {
-  const resString = mapAgentTools('WebFetch, WebSearch, UnknownCustom');
+  const resString = mapAgentTools('WebSearch, UnknownCustom');
   assert.equal(resString.hasExplicitTools, true);
   assert.equal(resString.isExplicitNone, false);
   assert.deepEqual(resString.mapped, []);
   assert.deepEqual(
     [...resString.dropped].sort(),
-    ['UnknownCustom', 'WebFetch', 'WebSearch'].sort()
+    ['UnknownCustom', 'WebSearch'].sort()
   );
   assert.equal(resString.canDelegate, false);
 
-  const resArray = mapAgentTools(['WebFetch', 'UnknownTool']);
+  const resArray = mapAgentTools(['WebSearch', 'UnknownTool']);
   assert.equal(resArray.hasExplicitTools, true);
   assert.equal(resArray.isExplicitNone, false);
   assert.deepEqual(resArray.mapped, []);
   assert.deepEqual(
     [...resArray.dropped].sort(),
-    ['UnknownTool', 'WebFetch'].sort()
+    ['UnknownTool', 'WebSearch'].sort()
   );
   assert.equal(resArray.canDelegate, false);
 });

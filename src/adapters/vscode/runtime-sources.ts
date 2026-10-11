@@ -335,7 +335,10 @@ const READ_TOOL_NAMES = {
   readfile: true,
   read: true,
   'read/readfile': true,
-  copilot_readfile: true
+  copilot_readfile: true,
+  getnotebooksummary: true,
+  'read/getnotebooksummary': true,
+  copilot_getnotebooksummary: true
 };
 
 const EDIT_TOOL_NAMES = {
@@ -354,7 +357,10 @@ const EDIT_TOOL_NAMES = {
   insertedit: true,
   copilot_insertedit: true,
   multireplacestring: true,
-  copilot_multireplacestring: true
+  copilot_multireplacestring: true,
+  editnotebook: true,
+  'edit/editnotebook': true,
+  copilot_editnotebook: true
 };
 
 const TERMINAL_TOOL_NAMES = {
@@ -407,6 +413,15 @@ const UNRELATED_TOOL_NAMES = {
   list_resources: true,
   getterminaloutput: true,
   killterminal: true
+};
+
+const WEB_TOOL_NAMES = {
+  web_fetch: true,
+  webfetch: true,
+  fetch: true,
+  'web/fetch': true,
+  copilot_fetchwebpage: true,
+  fetchwebpage: true
 };
 
 const CANONICAL_BLOCKED_DIR_NAMES = {
@@ -766,6 +781,45 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
     };
   }
 
+  // 7. Web fetch operations
+  if (WEB_TOOL_NAMES[lowerName]) {
+    const rawUrls = toolInput.urls || toolInput.url || toolInput.uri || toolInput.uris;
+    const urlList = [];
+    if (typeof rawUrls === 'string' && rawUrls.trim()) {
+      urlList.push(rawUrls.trim());
+    } else if (Array.isArray(rawUrls)) {
+      for (const u of rawUrls) {
+        if (typeof u === 'string' && u.trim()) {
+          urlList.push(u.trim());
+        }
+      }
+    }
+
+    if (urlList.length === 0) {
+      return {
+        kind: 'unqualified',
+        toolName,
+        reason: 'Web fetch tool requires valid urls or url string',
+        originalInput: toolInput
+      };
+    }
+
+    const checked = validateOperands(urlList);
+    if (typeof checked === 'string') {
+      return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
+    }
+
+    return {
+      kind: 'web',
+      toolName,
+      operands: checked,
+      pattern: typeof toolInput.query === 'string' && toolInput.query.trim() ? toolInput.query.trim() : undefined,
+      toolUseId,
+      originalInput: toolInput,
+      executionBase: contextCwd
+    };
+  }
+
   // 7. Unrelated tools
   if (UNRELATED_TOOL_NAMES[lowerName]) {
     return {
@@ -1023,7 +1077,7 @@ function evaluateLocalPolicies(operation, config = {}) {
   if (config.privacyEnabled !== false) {
     for (const operand of operation.operands) {
       if (isPrivacySensitive(operand)) {
-        if (operation.kind === 'read' || operation.kind === 'edit') {
+        if (operation.kind === 'read' || operation.kind === 'edit' || operation.kind === 'web') {
           return {
             decision: 'ask',
             reason: 'Access to privacy-sensitive file "' + operand + '" requires explicit user confirmation.',

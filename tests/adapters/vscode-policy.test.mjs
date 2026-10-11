@@ -392,3 +392,68 @@ test('policy: native search parameters normalize scope and block protected direc
   }));
   assert.equal(fileSearchPermitted.decision, 'none');
 });
+
+test('policy: web fetch tools normalize URLs and enforce scout and privacy policies', () => {
+  // Allowed external web fetch
+  const webAllowed = evaluateLocalPolicies(normalizeLocalTool('web/fetch', {
+    urls: ['https://code.visualstudio.com/docs'],
+    query: 'API reference'
+  }));
+  assert.equal(webAllowed.decision, 'none');
+
+  // Allowed single url string
+  const webSingleAllowed = evaluateLocalPolicies(normalizeLocalTool('copilot_fetchWebPage', {
+    url: 'https://github.com/microsoft/vscode',
+    query: 'README'
+  }));
+  assert.equal(webSingleAllowed.decision, 'none');
+
+  // Privacy-sensitive local operand in web fetch triggers ask
+  const webPrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('web/fetch', {
+    urls: ['.env.local'],
+    query: 'config'
+  }));
+  assert.equal(webPrivacyAsk.decision, 'ask');
+  assert.ok(webPrivacyAsk.reason.includes('privacy-sensitive'));
+
+  // Scout-blocked directory operand in web fetch triggers deny
+  const webScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('web/fetch', {
+    urls: ['node_modules/express/README.md']
+  }));
+  assert.equal(webScoutBlocked.decision, 'deny');
+  assert.ok(webScoutBlocked.reason.includes('Scout policy blocked'));
+
+  // Missing urls fails closed as unqualified
+  const webMissing = normalizeLocalTool('web/fetch', { query: 'test' });
+  assert.equal(webMissing.kind, 'unqualified');
+});
+
+test('policy: notebook edit and summary tools enforce file policies with filePath', () => {
+  // Allowed notebook edit
+  const nbEditAllowed = evaluateLocalPolicies(normalizeLocalTool('edit/editNotebook', {
+    filePath: 'notebooks/pipeline.ipynb',
+    editType: 'replace',
+    cellId: 'cell-0'
+  }));
+  assert.equal(nbEditAllowed.decision, 'none');
+
+  // Allowed notebook summary read
+  const nbSummaryAllowed = evaluateLocalPolicies(normalizeLocalTool('read/getNotebookSummary', {
+    filePath: 'notebooks/pipeline.ipynb'
+  }));
+  assert.equal(nbSummaryAllowed.decision, 'none');
+
+  // Scout-blocked notebook edit
+  const nbEditBlocked = evaluateLocalPolicies(normalizeLocalTool('copilot_editNotebook', {
+    filePath: 'node_modules/demo/notebook.ipynb'
+  }));
+  assert.equal(nbEditBlocked.decision, 'deny');
+  assert.ok(nbEditBlocked.reason.includes('Scout policy blocked'));
+
+  // Privacy ask for sensitive notebook or config
+  const nbPrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('getNotebookSummary', {
+    filePath: '.env.local'
+  }));
+  assert.equal(nbPrivacyAsk.decision, 'ask');
+  assert.ok(nbPrivacyAsk.reason.includes('privacy-sensitive'));
+});

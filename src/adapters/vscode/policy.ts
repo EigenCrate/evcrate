@@ -257,7 +257,7 @@ export function evaluateLocalPolicies(
   if (config.privacyEnabled !== false) {
     for (const operand of operation.operands) {
       if (isPrivacySensitive(operand)) {
-        if (operation.kind === 'read' || operation.kind === 'edit') {
+        if (operation.kind === 'read' || operation.kind === 'edit' || operation.kind === 'web') {
           return {
             decision: 'ask',
             reason: `Access to privacy-sensitive file "${operand}" requires explicit user confirmation.`,

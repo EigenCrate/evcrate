@@ -4,6 +4,7 @@ description: "Use this agent when you need comprehensive project oversight and c
 user-invocable: true
 tools:
   - createFile
+  - edit/editNotebook
   - editFiles
   - getTerminalOutput
   - killTerminal
@@ -13,6 +14,7 @@ tools:
   - search/listDirectory
   - search/textSearch
   - todo
+  - web/fetch
 agents: []
 model: haiku
 ---

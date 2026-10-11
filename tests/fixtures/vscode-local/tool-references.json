@@ -114,6 +114,22 @@
       "tool_set": "edit",
       "model_name": "copilot_multiReplaceString",
       "category": "editing"
+    },
+    "webfetch": {
+      "canonical_intent": "WebFetch",
+      "host_reference": "web/fetch",
+      "accepted_aliases": ["fetch"],
+      "tool_set": "web",
+      "model_name": "copilot_fetchWebPage",
+      "category": "web"
+    },
+    "notebookedit": {
+      "canonical_intent": "NotebookEdit",
+      "host_reference": "edit/editNotebook",
+      "accepted_aliases": ["editNotebook"],
+      "tool_set": "edit",
+      "model_name": "copilot_editNotebook",
+      "category": "notebook"
     }
   }
 }
