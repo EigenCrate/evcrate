@@ -342,7 +342,7 @@ test('native no-flag admission ignores locked or corrupt HOME state and sends a 
 });
 
 
-test('OMP rejects input when its host continues after a required-payload lifecycle error', async (t) => {
+test('OMP warns and continues when AGENTS payload is unavailable or mid-run compaction occurs', async (t) => {
   const directory = mkdtempSync(join(tmpdir(), 'evcrate-omp-context-admission-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const resources = join(directory, '.omp/evcrate');
@@ -356,22 +356,37 @@ test('OMP rejects input when its host continues after a required-payload lifecyc
   register({ on(name, handler) { handlers.set(name, handler); } });
   const notices = [];
   let aborted = 0;
-  const ctx = { cwd: directory, abort() { aborted += 1; }, ui: { notify(message) { notices.push(message); } } };
-  t.mock.method(console, 'error', () => {});
-  await assert.rejects(handlers.get('session_start')({}, ctx));
-  assert.deepEqual(await handlers.get('input')({}, ctx), { handled: true });
-  assert.equal(notices.some((message) => message.includes('AGENTS')), true);
+  const ctx = { cwd: directory, abort() { aborted += 1; }, ui: { notify(message, kind) { notices.push({ message, kind }); } } };
+  t.mock.method(console, 'warn', () => {});
+  await handlers.get('session_start')({}, ctx);
+  assert.equal(await handlers.get('input')({}, ctx), undefined, 'missing payload warns without blocking user input');
+  assert.equal(await handlers.get('before_agent_start')({}, ctx), undefined);
   await handlers.get('before_provider_request')({}, ctx);
-  assert.equal(aborted, 1, 'print mode cannot dispatch after a swallowed lifecycle refusal');
+  assert.equal(aborted, 0, 'missing payload warns and continues without aborting provider request');
+  assert.equal(notices.length, 1, 'repeated missing-payload callbacks emit exactly one warning per degradation episode');
+  assert.equal(notices[0].message.includes('AGENTS') && notices[0].kind === 'warning', true);
+
   writeFileSync(join(resources, 'AGENTS.md'), 'restored OMP instructions\n');
-  assert.equal(await handlers.get('input')({}, ctx), undefined);
-  const admitted = await handlers.get('before_agent_start')({}, ctx);
-  assert.equal(admitted.message.content, 'restored OMP instructions');
   await handlers.get('before_provider_request')({}, ctx);
-  assert.equal(aborted, 1, 'valid context still permits provider admission');
+  assert.equal(aborted, 0);
+  assert.equal(notices.length, 1, 'provider-time recovery emits no warning');
+  const admittedAfterProviderRecovery = await handlers.get('before_agent_start')({}, ctx);
+  assert.equal(admittedAfterProviderRecovery.message.content, 'restored OMP instructions', 'provider-time recovery delivers AGENTS on next agent start');
+  assert.equal(await handlers.get('before_agent_start')({}, ctx), undefined, 'admitted startup context delivers only once before compaction');
+
+  await handlers.get('session_before_compact')({}, ctx);
+  await handlers.get('before_provider_request')({}, ctx);
+  assert.equal(aborted, 0, 'mid-run compaction before next agent turn must not abort provider request');
+  assert.equal(notices.length, 1, 'mid-run compaction with valid AGENTS payload emits no warning');
+  const postCompactAdmitted = await handlers.get('before_agent_start')({}, ctx);
+  assert.equal(postCompactAdmitted.message.content, 'restored OMP instructions');
+
   rmSync(join(resources, 'AGENTS.md'));
   await handlers.get('session_before_compact')({}, ctx);
-  await assert.rejects(handlers.get('before_agent_start')({}, ctx));
+  const degraded = await handlers.get('before_agent_start')({}, ctx);
+  assert.equal(degraded, undefined, 'failed rebuilt context must not reuse the prior valid snapshot');
   await handlers.get('before_provider_request')({}, ctx);
-  assert.equal(aborted, 2, 'failed rebuilt context must not use the prior valid snapshot');
+  assert.equal(aborted, 0, 'degraded post-compact context warns and continues without aborting');
+  assert.equal(notices.length, 2, 'recovery re-enables a single warning for a subsequent degradation episode');
+  assert.equal(notices[1].message.includes('AGENTS') && notices[1].kind === 'warning', true);
 });

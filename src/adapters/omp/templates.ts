@@ -40,7 +40,10 @@ function canonicalHookPath(relative: string): string {
   const stat = lstatSync(candidate); if (!stat.isFile() || stat.isSymbolicLink()) throw new Error("Missing OMP hook source: " + relative); return candidate;
 }
 export interface CanonicalHookResult { stdout: string; stderr: string; code: number; }
-export async function runCanonicalHook(relative: string, payload: unknown, ctx: any): Promise<CanonicalHookResult> {
+export interface OmpHookContext { cwd?: string; abort?: () => void; ui?: { notify?: (message: string, kind: string) => void }; sessionManager?: { getSessionFile?: () => string | undefined }; }
+export interface OmpHookEvent { prompt?: string; toolName?: string; input?: Record<string, unknown>; content?: unknown[]; }
+export interface OmpHookHost { on: (event: string, handler: (event: OmpHookEvent, ctx: OmpHookContext) => unknown) => void; }
+export async function runCanonicalHook(relative: string, payload: unknown, ctx?: OmpHookContext): Promise<CanonicalHookResult> {
   let script: string; try { script = canonicalHookPath(relative); } catch (error) { return { stdout: "", stderr: String(error), code: 127 }; }
   const cwd = typeof ctx?.cwd === "string" && ctx.cwd ? ctx.cwd : process.cwd();
   const resourceRoot = path.resolve(SOURCE_HOOK_ROOT, "..");
@@ -55,65 +58,75 @@ export async function runCanonicalHook(relative: string, payload: unknown, ctx: 
     try { child.stdin.end(JSON.stringify(payload ?? {})); } catch (error) { child.kill("SIGTERM"); finish({ stdout, stderr: stderr + String(error), code: 127 }); }
   });
 }
-export function sessionFile(ctx: any): string | undefined { try { const value = ctx?.sessionManager?.getSessionFile?.(); return typeof value === "string" && value ? value : undefined; } catch { return undefined; } }
-export function sessionId(ctx: any): string { const file = sessionFile(ctx); return file ? path.basename(file) : "default"; }
-function canonicalName(toolName: string): string { return ({ bash: "Bash", glob: "Glob", grep: "Grep", read: "Read", edit: "Edit", write: "Write" } as Record<string, string>)[toolName] ?? toolName; }
-export function canonicalToolPayload(event: any, ctx: any): Record<string, unknown> { const input = { ...(event?.input ?? {}) } as Record<string, unknown>; if (input.file_path === undefined && typeof input.path === "string") input.file_path = input.path; return { tool_name: canonicalName(typeof event?.toolName === "string" ? event.toolName : "unknown"), tool_input: input, cwd: ctx?.cwd ?? process.cwd() }; }
+export function sessionFile(ctx?: OmpHookContext): string | undefined { try { const value = ctx?.sessionManager?.getSessionFile?.(); return typeof value === "string" && value ? value : undefined; } catch { return undefined; } }
+export function sessionId(ctx?: OmpHookContext): string { const file = sessionFile(ctx); return file ? path.basename(file) : "default"; }
+export function canonicalToolPayload(event?: OmpHookEvent, ctx?: OmpHookContext): Record<string, unknown> { const input = { ...(event?.input ?? {}) } as Record<string, unknown>; if (input.file_path === undefined && typeof input.path === "string") input.file_path = input.path; const toolName = typeof event?.toolName === "string" ? event.toolName : "unknown"; const mappedName = ({ bash: "Bash", glob: "Glob", grep: "Grep", read: "Read", edit: "Edit", write: "Write" } as Record<string, string>)[toolName] ?? toolName; return { tool_name: mappedName, tool_input: input, cwd: ctx?.cwd ?? process.cwd() }; }
 export function additionalContext(output: string): string | undefined { for (const line of output.split("\n").reverse()) { const trimmed = line.trim(); if (!trimmed) continue; try { const value = JSON.parse(trimmed); const candidate = value?.hookSpecificOutput?.additionalContext; if (typeof candidate === "string" && candidate.trim()) return candidate.trim(); if (Array.isArray(candidate)) { const text = candidate.filter((item: unknown): item is string => typeof item === "string").join("\n").trim(); if (text) return text; } } catch { /* plain text */ } } return undefined; }
 export function outputText(result: CanonicalHookResult): string { return result.stdout + "\n" + result.stderr; }
 `;
 
-export const OMP_PRE_MODULE = String.raw`import { requiredAgentsContext, runCanonicalHook, sessionFile, sessionId } from "../../evcrate/omp-hook-runtime.ts";
-export default function (pi: any) {
-  let startupContext: string | undefined; let startupDelivered = false;
-  // Print mode bypasses input and the host swallows lifecycle exceptions.
-  // Abort the active operation before transport when no context was admitted.
-  pi.on("before_provider_request", (_event: unknown, ctx: { abort: () => void; ui?: { notify?: (message: string, kind: string) => void } }) => {
-    if (startupContext !== undefined) return;
-    ctx.abort();
-    const message = "Required EVCrate AGENTS payload is unsafe or unavailable";
-    console.error(message); ctx.ui?.notify?.(message, "error");
-  });
-  async function rebuildStartupContext(ctx: any): Promise<void> {
-    startupContext = undefined; startupDelivered = false;
-    const agents = requiredAgentsContext();
-    const startup = await runCanonicalHook("session-init.cjs", { source: "startup", session_id: sessionId(ctx) }, ctx);
-    startupContext = [agents, startup.stdout.trim()].filter(Boolean).join("\n\n");
-    startupDelivered = false;
-  }
-  pi.on("session_start", async (_event: any, ctx: any) => { await rebuildStartupContext(ctx); });
-  // Interactive/RPC input can refuse before entering the provider operation.
-  pi.on("input", async (_event: unknown, ctx: { ui?: { notify?: (message: string, kind: string) => void } }) => {
-    if (startupContext !== undefined) return;
-    try { await rebuildStartupContext(ctx); }
+export const OMP_PRE_MODULE = String.raw`import { requiredAgentsContext, runCanonicalHook, sessionFile, sessionId, type OmpHookContext, type OmpHookEvent, type OmpHookHost } from "../../evcrate/omp-hook-runtime.ts";
+export default function (pi: OmpHookHost) {
+  let agentsText: string | undefined; let sessionInitText: string | undefined; let startupDelivered = false; let agentsWarned = false;
+  function tryReadAgentsContext(ctx?: OmpHookContext): string | undefined {
+    try { const text = requiredAgentsContext(); agentsWarned = false; return text; }
     catch {
-      const message = "Required EVCrate AGENTS payload is unsafe or unavailable";
-      console.error(message); ctx?.ui?.notify?.(message, "error");
-      return { handled: true };
+      if (!agentsWarned) {
+        agentsWarned = true;
+        const message = "Required EVCrate AGENTS payload is unsafe or unavailable";
+        console.warn(message); ctx?.ui?.notify?.(message, "warning");
+      }
+      return undefined;
+    }
+  }
+  // Print mode bypasses input and the host swallows lifecycle exceptions.
+  // Warn and allow the operation to continue when no AGENTS context was admitted.
+  pi.on("before_provider_request", (_event: OmpHookEvent, ctx: OmpHookContext) => {
+    if (agentsText !== undefined) return;
+    const nextAgents = tryReadAgentsContext(ctx);
+    if (nextAgents !== undefined) {
+      agentsText = nextAgents;
+      startupDelivered = false;
     }
   });
-  pi.on("before_agent_start", async (event: any, ctx: any) => {
-    if (startupContext === undefined) await rebuildStartupContext(ctx);
+  async function rebuildStartupContext(ctx?: OmpHookContext): Promise<void> {
+    const nextAgents = tryReadAgentsContext(ctx);
+    const startup = await runCanonicalHook("session-init.cjs", { source: "startup", session_id: sessionId(ctx) }, ctx);
+    agentsText = nextAgents;
+    sessionInitText = startup.stdout.trim();
+    startupDelivered = false;
+  }
+  pi.on("session_start", async (_event: OmpHookEvent, ctx: OmpHookContext) => { await rebuildStartupContext(ctx); });
+  pi.on("input", async (_event: OmpHookEvent, ctx: OmpHookContext) => {
+    if (sessionInitText !== undefined && agentsText !== undefined) return;
+    await rebuildStartupContext(ctx);
+  });
+  pi.on("before_agent_start", async (event: OmpHookEvent, ctx: OmpHookContext) => {
+    if (sessionInitText === undefined || agentsText === undefined) await rebuildStartupContext(ctx);
     const parts: string[] = [];
-    if (!startupDelivered) { parts.push(startupContext); startupDelivered = true; }
+    if (!startupDelivered) {
+      const startupContext = [agentsText, sessionInitText].filter(Boolean).join("\n\n");
+      if (startupContext) parts.push(startupContext);
+      startupDelivered = true;
+    }
     const reminder = await runCanonicalHook("dev-rules-reminder.cjs", { prompt: event?.prompt ?? "", transcript_path: sessionFile(ctx) }, ctx);
     if (reminder.stdout.trim()) parts.push(reminder.stdout.trim()); if (!parts.length) return;
     return { message: { customType: "evcrate-context", content: parts.join("\n\n"), display: false } };
   });
-  pi.on("session_before_compact", async (_event: any, ctx: any) => {
-    startupContext = undefined; startupDelivered = false;
+  pi.on("session_before_compact", async (_event: OmpHookEvent, ctx: OmpHookContext) => {
     await runCanonicalHook("write-compact-marker.cjs", { source: "compact", session_id: sessionId(ctx), trigger: "omp", context_window: {} }, ctx);
+    await rebuildStartupContext(ctx);
   });
 }
 `;
-export const OMP_POLICY_MODULE = String.raw`import { canonicalToolPayload, outputText, runCanonicalHook } from "../../evcrate/omp-hook-runtime.ts";
-export default function (pi: any) {
-  pi.on("tool_call", async (event: any, ctx: any) => { const payload = canonicalToolPayload(event, ctx); for (const script of ["scout-block.cjs", "privacy-block.cjs"]) { const result = await runCanonicalHook(script, payload, ctx); if (result.code === 0) continue; return { block: true, reason: outputText(result) || "Blocked by migrated EVCrate security hook." }; } });
+export const OMP_POLICY_MODULE = String.raw`import { canonicalToolPayload, outputText, runCanonicalHook, type OmpHookContext, type OmpHookEvent, type OmpHookHost } from "../../evcrate/omp-hook-runtime.ts";
+export default function (pi: OmpHookHost) {
+  pi.on("tool_call", async (event: OmpHookEvent, ctx: OmpHookContext) => { const payload = canonicalToolPayload(event, ctx); for (const script of ["scout-block.cjs", "privacy-block.cjs"]) { const result = await runCanonicalHook(script, payload, ctx); if (result.code === 0) continue; return { block: true, reason: outputText(result) || "Blocked by migrated EVCrate security hook." }; } });
 }
 `;
-export const OMP_POST_MODULE = String.raw`import { additionalContext, canonicalToolPayload, runCanonicalHook, sessionId } from "../../evcrate/omp-hook-runtime.ts";
-export default function (pi: any) {
-  pi.on("tool_result", async (event: any, ctx: any) => { if (event?.toolName !== "write" && event?.toolName !== "edit") return; const result = await runCanonicalHook("modularization-hook.js", canonicalToolPayload(event, ctx), ctx); const text = additionalContext(result.stdout) ?? additionalContext(result.stderr); if (!text) return; return { content: [...(Array.isArray(event?.content) ? event.content : []), { type: "text", text }] }; });
-  pi.on("session_shutdown", async (_event: any, ctx: any) => { await runCanonicalHook("session-end.cjs", { reason: "shutdown", session_id: sessionId(ctx) }, ctx); });
+export const OMP_POST_MODULE = String.raw`import { additionalContext, canonicalToolPayload, runCanonicalHook, sessionId, type OmpHookContext, type OmpHookEvent, type OmpHookHost } from "../../evcrate/omp-hook-runtime.ts";
+export default function (pi: OmpHookHost) {
+  pi.on("tool_result", async (event: OmpHookEvent, ctx: OmpHookContext) => { if (event?.toolName !== "write" && event?.toolName !== "edit") return; const result = await runCanonicalHook("modularization-hook.js", canonicalToolPayload(event, ctx), ctx); const text = additionalContext(result.stdout) ?? additionalContext(result.stderr); if (!text) return; return { content: [...(Array.isArray(event?.content) ? event.content : []), { type: "text", text }] }; });
+  pi.on("session_shutdown", async (_event: OmpHookEvent, ctx: OmpHookContext) => { await runCanonicalHook("session-end.cjs", { reason: "shutdown", session_id: sessionId(ctx) }, ctx); });
 }
 `;

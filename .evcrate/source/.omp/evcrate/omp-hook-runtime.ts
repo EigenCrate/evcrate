@@ -40,7 +40,10 @@ function canonicalHookPath(relative: string): string {
   const stat = lstatSync(candidate); if (!stat.isFile() || stat.isSymbolicLink()) throw new Error("Missing OMP hook source: " + relative); return candidate;
 }
 export interface CanonicalHookResult { stdout: string; stderr: string; code: number; }
-export async function runCanonicalHook(relative: string, payload: unknown, ctx: any): Promise<CanonicalHookResult> {
+export interface OmpHookContext { cwd?: string; abort?: () => void; ui?: { notify?: (message: string, kind: string) => void }; sessionManager?: { getSessionFile?: () => string | undefined }; }
+export interface OmpHookEvent { prompt?: string; toolName?: string; input?: Record<string, unknown>; content?: unknown[]; }
+export interface OmpHookHost { on: (event: string, handler: (event: OmpHookEvent, ctx: OmpHookContext) => unknown) => void; }
+export async function runCanonicalHook(relative: string, payload: unknown, ctx?: OmpHookContext): Promise<CanonicalHookResult> {
   let script: string; try { script = canonicalHookPath(relative); } catch (error) { return { stdout: "", stderr: String(error), code: 127 }; }
   const cwd = typeof ctx?.cwd === "string" && ctx.cwd ? ctx.cwd : process.cwd();
   const resourceRoot = path.resolve(SOURCE_HOOK_ROOT, "..");
@@ -55,9 +58,8 @@ export async function runCanonicalHook(relative: string, payload: unknown, ctx: 
     try { child.stdin.end(JSON.stringify(payload ?? {})); } catch (error) { child.kill("SIGTERM"); finish({ stdout, stderr: stderr + String(error), code: 127 }); }
   });
 }
-export function sessionFile(ctx: any): string | undefined { try { const value = ctx?.sessionManager?.getSessionFile?.(); return typeof value === "string" && value ? value : undefined; } catch { return undefined; } }
-export function sessionId(ctx: any): string { const file = sessionFile(ctx); return file ? path.basename(file) : "default"; }
-function canonicalName(toolName: string): string { return ({ bash: "Bash", glob: "Glob", grep: "Grep", read: "Read", edit: "Edit", write: "Write" } as Record<string, string>)[toolName] ?? toolName; }
-export function canonicalToolPayload(event: any, ctx: any): Record<string, unknown> { const input = { ...(event?.input ?? {}) } as Record<string, unknown>; if (input.file_path === undefined && typeof input.path === "string") input.file_path = input.path; return { tool_name: canonicalName(typeof event?.toolName === "string" ? event.toolName : "unknown"), tool_input: input, cwd: ctx?.cwd ?? process.cwd() }; }
+export function sessionFile(ctx?: OmpHookContext): string | undefined { try { const value = ctx?.sessionManager?.getSessionFile?.(); return typeof value === "string" && value ? value : undefined; } catch { return undefined; } }
+export function sessionId(ctx?: OmpHookContext): string { const file = sessionFile(ctx); return file ? path.basename(file) : "default"; }
+export function canonicalToolPayload(event?: OmpHookEvent, ctx?: OmpHookContext): Record<string, unknown> { const input = { ...(event?.input ?? {}) } as Record<string, unknown>; if (input.file_path === undefined && typeof input.path === "string") input.file_path = input.path; const toolName = typeof event?.toolName === "string" ? event.toolName : "unknown"; const mappedName = ({ bash: "Bash", glob: "Glob", grep: "Grep", read: "Read", edit: "Edit", write: "Write" } as Record<string, string>)[toolName] ?? toolName; return { tool_name: mappedName, tool_input: input, cwd: ctx?.cwd ?? process.cwd() }; }
 export function additionalContext(output: string): string | undefined { for (const line of output.split("\n").reverse()) { const trimmed = line.trim(); if (!trimmed) continue; try { const value = JSON.parse(trimmed); const candidate = value?.hookSpecificOutput?.additionalContext; if (typeof candidate === "string" && candidate.trim()) return candidate.trim(); if (Array.isArray(candidate)) { const text = candidate.filter((item: unknown): item is string => typeof item === "string").join("\n").trim(); if (text) return text; } } catch { /* plain text */ } } return undefined; }
 export function outputText(result: CanonicalHookResult): string { return result.stdout + "\n" + result.stderr; }
