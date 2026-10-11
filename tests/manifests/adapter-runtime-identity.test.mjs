@@ -19,7 +19,7 @@ import {
 } from '../../dist/index.js';
 
 const packageRoot = process.cwd();
-const sharedHelper = 'dist/adapters/advisory.js';
+const sharedHelper = 'dist/adapters/uri-restoration.js';
 const vscodeHelper = 'dist/adapters/vscode/configuration-validation.js';
 
 function code(errorCode) {

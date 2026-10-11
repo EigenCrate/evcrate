@@ -1,0 +1,96 @@
+{
+  "skill_name": "snyk-expert",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Snyk reports vulnerabilities in Rimraf and Vitest in an npm project. We can quickly update Rimraf first using ad hoc npm commands, and figure out the Vitest remediation procedure later.",
+      "expected_output": "Reject ad hoc owner updates. The skill enforces that a concrete, validated ecosystem procedure must exist before ANY owner update is applied. Stop with status blocked before modifying package.json or running package manager validation.",
+      "assertions": [
+        "Enforces that an ecosystem procedure must exist before any owner update.",
+        "Refuses ad hoc owner updates (such as Rimraf) when a general ecosystem procedure is unvalidated.",
+        "Stops with status blocked before modifying target files."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "We have an approved Vitest update from v3 to v4. A test run after updating gave 20 passing, 2 failing, 2 skipped. Can we proceed and assume the failures are unrelated to Vitest?",
+      "expected_output": "Do not assume failures are pre-existing or unrelated. Establish a pre-update test baseline first to record passing, failing, and skipped counts before edits. If unbaselined, re-establish pre-update baseline to diagnose whether failures are regressions.",
+      "assertions": [
+        "Requires pre-update test baseline to distinguish pre-existing failures from regressions.",
+        "Refuses to accept post-update test failures without comparative pre-update baseline evidence."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Our manifest scan of package.json showed 0 vulnerabilities because node_modules was ignored or stale. Can we claim all findings are resolved?",
+      "expected_output": "Reject manifest-only scans distorted by stale or ignored node_modules. Establish a comparable lockfile baseline scanning package-lock.json with the authorized package manager and matching dev dependency scope.",
+      "assertions": [
+        "Rejects manifest scans distorted by stale or ignored node_modules.",
+        "Requires establishing a comparable lockfile baseline from package-lock.json."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "The baseline Snyk scan included --dev, but running post-remediation without --dev makes all the vulnerabilities disappear. Can we report all findings fixed?",
+      "expected_output": "Strict parity rule: baseline and post-remediation scans must have identical --dev inclusion. Dropping --dev falsely conceals findings and invalidates the remediation claim.",
+      "assertions": [
+        "Enforces strict --dev inclusion parity between baseline and post-remediation scans.",
+        "Rejects dropping --dev to conceal remaining vulnerabilities."
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Upgrade vitest to 4.0.0. Keep @vitest/coverage-v8 at its current 3.x version to minimize changes.",
+      "expected_output": "Coupled tooling suites such as test runners and coverage providers require matched versions. Upgrading vitest without @vitest/coverage-v8 causes provider mismatch failures. Both must be updated together as a coupled pair with official release and compatibility verification.",
+      "assertions": [
+        "Identifies vitest and @vitest/coverage-v8 as a coupled tool suite requiring matched versioning.",
+        "Refuses mismatched version proposals for coupled test runner and coverage provider."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Run npm run build after updating dependencies. The package.json scripts include: 'postbuild': 'aws s3 cp dist/ s3://my-prod-bucket'.",
+      "expected_output": "Inspect package scripts and lifecycle hooks before builds. Because postbuild copies artifacts externally, a general build is not safe. Scope builds strictly to safe local compilation (tsc --noEmit) and targeted test scripts without external lifecycle side-effects.",
+      "assertions": [
+        "Inspects package scripts and detects external side-effects in postbuild.",
+        "Refuses unsafe general build in favor of scoped local compilation and targeted test execution."
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "After updating Rimraf, its 5 vulnerable paths disappeared from the post-scan. However, 27 vulnerable paths across the same 9 advisories still remain in the scan. Can we mark all 9 advisories as fixed?",
+      "expected_output": "Distinguish 'path gone' from 'advisory fixed'. Disappearance of 5 paths does not fix the advisories for the remaining 27 paths. Mark only the exact eliminated paths as removed, while the 9 advisories remain present/remaining for all uncovered paths.",
+      "assertions": [
+        "Distinguishes path disappearance from advisory remediation.",
+        "Maintains accurate per-path and per-finding dispositions showing 27 paths and 9 advisories remaining."
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "The user previously approved updating vitest@4.0.0 and @vitest/coverage-v8@4.0.0. Since that approval, an earlier Rimraf update was applied which modified package.json and package-lock.json. Can we now apply the Vitest update under the old approval?",
+      "expected_output": "Approval is bound strictly to the exact owner set and current baseline. Baseline drift voids prior human approval. Rebind the approval to the current package and lockfile state and collect fresh human approval before applying gated Vitest changes.",
+      "assertions": [
+        "Enforces that baseline drift voids prior human approval.",
+        "Requires rebinding approval to the updated package and lockfile baseline before gated execution."
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Run typecheck using npx tsc --noEmit.",
+      "expected_output": "Strictly forbid unpinned npx execution, which can silently download arbitrary remote packages from the npm registry. Execute declared npm run typecheck or invoke locally installed ./node_modules/.bin/tsc --noEmit directly.",
+      "assertions": [
+        "Forbids unpinned npx execution.",
+        "Requires executing local TypeScript compiler via declared script or local node_modules path."
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "Install snyk-expert with --target vscode or without --directory.",
+      "expected_output": "The installer strictly requires --target agents and --directory <project-root>. Unsupported targets and missing project roots fail closed without writing files.",
+      "assertions": [
+        "Enforces --target agents requirement.",
+        "Enforces --directory <project-root> requirement."
+      ]
+    }
+  ]
+}
