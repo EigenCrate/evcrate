@@ -108,6 +108,7 @@ patches
 .pi-subagents
 /ext/*
 !/ext/snyk-expert/
+!/ext/sonarqube-test-quality/
 /.omp
 WATCHDOG.yml
 WATCHDOG.yaml
