@@ -61,7 +61,7 @@ const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 const { execFileSync } = require('node:child_process');
 
-const SCHEMA_RELEASE = 'evcrate-private-release/v1';
+const SCHEMA_RELEASE = 'evcrate-private-release/v2';
 const SCHEMA_JOURNAL = 'evcrate-install-journal/v1';
 const SCHEMA_RECEIPT = 'evcrate-installer-receipt/v1';
 const SCHEMA_OWNED = 'evcrate-installer-owned/v1';
@@ -84,54 +84,6 @@ const DOS_DEVICE_NAMES = new Set([
   'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
 ]);
 
-const ADVISOR_CONTROLLER_FILES = Object.freeze([
-    "evcrate-advisor",
-    "evcrate-advice-mode",
-    "lib/advisor/activation.cjs",
-    "lib/advisor/adapter-contract.cjs",
-    "lib/advisor/adapter-registry.cjs",
-    "lib/advisor/adapters/claude.cjs",
-    "lib/advisor/adapters/codex.cjs",
-    "lib/advisor/adapters/omp.cjs",
-    "lib/advisor/adapters/omp-parser.cjs",
-    "lib/advisor/adapters/pi.cjs",
-    "lib/advisor/checkpoint-contract.cjs",
-    "lib/advisor/contracts-v2.cjs",
-    "lib/advisor/controller-envelope.cjs",
-    "lib/advisor/controller.cjs",
-    "lib/advisor/darwin-platform.cjs",
-    "lib/advisor/errors.cjs",
-    "lib/advisor/generated/advisor-contract-runtime.js",
-    "lib/advisor/generated/advisor-metrics.js",
-    "lib/advisor/generated/canonical-json.js",
-    "lib/advisor/generated/json.js",
-    "lib/advisor/history-contract.cjs",
-    "lib/advisor/history-prune.cjs",
-    "lib/advisor/history-query.cjs",
-    "lib/advisor/history-store.cjs",
-    "lib/advisor/isolated-workspace.cjs",
-    "lib/advisor/json-document.cjs",
-    "lib/advisor/managed-checkpoint.cjs",
-    "lib/advisor/native/darwin/advisor-native.c",
-    "lib/advisor/native/darwin/advisor-native.h",
-    "lib/advisor/native/darwin/prebuilt/artifacts.json",
-    "lib/advisor/native/darwin/prebuilt/darwin-arm64/advisor-native.node",
-    "lib/advisor/native/darwin/prebuilt/darwin-x64/advisor-native.node",
-    "lib/advisor/native/darwin/process.c",
-    "lib/advisor/native/darwin/storage.c",
-    "lib/advisor/policy-schema.cjs",
-    "lib/advisor/profile.cjs",
-    "lib/advisor/runner.cjs",
-    "lib/advisor/runtime-brief.generated.cjs",
-    "lib/advisor/state-baseline.cjs",
-    "lib/advisor/state-contract.cjs",
-    "lib/advisor/state-human.cjs",
-    "lib/advisor/state-io.cjs",
-    "lib/advisor/task-state.cjs",
-    "lib/advisor/windows-native.cs",
-    "lib/advisor/windows-native.ps1",
-    "lib/advisor/windows-platform.cjs"
-  ]);
 const CONTROL_CHARS = /[\u0000-\u001f\u007f-\u009f]/u;
 
 function compareCodePoints(a, b) {
@@ -278,6 +230,24 @@ function validateInventoryPath(relativePath) {
   }
   return relativePath;
 }
+function assertNoSymlinkAncestors(value) {
+  const absolute = path.resolve(value);
+  const root = path.parse(absolute).root;
+  let current = root;
+  const parts = absolute.slice(root.length).split(/[/\\]/u);
+  for (const part of parts) {
+    if (!part) continue;
+    current = path.join(current, part);
+    try {
+      const stat = fs.lstatSync(current);
+      if (stat.isSymbolicLink()) throw new Error(`Symlink detected in ancestor: ${current}`);
+    } catch (err) {
+      if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return;
+      throw err;
+    }
+  }
+}
+
 
 function parseStrictOctal(buf, fieldName) {
   const str = buf.toString('ascii').replace(/\0.*$/u, '').trim();
@@ -325,8 +295,7 @@ function decompressTarBounded(archivePath) {
 }
 
 function isMandatoryLauncherRole(packageRelative) {
-  return packageRelative === 'dist/cli/evcrate.js' ||
-         packageRelative === '.evcrate/source/.evcrate/bin/evcrate-advisor';
+  return packageRelative === 'dist/cli/evcrate.js';
 }
 
 function extractTarArchive(archivePath, targetStageDir) {
@@ -653,17 +622,46 @@ function resolveAssets(installerScriptPath, options) {
   return { archivePath, checksumPath, metadataPath };
 }
 
-function parseAndValidateMetadata(metadataPath, archivePath, archiveSha256) {
-  const raw = fs.readFileSync(metadataPath, 'utf8');
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch (err) {
-    throw new Error(`Failed to parse release metadata JSON: ${err.message}`);
+function validateMetadata(data, archivePath, archiveSha256, recordedReceipt = null) {
+  const historical = data.schema === 'evcrate-private-release/v1';
+  if (historical && (!recordedReceipt || recordedReceipt.schema !== SCHEMA_RECEIPT
+    || recordedReceipt.version !== data.version || recordedReceipt.archive_sha256 !== archiveSha256
+    || recordedReceipt.inventory_digest !== data.inventory_digest
+    || recordedReceipt.archive_name !== path.basename(archivePath))) {
+    throw new Error('Old release assets require repair of a recorded matching predecessor snapshot; use the predecessor installer for a fresh install or regenerate v2 assets.');
   }
-
-  if (data.schema !== SCHEMA_RELEASE) {
-    throw new Error(`Invalid metadata schema: ${data.schema}, expected ${SCHEMA_RELEASE}`);
+  const keys = ['schema', 'version', 'tag', 'source_commit', 'node_floor', 'inventory_digest',
+    'build_manifest_digests', 'platforms', 'installers', 'mutable_paths',
+    ...(historical ? ['controller_closure_digest'] : [])];
+  if ((!historical && data.schema !== SCHEMA_RELEASE) || Object.keys(data).length !== keys.length
+    || keys.some((key) => !Object.hasOwn(data, key))
+    || !/^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/u.test(data.version)
+    || data.tag !== `v${data.version}` || !/^[a-f0-9]{40}$/u.test(data.source_commit)
+    || data.node_floor !== '>=22.19.0' || !/^[a-f0-9]{64}$/u.test(data.inventory_digest)
+    || !data.build_manifest_digests || Array.isArray(data.build_manifest_digests)
+    || JSON.stringify(Object.keys(data.build_manifest_digests).sort()) !== JSON.stringify(['all', 'antigravity', 'claude', 'codex', 'copilot', 'omp', 'pi', 'vscode'])
+    || Object.values(data.build_manifest_digests).some((digest) => !/^[a-f0-9]{64}$/u.test(digest))
+    || JSON.stringify(data.mutable_paths) !== JSON.stringify(MUTABLE_PATHS)
+    || (historical && !/^[a-f0-9]{64}$/u.test(data.controller_closure_digest))) {
+    throw new Error('Invalid release metadata schema or fields');
+  }
+  if (!data.platforms || JSON.stringify(Object.keys(data.platforms).sort()) !== '["linux-x64","windows-x64"]'
+    || !data.installers || JSON.stringify(Object.keys(data.installers).sort()) !== '["install.ps1","install.sh"]') {
+    throw new Error('Invalid release platform or installer inventory');
+  }
+  for (const [platform, entry] of Object.entries(data.platforms)) {
+    const extension = platform === 'linux-x64' ? 'tar.gz' : 'zip';
+    if (JSON.stringify(Object.keys(entry).sort()) !== '["archive_name","sha256","size"]'
+      || entry.archive_name !== `evcrate-v${data.version}-${platform}.${extension}`
+      || !/^[a-f0-9]{64}$/u.test(entry.sha256) || !Number.isSafeInteger(entry.size) || entry.size <= 0) {
+      throw new Error('Invalid release archive metadata');
+    }
+  }
+  for (const [name, entry] of Object.entries(data.installers)) {
+    if (JSON.stringify(Object.keys(entry).sort()) !== '["name","sha256","size"]' || entry.name !== name
+      || !/^[a-f0-9]{64}$/u.test(entry.sha256) || !Number.isSafeInteger(entry.size) || entry.size <= 0) {
+      throw new Error('Invalid release installer metadata');
+    }
   }
 
   const linuxPlatform = data.platforms && data.platforms['linux-x64'];
@@ -746,8 +744,29 @@ function performInstall(roots, assets, options, isRepair = false) {
     throw new Error(`Archive SHA-256 ${archiveSha} does not match sidecar ${sidecar.sha256}`);
   }
 
-  // 3. Verify metadata
-  const metadata = parseAndValidateMetadata(assets.metadataPath, assets.archivePath, archiveSha);
+  // 3. Current assets can repair a missing or corrupt receipt; only historical
+  // assets need a recorded current snapshot to authorize their admission.
+  let metadata;
+  try {
+    metadata = JSON.parse(fs.readFileSync(assets.metadataPath, 'utf8'));
+  } catch (err) {
+    throw new Error(`Failed to parse release metadata JSON: ${err.message}`);
+  }
+  let recordedReceipt = null;
+  if (isRepair && fs.existsSync(roots.currentLink)) {
+    const current = path.resolve(roots.dataRoot, fs.readlinkSync(roots.currentLink));
+    assertNoSymlinkAncestors(current);
+    if (path.dirname(current) !== path.resolve(roots.snapshotsDir) || !fs.lstatSync(current).isDirectory()) {
+      throw new Error('Unsafe predecessor snapshot');
+    }
+    if (metadata.schema === 'evcrate-private-release/v1') {
+      const receiptPath = path.join(current, 'installer-receipt.json');
+      if (!fs.lstatSync(receiptPath).isFile()) throw new Error('Predecessor receipt must be a regular non-symlink file');
+      recordedReceipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+      if (recordedReceipt?.snapshot_id !== path.basename(current)) throw new Error('Predecessor receipt snapshot mismatch');
+    }
+  }
+  validateMetadata(metadata, assets.archivePath, archiveSha, recordedReceipt);
 
   // 4. Current snapshot check for idempotent retry
   let oldSnapshotId = null;
@@ -809,6 +828,8 @@ function performInstall(roots, assets, options, isRepair = false) {
   if (pkg.version !== metadata.version) {
     throw new Error(`package.json version ${pkg.version} does not match metadata ${metadata.version}`);
   }
+  if (metadata.schema === SCHEMA_RELEASE && (Object.keys(pkg.bin ?? {}).length !== 1
+    || pkg.bin.evcrate !== 'dist/cli/evcrate.js')) throw new Error('Current package must expose only evcrate');
 
   // Verify build manifests
   if (metadata.build_manifest_digests) {
@@ -821,20 +842,18 @@ function performInstall(roots, assets, options, isRepair = false) {
     }
   }
 
-  // Verify controller closure
-  if (metadata.controller_closure_digest) {
-    const controllerDir = path.join(stageDir, 'package', '.evcrate', 'source', '.evcrate', 'bin');
-    if (!fs.existsSync(controllerDir)) throw new Error('Controller closure directory missing from stage');
-    const controllerMap = {};
-    for (const entry of ADVISOR_CONTROLLER_FILES) {
-      const full = path.join(controllerDir, entry);
-      if (!fs.existsSync(full)) throw new Error(`Controller file missing from stage: ${entry}`);
-      controllerMap[`.evcrate/bin/${entry}`] = sha256File(full);
+  // Historical controller bytes are authenticated solely by the recorded
+  // archive/inventory and its old metadata; no current runtime inventory.
+  if (metadata.schema === 'evcrate-private-release/v1') {
+    const prefix = '.evcrate/source/.evcrate/bin/';
+    const map = Object.fromEntries(extractedRecords.filter((entry) => entry.path.startsWith(prefix))
+      .map((entry) => [`.evcrate/bin/${entry.path.slice(prefix.length)}`, entry.sha256]));
+    if (Object.keys(map).length === 0
+      || sha256Bytes(canonicalJsonBytes(map)) !== metadata.controller_closure_digest) {
+      throw new Error('Recorded predecessor controller digest mismatch');
     }
-    const computedClosureDigest = sha256Bytes(canonicalJsonBytes(controllerMap));
-    if (computedClosureDigest !== metadata.controller_closure_digest) {
-      throw new Error(`Controller closure digest ${computedClosureDigest} does not match metadata ${metadata.controller_closure_digest}`);
-    }
+  } else if (extractedRecords.some((entry) => entry.path.startsWith('.evcrate/source/.evcrate/'))) {
+    throw new Error('Current assets contain retired runtime files; regenerate the release');
   }
 
   // Non-mutating smoke check

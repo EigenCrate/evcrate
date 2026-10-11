@@ -1,26 +1,22 @@
 ---
 name: "evc-cmd-worktree"
 description: "Create isolated git worktree for parallel development"
-argument-hint: "[feature-description] OR [project] [feature] (monorepo) [--base <branch>] [--plan <path>]"
+argument-hint: "[feature-description] OR [project] [feature] (monorepo)"
 user-invocable: true
 disable-model-invocation: true
 ---
 
 ## Invocation contract
 
-The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-worktree`. Do not split, normalize, or discard it before the canonical command parses it.
+The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-worktree`. Do not split, normalize, or discard it; arguments are ordinary task data.
 
-Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions and activation-first ordering; load full mentoring only after resolved explicit or inherited mode.
+Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions.
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advice-activation.md`
-- `@evcrate/workflows/advisor-mentoring.md`
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
 Create an isolated git worktree for parallel feature development.
@@ -30,7 +26,7 @@ Create an isolated git worktree for parallel feature development.
 ### Step 1: Get Repository Info
 
 ```bash
-node .copilot/evcrate/scripts/worktree.cjs info --json
+node .copilot/evcrate/scripts/evc-cmd-worktree.cjs info --json
 ```
 
 **Response fields:**
@@ -86,22 +82,20 @@ user input({
 
 **Monorepo:**
 ```bash
-node .copilot/evcrate/scripts/worktree.cjs create "<PROJECT>" "<SLUG>" --prefix <TYPE> --env "<FILES>"
+node .copilot/evcrate/scripts/evc-cmd-worktree.cjs create "<PROJECT>" "<SLUG>" --prefix <TYPE> --env "<FILES>"
 ```
 
 **Standalone:**
 ```bash
-node .copilot/evcrate/scripts/worktree.cjs create "<SLUG>" --prefix <TYPE> --env "<FILES>"
+node .copilot/evcrate/scripts/evc-cmd-worktree.cjs create "<SLUG>" --prefix <TYPE> --env "<FILES>"
 ```
 
 **Options:**
-- `--base` - Base branch to branch off from (e.g. main, develop)
 - `--prefix` - Branch type: feat|fix|refactor|docs|test|chore|perf
 - `--env` - Comma-separated .env files to copy
-- `--plan` - Plan directory or file to copy (auto-detected if omitted)
-- `--no-plan` - Disable automatic plan directory copying
 - `--json` - Output JSON for parsing
 - `--dry-run` - Preview without executing
+
 ## Commands
 
 | Command | Usage | Description |
@@ -130,7 +124,7 @@ node .copilot/evcrate/scripts/worktree.cjs create "<SLUG>" --prefix <TYPE> --env
 ```
 User: /evc-cmd-worktree fix the login validation bug
 
-Claude: [Runs: node .copilot/evcrate/scripts/worktree.cjs info --json]
+Claude: [Runs: node .copilot/evcrate/scripts/evc-cmd-worktree.cjs info --json]
         [Detects: standalone repo, envFiles: [".env.example"]]
         [Detects prefix from "fix" keyword: fix]
         [Converts slug: "login-validation-bug"]
@@ -141,7 +135,7 @@ Claude: [Uses user input for env files]
 
 User: .env.example
 
-Claude: [Runs: node .copilot/evcrate/scripts/worktree.cjs create "login-validation-bug" --prefix fix --env ".env.example"]
+Claude: [Runs: node .copilot/evcrate/scripts/evc-cmd-worktree.cjs create "login-validation-bug" --prefix fix --env ".env.example"]
 
 Output: Worktree created at ../worktrees/myrepo-login-validation-bug
         Branch: fix/login-validation-bug

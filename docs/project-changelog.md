@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-10-11
-**Status:** Core package `evcrate` 3.0.0; VS Code `evc` plugin identity and container-local `cmd-*` command mapping complete; VS Code subagent frontmatter tool-reference correction and Linux candidate handoff complete (Phases 01–07; Windows native qualification and deployment blocked); Unified evc-* naming and AGENTS.md instructions across all harnesses (Phases 01–11 complete); PR #19 advice activation review repairs complete; Deterministic Advice Activation complete; Hook Materialization Scope Distribution complete; Windows release qualification through Phase 11.
+**Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
 ### 2026-10-11 — feat(vscode): shorten plugin identity and use container-local command names
 

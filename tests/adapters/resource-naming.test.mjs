@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync, readdirSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { ADVISOR_COMMAND_NAMES } from '../../dist/manifests/controller.js';
 import {
   assertAgentName,
   assertUniqueNames,
@@ -16,7 +13,6 @@ import {
 } from '../../dist/adapters/resource-naming.js';
 
 const MAPPED_COMMAND_NAMES = [
-  'evc-cmd-advise',
   'evc-cmd-ask',
   'evc-cmd-bootstrap',
   'evc-cmd-bootstrap-x-auto',
@@ -90,8 +86,8 @@ const MAPPED_COMMAND_NAMES = [
 
 const validationInvalid = { name: 'ControlPlaneError', code: 'VALIDATION_INVALID' };
 
-test('all 70 mapped command names round-trip through parse/format', () => {
-  assert.equal(MAPPED_COMMAND_NAMES.length, 70);
+test('all 69 mapped command names round-trip through parse/format', () => {
+  assert.equal(MAPPED_COMMAND_NAMES.length, 69);
   for (const name of MAPPED_COMMAND_NAMES) {
     const parsed = parseCommandName(name);
     assert.equal(formatCommandName(parsed.segments), name);
@@ -99,7 +95,7 @@ test('all 70 mapped command names round-trip through parse/format', () => {
   }
 });
 
-test('parse yields segments and the semantic id used by the advisor allowlist', () => {
+test('parse yields segments and canonical semantic identity', () => {
   assert.deepEqual({ ...parseCommandName('evc-cmd-code-x-no-test') }, {
     name: 'evc-cmd-code-x-no-test', segments: ['code', 'no-test'], semanticId: 'code/no-test',
   });
@@ -173,49 +169,13 @@ test('64-char limit is inclusive for every generated name kind', () => {
   }
 });
 
-test('advisor activation guard: allowlist ids resolve to command files and cover all advisor-capable commands', () => {
+test('canonical command inventory round-trips without a secondary allowlist', () => {
   const commandsDirectory = fileURLToPath(new URL('../../.evcrate/source/.claude/commands', import.meta.url));
-  const allCommandFiles = readdirSync(commandsDirectory).filter((file) => file.endsWith('.md'));
-
-  assert.equal(ADVISOR_COMMAND_NAMES.length, 21);
-
-  // 1. Every allowlist id resolves to exactly one commands/evc-cmd-*.md via formatCommandName(id.split('/'))
-  const expectedCommandFiles = new Set();
-  for (const id of ADVISOR_COMMAND_NAMES) {
-    const formatted = formatCommandName(id.split('/'));
-    const fileName = `${formatted}.md`;
-    assert.ok(
-      allCommandFiles.includes(fileName),
-      `Allowlist id ${id} must resolve to existing ${fileName}`
-    );
-    expectedCommandFiles.add(fileName);
+  const commandFiles = readdirSync(commandsDirectory).filter((file) => file.endsWith('.md')).sort();
+  assert.deepEqual(commandFiles, MAPPED_COMMAND_NAMES.map((name) => `${name}.md`).sort());
+  for (const file of commandFiles) {
+    const command = commandNameFromSourcePath(`commands/${file}`);
+    assert.equal(formatCommandName(command.segments), command.name);
+    assert.equal(command.semanticId, command.segments.join('/'));
   }
-  assert.equal(expectedCommandFiles.size, ADVISOR_COMMAND_NAMES.length);
-
-  // 2. Every advisor-capable command file (has advice-activation block) is in allowlist
-  const advisorCapableFiles = [];
-  for (const file of allCommandFiles) {
-    const content = readFileSync(join(commandsDirectory, file), 'utf8');
-    if (content.includes('advice-activation.md') || content.includes('## Advice Mode')) {
-      advisorCapableFiles.push(file);
-      const stem = file.slice(0, -3);
-      const parsed = parseCommandName(stem);
-      assert.ok(
-        ADVISOR_COMMAND_NAMES.includes(parsed.semanticId),
-        `Advisor-capable command ${file} (${parsed.semanticId}) must be in ADVISOR_COMMAND_NAMES`
-      );
-    }
-  }
-
-  // 3. Exactly 21 advisor-capable commands matching the allowlist
-  assert.equal(advisorCapableFiles.length, 21);
-  assert.deepEqual(
-    advisorCapableFiles.sort(),
-    [...expectedCommandFiles].sort()
-  );
-
-  // 4. Parity with activation.cjs COMMAND_NAMES
-  const require = createRequire(import.meta.url);
-  const { COMMAND_NAMES } = require('../../.evcrate/source/.evcrate/bin/lib/advisor/activation.cjs');
-  assert.deepEqual([...ADVISOR_COMMAND_NAMES], [...COMMAND_NAMES]);
 });

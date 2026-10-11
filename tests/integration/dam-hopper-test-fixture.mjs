@@ -70,12 +70,6 @@ export function createConsumerWorkspace() {
 
   const packageInfo = getSharedInstallation();
 
-  const binDir = join(fixture.root, '.evcrate', 'source', '.evcrate', 'bin');
-  mkdirSync(binDir, { recursive: true, mode: 0o755 });
-  chmodSync(binDir, 0o755);
-  const advisorScript = `const fs=require('node:fs'); const input=fs.readFileSync(0,'utf8'); const req=JSON.parse(input); const res={protocol:'evcrate-advisor-diagnostic',protocolVersion:1,requestId:req.requestId,status:'QUALIFIED',target:{backend:'codex',model:'gpt-5.6-sol',effort:'high'},probes:{version:{status:'passed',value:'1.0.0'},auth:{status:'passed'},capabilities:{status:'passed',model:'gpt-5.6-sol',effort:'high',noninteractive:true,session:'isolated',tools:'none',output:'json'}}}; process.stdout.write(JSON.stringify(res)+'\\n');`;
-  writeFileSync(join(binDir, 'evcrate-advisor'), advisorScript, { mode: 0o755 });
-  chmodSync(join(binDir, 'evcrate-advisor'), 0o755);
 
   writeFileSync(join(fixture.root, '.evcrate', 'source', '.claude', 'AGENTS.md'), '# Agent guidance\n', { mode: 0o644 });
   chmodSync(join(fixture.root, '.evcrate', 'source', '.claude', 'AGENTS.md'), 0o644);

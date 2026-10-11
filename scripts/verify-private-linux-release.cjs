@@ -126,15 +126,13 @@ function verifyPrivateLinuxRelease(options = {}) {
       sandbox.projectDir, sandbox.stateDir
     );
 
-    evidence.health_check_status = verification.healthStatus;
     evidence.package_hash_before_publish = verification.packageHashBefore;
     evidence.package_hash_after_publish = verification.packageHashAfter;
     evidence.package_hash_invariant = true;
-    evidence.controller_closure_verified = true;
     evidence.home_projections_verified = true;
     evidence.project_projections_verified = verification.projectProjectionsVerified;
     evidence.runtime_entrypoints_verified = verification.runtimeEntrypointsVerified;
-    evidence.partial_recovery_verified = verification.partialRecoveryVerified;
+    evidence.failure_recovery_verified = verification.failureRecoveryVerified;
     evidence.status = 'PASS';
     evidence.evidence_complete = true;
   } finally {

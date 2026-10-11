@@ -28,7 +28,9 @@ Skills are specialized knowledge modules that enhance EVCrate agents in specific
 
 ## How to Use Skills
 
-Skills are invoked automatically when Claude detects relevant context in your request. You can also explicitly invoke a skill:
+Skill discovery and automatic activation depend on the host and its configuration.
+Generated projections alone do not qualify native activation. In Claude, request a
+relevant skill explicitly when automatic discovery is unavailable:
 
 ```bash
 # Automatic invocation
@@ -634,7 +636,7 @@ Or manually create a skill:
 ## Skill Best Practices
 
 ### For Users
-- Let Claude auto-detect which skill to use based on context
+- Use host-supported skill discovery, or explicitly read the installed skill entrypoint when discovery is disabled
 - Provide clear, specific requests
 - Combine skills for complex tasks
 - Check skill documentation for advanced features

@@ -1,7 +1,8 @@
 ---
-argument-hint: "[feature-description] OR [project] [feature] (monorepo) [--base <branch>] [--plan <path>]"
+argument-hint: "[feature-description] OR [project] [feature] (monorepo)"
 description: "Create isolated git worktree for parallel development"
 ---
+
 
 Create an isolated git worktree for parallel feature development.
 
@@ -10,7 +11,7 @@ Create an isolated git worktree for parallel feature development.
 ### Step 1: Get Repository Info
 
 ```bash
-node .omp/evcrate/scripts/worktree.cjs info --json
+node .omp/evcrate/scripts/evc-cmd-worktree.cjs info --json
 ```
 
 **Response fields:**
@@ -66,22 +67,20 @@ ask the user({
 
 **Monorepo:**
 ```bash
-node .omp/evcrate/scripts/worktree.cjs create "<PROJECT>" "<SLUG>" --prefix <TYPE> --env "<FILES>"
+node .omp/evcrate/scripts/evc-cmd-worktree.cjs create "<PROJECT>" "<SLUG>" --prefix <TYPE> --env "<FILES>"
 ```
 
 **Standalone:**
 ```bash
-node .omp/evcrate/scripts/worktree.cjs create "<SLUG>" --prefix <TYPE> --env "<FILES>"
+node .omp/evcrate/scripts/evc-cmd-worktree.cjs create "<SLUG>" --prefix <TYPE> --env "<FILES>"
 ```
 
 **Options:**
-- `--base` - Base branch to branch off from (e.g. main, develop)
 - `--prefix` - Branch type: feat|fix|refactor|docs|test|chore|perf
 - `--env` - Comma-separated .env files to copy
-- `--plan` - Plan directory or file to copy (auto-detected if omitted)
-- `--no-plan` - Disable automatic plan directory copying
 - `--json` - Output JSON for parsing
 - `--dry-run` - Preview without executing
+
 ## Commands
 
 | Command | Usage | Description |
@@ -110,7 +109,7 @@ node .omp/evcrate/scripts/worktree.cjs create "<SLUG>" --prefix <TYPE> --env "<F
 ```
 User: /evc-cmd-worktree fix the login validation bug
 
-Claude: [Runs: node .omp/evcrate/scripts/worktree.cjs info --json]
+Claude: [Runs: node .omp/evcrate/scripts/evc-cmd-worktree.cjs info --json]
         [Detects: standalone repo, envFiles: [".env.example"]]
         [Detects prefix from "fix" keyword: fix]
         [Converts slug: "login-validation-bug"]
@@ -121,7 +120,7 @@ Claude: [Uses ask the user for env files]
 
 User: .env.example
 
-Claude: [Runs: node .omp/evcrate/scripts/worktree.cjs create "login-validation-bug" --prefix fix --env ".env.example"]
+Claude: [Runs: node .omp/evcrate/scripts/evc-cmd-worktree.cjs create "login-validation-bug" --prefix fix --env ".env.example"]
 
 Output: Worktree created at ../worktrees/myrepo-login-validation-bug
         Branch: fix/login-validation-bug

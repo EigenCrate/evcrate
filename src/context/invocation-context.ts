@@ -46,7 +46,6 @@ export interface InvocationContext {
   readonly packageRoot: string;
   readonly canonicalHarnessRoot: string;
   readonly canonicalSourceRoot: string;
-  readonly controllerRoot: string;
   readonly registryPath: string;
   readonly resourceRoots: ResourceRootMap;
   readonly selectedTargets: readonly SelectedTargetContext[];
@@ -165,7 +164,6 @@ export function resolveInvocationContext(options: InvocationContextOptions = {})
   );
   assertDirectory(canonicalHarnessRoot);
   const sourceParent = dirname(canonicalHarnessRoot);
-  const controllerRoot = resolveSafePath(join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin'));
   const registryPath = resolveSafePath(join(packageRoot, '.evcrate', 'targets', 'manifest.json'));
   const homeRoot = resolveHomeRoot(options);
   const stateRoot = resolveStateRoot({ ...options, home: homeRoot });
@@ -190,7 +188,6 @@ export function resolveInvocationContext(options: InvocationContextOptions = {})
     packageRoot,
     canonicalHarnessRoot,
     canonicalSourceRoot: canonicalHarnessRoot,
-    controllerRoot,
     registryPath,
     resourceRoots: registry.resourceRoots,
     selectedTargets: Object.freeze(selectedTargets),

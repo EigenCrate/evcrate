@@ -8,19 +8,15 @@ disable-model-invocation: true
 
 ## Invocation contract
 
-The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-plan-x-archive`. Do not split, normalize, or discard it before the canonical command parses it.
+The literal `$ARGUMENTS` is the exact raw text following `/evc-cmd-plan-x-archive`. Do not split, normalize, or discard it; arguments are ordinary task data.
 
-Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions and activation-first ordering; load full mentoring only after resolved explicit or inherited mode.
+Read the mandatory documentation ownership policy at `@evcrate/workflows/documentation-management.md`. The workflow list below is navigation, not a preload instruction. Follow the canonical command's read conditions.
 
 ## Available workflow assets
 
-- `@evcrate/workflows/advice-activation.md`
-- `@evcrate/workflows/advisor-mentoring.md`
-- `@evcrate/workflows/advisory-interview.md`
 - `@evcrate/workflows/development-rules.md`
 - `@evcrate/workflows/documentation-management.md`
 - `@evcrate/workflows/orchestration-protocol.md`
-- `@evcrate/workflows/plan-progress.md`
 - `@evcrate/workflows/primary-workflow.md`
 
 ## Your mission
@@ -37,14 +33,6 @@ Read and analyze the plans, then write journal entries and archive specific plan
 Read the plan directory:
 - `plan.md` - Overview and phases list
 - `phase-*.md` - 20 first lines of each phase file to understand the progress and status
-
-Before interpreting completion, apply `Plan progress and phase reconciliation`
-in `.copilot/evcrate/workflows/advisor-mentoring.md` regardless of the current mode flag.
-For advice-controlled plans, read `progress.md` and reconcile receipts/run scope;
-do not infer completion from frozen phase headers. Do not move, delete, rewrite
-or stage captured plans/evidence or their immutable receipts: exclude those
-plans from the archive candidates and provide read-only links instead. Ordinary
-uncaptured plans retain the confirmation and archive behavior below.
 
 ### Step 2: Summarize the plans and document them with `/evc-cmd-journal` slash command
 Use `user input` tool to ask if user wants to document journal entries or not.

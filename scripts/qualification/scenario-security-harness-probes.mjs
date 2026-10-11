@@ -57,13 +57,7 @@ export function runWrongHarnessScenario() {
     fs.mkdirSync(projectDir, { recursive: true });
     fs.cpSync(path.join(REPO_ROOT, '.evcrate/source/.evcrate-vscode'), pluginDir, { recursive: true });
 
-    const adviseSkillPath = [
-      path.join(pluginDir, 'skills/evc-cmd-advise/SKILL.md'),
-      path.join(pluginDir, 'skills/cmd-advise/SKILL.md')
-    ].find((p) => fs.existsSync(p));
-    const adviseWorkflowPath = path.join(pluginDir, 'evcrate/workflows/advisory-interview.md');
-    const hasSkillRule = Boolean(adviseSkillPath && fs.readFileSync(adviseSkillPath, 'utf8').includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE'));
-    const hasWorkflowRule = fs.existsSync(adviseWorkflowPath) && fs.readFileSync(adviseWorkflowPath, 'utf8').includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE');
+
 
     // Calculate exact runtime session state path from production session context module
     const { computeProjectKey, computeSessionKey, getSessionStatePath } = require(path.join(pluginDir, 'evcrate/runtime/local-session-context.cjs'));
@@ -76,13 +70,13 @@ export function runWrongHarnessScenario() {
     // Verify state does not exist prior to invocation
     const stateExistedBefore = fs.existsSync(exactSessionStatePath);
 
-    // Behavioral verification: ensure prompt with --agent triggers reminder without state mutation in dedicated temp dir
+    // Prompt reminders must not create session state.
     const bridgeScript = path.join(pluginDir, 'evcrate', 'runtime', 'local-hook-bridge.cjs');
-    const resRelay = spawnSync(process.execPath, [bridgeScript, 'UserPromptSubmit'], {
+    const reminder = spawnSync(process.execPath, [bridgeScript, 'UserPromptSubmit'], {
       cwd: projectDir,
       input: JSON.stringify({
         hook_event_name: 'UserPromptSubmit',
-        prompt: 'test --agent',
+        prompt: 'ordinary task with raw arguments',
         session_id: sessionId,
         cwd: projectDir
       }),
@@ -90,31 +84,27 @@ export function runWrongHarnessScenario() {
       env: { ...process.env, VSCODE_PROJECT_DIR: projectDir, TMPDIR: stateBaseDir }
     });
 
-    const relayOutput = resRelay.status === 0 ? JSON.parse(resRelay.stdout) : null;
-    const relayExitPass = resRelay.status === 0 && relayOutput?.continue === true && typeof relayOutput?.systemMessage === 'string' && relayOutput.systemMessage.includes('EVCrate Local Prompt Reminder');
+    const output = reminder.status === 0 ? JSON.parse(reminder.stdout) : null;
+    const reminderPass = reminder.status === 0 && output?.continue === true
+      && typeof output?.systemMessage === 'string' && output.systemMessage.includes('EVCrate Local Prompt Reminder');
 
     // Verify exact session state file was NOT created on disk
     const stateExistedAfter = fs.existsSync(exactSessionStatePath);
     const noStateMutationPass = !stateExistedBefore && !stateExistedAfter;
 
     rawEvents.push({
-      test: 'advisorRelayRejection',
-      disposition: 'ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE',
-      skillEnforced: hasSkillRule,
-      workflowEnforced: hasWorkflowRule,
-      behavioralExitCode: resRelay.status,
+      test: 'promptReminderIsolation',
+      behavioralExitCode: reminder.status,
       exactStatePathChecked: exactSessionStatePath,
       noStateMutation: noStateMutationPass
     });
 
     const checks = {
-      hasSkillRule,
-      hasWorkflowRule,
-      relayExitPass,
+      reminderPass,
       noStateMutationPass
     };
 
-    const allPassed = hasSkillRule && hasWorkflowRule && relayExitPass && noStateMutationPass;
+    const allPassed = reminderPass && noStateMutationPass;
     const receipt = buildWrongHarnessReceipt({ date: new Date().toISOString().slice(0, 10) });
     saveReceipt('wrong-harness-isolation', receipt, rawEvents);
     return { ok: allPassed, checks };

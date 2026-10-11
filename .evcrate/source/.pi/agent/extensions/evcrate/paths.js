@@ -121,7 +121,7 @@ function commandInstruction(root, reference) {
   if (!resolved) return undefined;
   const name = relative(commandsRoot, resolved).replace(/\.md$/, "");
   if (name.includes(sep)) return undefined;
-  return `Invoke \`evcrate_command\` with name \`${name}\`, the intended command text unchanged in \`args\` (empty only when there is none), and the current direct \`handoff\` object when one exists.`;
+  return `Invoke \`evcrate_command\` with name \`${name}\` and the intended command text unchanged in \`args\` (empty only when there is none).`;
 }
 
 export function resolveEvcrateMarkers(text, agentRoot = getAgentRoot()) {

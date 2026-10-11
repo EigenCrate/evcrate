@@ -11,8 +11,6 @@ Description: Analyze the codebase and update documentation
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
-For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
-
 ## Subagent Completion Contract
 
 Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
@@ -29,10 +27,10 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 1. Scan the codebase and calculate the number of files with LOC in each directory (skip credentials, cache or external modules directories, such as `.codex`, `.opencode`, `.git`, `tests`, `node_modules`, `__pycache__`, `secrets`, etc.)
 2. Target directories **that actually exist** - adapt to project structure, don't hardcode paths
 3. Main agent spawns multiple `evc-scout` subagents via subagent workflow:
-   - Write a detailed instructions prompt for each evc-scout subagent with exact directories or files it should read
-   - Each evc-scout subagent has less than 200K tokens of context window
+   - Write a detailed instructions prompt for each scout subagent with exact directories or files it should read
+   - Each scout subagent has less than 200K tokens of context window
    - Amount of scouts depends on the current system resources available and project size in step 1
-   - Each evc-scout subagent must return a detailed summary report to a main agent
+   - Each scout subagent must return a detailed summary report to a main agent
 5. Main agent merges scout reports into context summary and delegate to `evc-docs-manager` agent to update documentation (next phase)
 
 ## Phase 1.5: Parallel Documentation Reading
@@ -57,13 +55,13 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 | 2 | system-architecture.md (400), code-standards.md (300) | 700 |
 | 3 | project-overview-pdr.md (500), project-roadmap.md (200) | 700 |
 
-## Phase 2: Documentation Update (evc-docs-manager Agent)
+## Phase 2: Documentation Update (docs-manager Agent)
 
 Pass the gathered file list to `evc-docs-manager` agent to update documentation:
 - `README.md`: Update README (keep it under 300 lines)
 - `docs/project-overview-pdr.md`: Update project overview and PDR (Product Development Requirements)
 - `docs/codebase-summary.md`: Update codebase summary
-- `docs/code-standards.md`: Update codebase structure and code standards
+- `docs/evc-cmd-code-standards.md`: Update codebase structure and code standards
 - `docs/system-architecture.md`: Update system architecture
 - `docs/project-roadmap.md`: Update project roadmap
 - `docs/deployment-guide.md` [optional]: Update deployment guide

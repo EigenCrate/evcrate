@@ -28,11 +28,10 @@ test('Linux release verification script passes with unshare network isolation an
   assert.equal(result.status, 'PASS');
   assert.equal(result.package_hash_invariant, true);
   assert.equal(result.home_untouched_on_install, true);
-  assert.equal(result.controller_closure_verified, true);
   assert.equal(result.home_projections_verified, true);
   assert.equal(result.project_projections_verified, true);
   assert.equal(result.runtime_entrypoints_verified, true);
-  assert.equal(result.partial_recovery_verified, true);
+  assert.equal(result.failure_recovery_verified, true);
 });
 
 test('installed package snapshot proves clean-new and whole-old-backup mutable-state semantics on upgrade', (t) => {
@@ -112,7 +111,7 @@ test('installed package snapshot proves clean-new and whole-old-backup mutable-s
   }
 });
 
-test('installed launcher exercises recover, health, and repeat apply without package mutation', (t) => {
+test('installed launcher exercises recover and repeat apply without package mutation', (t) => {
   if (process.platform !== 'linux' || process.arch !== 'x64') return;
   if (!checkNetworkNamespaceSupport()) {
     t.skip('Linux network namespace isolation (unshare -rn) is unavailable on this host');
@@ -179,7 +178,7 @@ test('uninstall leaves published HOME targets, advisor policy, and recovery stat
 
     // Verify HOME was published
     assert.ok(fs.existsSync(path.join(sandbox.homeDir, '.claude')));
-    assert.ok(fs.existsSync(path.join(sandbox.homeDir, '.evcrate', 'bin', 'evcrate-advisor')));
+    assert.equal(fs.existsSync(path.join(sandbox.homeDir, '.evcrate', 'bin')), false);
 
     // Uninstall EVCrate CLI
     const uninst = spawnSync('unshare', [
@@ -196,7 +195,7 @@ test('uninstall leaves published HOME targets, advisor policy, and recovery stat
 
     // Published HOME targets and advisor policy remain completely untouched!
     assert.ok(fs.existsSync(path.join(sandbox.homeDir, '.claude')));
-    assert.ok(fs.existsSync(path.join(sandbox.homeDir, '.evcrate', 'bin', 'evcrate-advisor')));
+    assert.equal(fs.existsSync(path.join(sandbox.homeDir, '.evcrate', 'bin')), false);
   } finally {
     sandbox.cleanup();
   }

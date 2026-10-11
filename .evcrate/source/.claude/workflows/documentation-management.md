@@ -20,7 +20,7 @@ The `evc-project-manager` agent MUST update these documents (for unsealed, autho
 - Significant bugs are resolved or security patches applied
 - Project timeline or scope adjustments are made
 - External dependencies or breaking changes occur
-*(Note: For advice-controlled plans or sealed phases, never direct edits to roadmap or metadata after seal; updates must be reconciled by the parent orchestrator within authorized scope before seal.)*
+*(Note: Protected historical plan, phase, evidence, roadmap and selected-index identities remain immutable; the parent reconciles status through authorized uncaptured administrative outputs.)*
 ### Update Protocol
 1. **Before Updates**: Always read current roadmap and changelog status
 2. **During Updates**: Maintain version consistency and proper formatting
@@ -66,11 +66,11 @@ plans/
 - List each phase with status/progress
 - Link to detailed phase files
 - Key dependencies
-- **Plan progress & reconciliation**: Follow neutral [Plan progress and phase reconciliation](./plan-progress.md) in every mode, without loading full mentoring from documentation navigation.
-  - Sealed plan/phase/evidence/index identities remain protected independently of activation. Historical records never activate advice.
-  - Parent alone publishes immutable completion receipts outside capture and updates uncaptured `<plan-dir>/progress.md`; if a destination is already captured, stop publication rather than altering the manifest.
-  - Ordinary unprotected plans retain normal `plan.md` tracking after required approval/validation; protected off-mode phases use expressly non-durable default receipts. Never invent progress links or durable completion.
-  - Under resolved explicit/inherited mode, substantive docs/roadmap/status and selected index transitions settle under the registered parent action before final outcome/seal. No captured mutations or Git transitions after seal.
+- **Plan progress & reconciliation**: Follow neutral [Plan progress and phase reconciliation](./plan-progress.md).
+  - Sealed plan/phase/evidence/index identities remain protected; history grants no new write authority.
+  - Parent alone publishes immutable completion receipts outside capture and updates uncaptured `<plan-dir>/progress.md`; if a destination is already captured, stop publication rather than altering protection.
+  - Ordinary unprotected plans retain normal `plan.md` tracking after required approval/validation; new ordinary phases on protected plans use expressly ordinary approval/validation receipts. Never invent progress links or historical completion.
+  - Child documentation writers follow exact parent-authorized writable/protected paths and return terminal reports; settle and validate all authorized finalization before reporting completion.
 ##### Phase Files (phase-XX-name.md)
 Fully respect the `./docs/development-rules.md` file.
 Each phase file should contain:

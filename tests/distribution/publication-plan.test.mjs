@@ -25,7 +25,7 @@ function manifest(name, publicationRules = []) {
 
 test('publication rules are closed, explicit, and preserve the frozen order', () => {
   assert.deepEqual([...PUBLICATION_BINDING_ORDER], [
-    '.evcrate/bin', '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
+    '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
   ]);
   assert.equal(mapPublicationPath(manifest('omp', ['omp-agent-prefix']), 'agents/a.md'), 'agent/agents/a.md');
   assert.equal(mapPublicationPath(manifest('claude', ['claude-skill-root-exclusion']), 'skills/README.md'), null);
@@ -91,7 +91,7 @@ test.after(() => {
   if (builtPackage !== undefined) rmSync(builtPackage.packageRoot, { recursive: true, force: true });
 });
 
-test('publication plan set shares one aggregate build across fixed shared and scoped harness phases', async () => {
+test('publication plan set shares one aggregate build across isolated scoped harnesses', async () => {
   const fixture = await sourceDerivedFixture();
   let sourceDestination;
   let originalSourceDestination = null;
@@ -132,9 +132,8 @@ test('publication plan set shares one aggregate build across fixed shared and sc
     assert.strictEqual(homePlan.build, build);
     assert.strictEqual(projectPlan.build, build);
     assert.equal(homePlan.buildManifestDigest, projectPlan.buildManifestDigest);
-    assert.deepEqual(homePlan.phases.map(({ phase }) => phase), ['shared', 'harness']);
-    assert.deepEqual(homePlan.shared.bindingOrder, ['.evcrate/bin']);
-    assert.deepEqual(homePlan.shared.selectedTargets, []);
+    assert.deepEqual(homePlan.phases.map(({ phase }) => phase), ['harness']);
+    assert.deepEqual(projectPlan.phases.map(({ phase }) => phase), ['harness']);
     assert.deepEqual(homePlan.harness.bindingOrder, [
       '.agents/skills', '.codex', '.pi', '.gemini/config', '.omp', '.claude', '.copilot', '.evcrate-vscode'
     ]);
@@ -143,11 +142,8 @@ test('publication plan set shares one aggregate build across fixed shared and sc
       '.claude', '.codex', '.agents/skills', 'AGENTS.md',
       '.copilot', '.github/copilot-instructions.md', '.omp', '.pi', '.evcrate-vscode'
     ]);
-    assert.equal(projectPlan.shared.destinationRoot, fixture.home);
-    assert.equal(projectPlan.shared.bindings[0].destinationRoot, join(fixture.home, '.evcrate', 'bin'));
     assert.equal(projectPlan.harness.destinationRoot, fixture.project);
     assert.equal(projectPlan.harness.projectIdentity.length, 64);
-    assert.equal(projectPlan.harness.bindings.some(({ controller }) => controller), false);
 
     const homeCopilot = homePlan.harness.bindings.find(({ target }) => target === 'copilot');
     const projectCopilot = projectPlan.harness.bindings.find(({ target }) => target === 'copilot');
@@ -348,8 +344,8 @@ test('launch intent is derived from shebang bytes and direct launcher roles (F1 
   assert.equal(deriveLaunchIntent('scripts/tool.py', bytes('#!/usr/bin/env python3\npass')), true);
   // .sh script without shebang
   assert.equal(deriveLaunchIntent('scripts/test.sh', bytes('echo test')), true);
-  // Direct advisor launcher role
-  assert.equal(deriveLaunchIntent('evcrate-advisor', bytes('binary')), true);
+  // Direct launcher role
+  assert.equal(deriveLaunchIntent('evcrate', bytes('binary')), true);
   assert.equal(deriveLaunchIntent('bin/evcrate', bytes('binary')), true);
   // Non-launcher .cjs without shebang
   assert.equal(deriveLaunchIntent('lib/helper.cjs', bytes('module.exports = {};')), false);

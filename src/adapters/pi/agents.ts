@@ -35,11 +35,7 @@ export function convertAgents(context: ProjectionBuildContext, commands: readonl
     const model = (parsed.fields.model ?? '').toLowerCase() || 'standard'; const role = MODEL_ROLES[model] ?? (model === 'standard' ? model : undefined);
     if (!role) throw new ControlPlaneError('VALIDATION_INVALID');
     const tools = convertTools(parsed.fields.tools ?? '');
-    let description = neutralize(translatePrompt(parsed.fields.description ?? '', commands)); let body = neutralize(translatePrompt(parsed.body, commands));
-    if (name === 'evc-advisor') {
-      description = 'Use this high-tier mentor for fresh named checkpoints; Pi rejects interview relay.';
-      if (!body.includes('## Required checkpoint method') || !body.includes('## Checkpoint terminal report')) throw new ControlPlaneError('VALIDATION_INVALID');
-    }
+    const description = neutralize(translatePrompt(parsed.fields.description ?? '', commands)); const body = neutralize(translatePrompt(parsed.body, commands));
     const fields: Record<string, string> = { name, description }; if (tools.mapped.length) fields.tools = tools.mapped.join(', ');
     writeProjectionFile(context, `.pi/agent/agents/${path.slice('agents/'.length)}`, new TextEncoder().encode(serializeFrontmatter(fields, body)));
     roles[name] = { role, source: 'canonical-agent-frontmatter' }; audit[name] = { dropped: tools.dropped.sort(), mapped: tools.mapped };

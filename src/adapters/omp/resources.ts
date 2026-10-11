@@ -3,7 +3,7 @@ import { relative } from 'node:path';
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import { canonicalBytes } from '../../protocol/canonical-json.js';
 import { parseJsonDocument } from '../../protocol/json.js';
-import { isProductionControllerArtifact, ensureProjectionDirectory, writeProjectionFile } from '../projection-utils.js';
+import { isProductionArtifact, ensureProjectionDirectory, writeProjectionFile } from '../projection-utils.js';
 import type { ProjectionBuildContext } from '../types.js';
 
 export function fail(): never { throw new ControlPlaneError('VALIDATION_INVALID'); }
@@ -65,7 +65,7 @@ export function filesUnder(context: ProjectionBuildContext, prefix: string): typ
 export function productionFiles(context: ProjectionBuildContext, prefix: string) {
   return filesUnder(context, prefix).filter((entry) => {
     const rel = relativeTo(entry.path, prefix);
-    return !isProductionControllerArtifact(rel);
+    return !isProductionArtifact(rel);
   });
 }
 export function copyTree(context: ProjectionBuildContext, sourcePrefix: string, targetPrefix: string, transform?: (value: string) => string): string[] {

@@ -6,6 +6,7 @@ disable-model-invocation: true
 argument-hint: "[url] [options]"
 ---
 
+
 Activate the chrome-devtools skill.
 
 ## Purpose

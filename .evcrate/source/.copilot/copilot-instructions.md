@@ -11,11 +11,10 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - Primary workflow: @evcrate/workflows/primary-workflow.md (local .copilot/evcrate/workflows/primary-workflow.md; otherwise read ~/.copilot/evcrate/workflows/primary-workflow.md (the published install))
 - Development rules: @evcrate/workflows/development-rules.md (local .copilot/evcrate/workflows/development-rules.md; otherwise read ~/.copilot/evcrate/workflows/development-rules.md (the published install))
 - Orchestration protocols: @evcrate/workflows/orchestration-protocol.md (local .copilot/evcrate/workflows/orchestration-protocol.md; otherwise read ~/.copilot/evcrate/workflows/orchestration-protocol.md (the published install))
-- Advisor mentoring: @evcrate/workflows/advisor-mentoring.md (local .copilot/evcrate/workflows/advisor-mentoring.md; otherwise read ~/.copilot/evcrate/workflows/advisor-mentoring.md (the published install))
 - Documentation management: @evcrate/workflows/documentation-management.md (local .copilot/evcrate/workflows/documentation-management.md; otherwise read ~/.copilot/evcrate/workflows/documentation-management.md (the published install))
 - And other workflows: @evcrate/workflows/* (local .copilot/evcrate/workflows/*; otherwise read ~/.copilot/evcrate/workflows/* (the published install))
 
-Resolve required workflow resources from `./.copilot/evcrate/workflows/<name>` when present; otherwise use the published `~/.copilot/evcrate/workflows/<name>`. This shared lookup includes `advice-activation.md` and `plan-progress.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read full `advisor-mentoring.md` only after resolved explicit/inherited activation.
+Resolve required workflow resources from `./.copilot/evcrate/workflows/<name>` when present; otherwise use the published `~/.copilot/evcrate/workflows/<name>`. This shared lookup includes `plan-progress.md` and `advisory-interview.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read only workflows required by the current task.
 
 ## Subagent Completion Contract
 

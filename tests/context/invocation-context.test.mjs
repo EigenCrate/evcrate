@@ -28,7 +28,6 @@ test('resolves explicit HOME/state/project values and target roots independently
   });
   assert.deepEqual(context.selectedTargetIds, ['copilot', 'omp']);
   assert.equal(context.canonicalHarnessRoot, join(packageRoot, '.evcrate/source/.claude'));
-  assert.equal(context.controllerRoot, join(packageRoot, '.evcrate/source/.evcrate/bin'));
   assert.equal(context.selectedTargets.find(({ id }) => id === 'omp').generatedRoots[0], join(packageRoot, '.evcrate/source/.omp'));
   assert.equal(context.selectedTargets.find(({ id }) => id === 'copilot').generatedRoots[0], join(packageRoot, '.evcrate/source/.copilot'));
   assert.equal(context.selectedTargets.find(({ id }) => id === 'omp').homeBindings[0].homeRoot, join(home, '.omp'));

@@ -3,6 +3,7 @@ argument-hint: "[task]"
 description: "Intelligent plan creation with prompt enhancement"
 ---
 
+
 ## Your mission
 <task>
 $ARGUMENTS

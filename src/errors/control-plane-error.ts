@@ -6,7 +6,7 @@ export type ControlPlaneErrorCode =
   | 'OK' | 'USAGE_INVALID' | 'PROTOCOL_INVALID' | 'VALIDATION_INVALID'
   | 'PATH_UNSAFE' | 'CAPABILITY_UNSUPPORTED' | 'CAS_CONFLICT'
   | 'PUBLICATION_FAILED' | 'ROLLBACK_FAILED' | 'RECOVERY_FAILED'
-  | 'INTERNAL_ERROR' | 'SETTINGS_INVALID' | 'DIAGNOSTIC_INVALID';
+  | 'INTERNAL_ERROR';
 
 interface ErrorDefinition { category: ControlPlaneErrorCategory; action: string; message: string; }
 
@@ -27,9 +27,7 @@ const DEFINITIONS: Record<ControlPlaneErrorCode, ErrorDefinition> = {
   PUBLICATION_FAILED: { category: 'publication', action: 'Repair the publication state before retrying.', message: 'Publication failed' },
   ROLLBACK_FAILED: { category: 'rollback', action: 'Run recovery for the incomplete publication.', message: 'Rollback failed' },
   RECOVERY_FAILED: { category: 'recovery', action: 'Resolve the recovery marker before retrying.', message: 'Recovery failed' },
-  INTERNAL_ERROR: { category: 'internal', action: 'Retry or inspect the bounded diagnostic.', message: 'Internal error' },
-  SETTINGS_INVALID: { category: 'validation', action: 'Provide one complete version 1 advisor policy.', message: 'Advisor settings are invalid' },
-  DIAGNOSTIC_INVALID: { category: 'protocol', action: 'Return one valid qualification diagnostic result.', message: 'Qualification diagnostic is invalid' }
+  INTERNAL_ERROR: { category: 'internal', action: 'Retry or inspect the bounded diagnostic.', message: 'Internal error' }
 };
 
 const EXIT_CODES: Record<ControlPlaneErrorCategory, number> = {

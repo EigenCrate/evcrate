@@ -8,7 +8,6 @@ import { compareCodePoints } from '../../../scripts/release/canonical-json.cjs';
 import { createMinimalValidRecords, FIXTURE_BUILD_TIMESTAMP } from './fixture-records.mjs';
 import {
   PROJECT_ROOT,
-  computeControllerClosureDigest,
   computeBuildManifestDigests,
   getRealInstallerEntry
 } from './release-fixture-shared-helpers.mjs';
@@ -18,7 +17,6 @@ export {
   createMinimalValidRecords,
   FIXTURE_BUILD_TIMESTAMP,
   PROJECT_ROOT,
-  computeControllerClosureDigest,
   computeBuildManifestDigests,
   getRealInstallerEntry,
   buildWindowsTestReleaseSet
@@ -34,7 +32,6 @@ export function buildTestReleaseSet(options) {
     tamperArchive = false,
     tamperMetadata = null,
     tamperChecksum = false,
-    tamperController = false,
     includeInstallSh = true,
     customInstallShContent = null
   } = options;
@@ -82,34 +79,27 @@ export function buildTestReleaseSet(options) {
   }
   fs.writeFileSync(sidecarPath, sidecarContent);
 
-  let controllerClosureDigest = 'c'.repeat(64);
-  if (!tamperController) {
-    controllerClosureDigest = computeControllerClosureDigest(sortedRecords);
-  }
 
   const buildManifestDigests = computeBuildManifestDigests(sortedRecords);
 
   const metadata = {
-    schema: 'evcrate-private-release/v1',
+    schema: 'evcrate-private-release/v2',
     version,
     tag: `v${version}`,
     source_commit: commit,
     node_floor: '>=22.19.0',
     inventory_digest: inventoryDigest,
     build_manifest_digests: buildManifestDigests,
-    controller_closure_digest: controllerClosureDigest,
     platforms: {
       'linux-x64': {
         archive_name: linuxName,
         size: actualArchiveBytes.length,
-        sha256: actualArchiveSha256,
-        format: 'tar.gz'
+        sha256: actualArchiveSha256
       },
       'windows-x64': {
         archive_name: windowsName,
         size: 100,
-        sha256: 'd'.repeat(64),
-        format: 'zip'
+        sha256: 'd'.repeat(64)
       }
     },
     installers: {

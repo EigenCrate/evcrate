@@ -12,7 +12,6 @@ const { buildReleaseArchives } = require('./release/archive-writers.cjs');
 const {
   collectPackInventory,
   collectBuildManifestDigests,
-  collectControllerClosureDigest,
   getInstallerEntry
 } = require('./release/pack-inventory.cjs');
 
@@ -110,9 +109,8 @@ function main() {
   console.log('Validating runtime closure...');
   validateRuntimeClosure(projectRoot);
 
-  // 3. Collect verified build and controller digests
+  // 3. Collect verified harness build digests
   const buildManifestDigests = collectBuildManifestDigests(projectRoot);
-  const controllerClosureDigest = collectControllerClosureDigest(projectRoot);
 
   // 4. Standalone installer entrypoints (authored in Phases 2 and 3)
   const installSh = getInstallerEntry(projectRoot, 'install.sh');
@@ -138,14 +136,13 @@ function main() {
     outputDir: releaseDir,
     version,
     metadataGenerator: ({ inventoryDigest, platforms }) => ({
-      schema: 'evcrate-private-release/v1',
+      schema: 'evcrate-private-release/v2',
       version,
       tag,
       source_commit: commit,
       node_floor: pkg.engines?.node || '>=22.19.0',
       inventory_digest: inventoryDigest,
       build_manifest_digests: buildManifestDigests,
-      controller_closure_digest: controllerClosureDigest,
       platforms,
       installers: {
         'install.sh': {

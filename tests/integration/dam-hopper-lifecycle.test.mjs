@@ -108,7 +108,7 @@ test('dam-hopper consumer exercises full resource-control lifecycle with packed 
   }
 });
 
-test('dam-hopper consumer exercises separate OMP and Copilot targets and health diagnostic', () => {
+test('dam-hopper consumer exercises separate OMP and Copilot targets', () => {
   const ws = createConsumerWorkspace();
   const home = mkdtempSync(join(tmpdir(), 'evcrate-dh-home-'));
   const state = mkdtempSync(join(tmpdir(), 'evcrate-dh-state-'));
@@ -127,22 +127,19 @@ test('dam-hopper consumer exercises separate OMP and Copilot targets and health 
 
     const pubOmp = client.publishDryRun({ targets: ['omp'] });
     assert.equal(pubOmp.status, 'preview');
-    assert.deepEqual(pubOmp.payload.phases[1].selectedTargets, ['omp']);
+    assert.deepEqual(pubOmp.payload.phases[0].selectedTargets, ['omp']);
 
     const pubCopilot = client.publishDryRun({ targets: ['copilot'] });
     assert.equal(pubCopilot.status, 'preview');
-    assert.deepEqual(pubCopilot.payload.phases[1].selectedTargets, ['copilot']);
+    assert.deepEqual(pubCopilot.payload.phases[0].selectedTargets, ['copilot']);
 
     const pubApply = client.publishApply({ targets: ['omp'] });
     assert.equal(pubApply.status, 'published');
-    assert.deepEqual(pubApply.payload.phases[1].selectedTargets, ['omp']);
+    assert.deepEqual(pubApply.payload.phases[0].selectedTargets, ['omp']);
 
     const recoverRes = client.recover({ targets: ['omp'] });
     assert.equal(recoverRes.status, 'recovered');
 
-    const healthRes = client.health();
-    assert.ok(healthRes.status === 'QUALIFIED' || healthRes.status === 'FAILED');
-    assert.equal(healthRes.protocol, 'evcrate-advisor-diagnostic');
   } finally {
     ws.cleanup();
     try { rmSync(home, { recursive: true, force: true }); } catch { /* ignore */ }

@@ -117,6 +117,17 @@ export function buildTypeScript(options = {}) {
     root,
     info.relativeDeclarationDir
   );
+  if (process.platform !== 'win32' && info.expectedOutputs.some((p) => p.replace(/\\/g, '/').endsWith('dist/cli/evcrate.js'))) {
+    const cliPath = resolve(root, 'dist', 'cli', 'evcrate.js');
+    if (fs.existsSync(cliPath)) {
+      try {
+        fs.chmodSync(cliPath, 0o755);
+      } catch (err) {
+        logger.error?.(`[build-typescript] Failed to set executable permissions on ${cliPath}: ${err.message}`);
+        return { status: 1, cleaned, receiptWritten: false };
+      }
+    }
+  }
   return {
     status: 0,
     cleaned,

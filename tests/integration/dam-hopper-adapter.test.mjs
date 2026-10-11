@@ -37,25 +37,11 @@ test('adapter parses successful resource envelope', () => {
   }
 });
 
-test('adapter parses qualification health diagnostic envelope', () => {
-  const payload = {
-    protocol: 'evcrate-advisor-diagnostic', protocolVersion: 1,
-    requestId: 'test-02', status: 'QUALIFIED',
-    target: { backend: 'codex', model: 'gpt-5.6-sol', effort: 'high' },
-    probes: {
-      version: { status: 'passed', value: '1.0.0' },
-      auth: { status: 'passed' },
-      capabilities: { status: 'passed', model: 'gpt-5.6-sol', effort: 'high', noninteractive: true, session: 'isolated', tools: 'none', output: 'json' }
-    }
-  };
-  const dummy = createDummyCli(`console.log(${JSON.stringify(JSON.stringify(payload))});`);
-  try {
-    const client = new DamHopperSubprocessClient({ cliPath: dummy.cliPath, cwd: dummy.root });
-    const result = client.health();
-    assert.equal(result.status, 'QUALIFIED');
-    assert.equal(result.target.backend, 'codex');
-  } finally {
-    dummy.cleanup();
+test('adapter rejects retired protocols as unsupported', () => {
+  for (const protocol of ['evcrate-advisor-diagnostic', 'evcrate-advisor-settings']) {
+    const client = new DamHopperSubprocessClient({ cliPath: 'unused' });
+    assert.throws(() => client.parseEnvelope(JSON.stringify({ protocol, protocolVersion: 1, status: 'ok' }), 0),
+      (error) => error.code === 'PROTOCOL_UNSUPPORTED');
   }
 });
 

@@ -8,15 +8,15 @@ import { writeAtomicProjectionFile } from '../filesystem/atomic.js';
 import { registerProjectionExpectation, projectionExpectations } from './types.js';
 import type { ProjectionBuildContext, ProjectionExpectedEntry, ProjectionValidation, ProjectedFileDiagnostic } from './types.js';
 import type { ResourceGraphFile } from './resource-graph.js';
-const FORBIDDEN_CONTROLLER_PARTS = new Set(['__tests__', 'tests', 'fixtures', 'helpers']);
-const FORBIDDEN_CONTROLLER_SUFFIXES = ['.test.cjs', '.test.js', '.test.mjs', '.test.py', '.spec.cjs', '.spec.js'];
+const FORBIDDEN_ARTIFACT_PARTS = new Set(['__tests__', 'tests', 'fixtures', 'helpers']);
+const FORBIDDEN_ARTIFACT_SUFFIXES = ['.test.cjs', '.test.js', '.test.mjs', '.test.py', '.spec.cjs', '.spec.js'];
 
-export function isProductionControllerArtifact(path: string): boolean {
+export function isProductionArtifact(path: string): boolean {
   const parts = path.split('/');
   const name = parts.at(-1) ?? '';
-  return parts.some((part) => FORBIDDEN_CONTROLLER_PARTS.has(part))
+  return parts.some((part) => FORBIDDEN_ARTIFACT_PARTS.has(part))
     || name.startsWith('fake-')
-    || FORBIDDEN_CONTROLLER_SUFFIXES.some((suffix) => name.endsWith(suffix));
+    || FORBIDDEN_ARTIFACT_SUFFIXES.some((suffix) => name.endsWith(suffix));
 }
 
 function unsafe(): never {
@@ -162,8 +162,7 @@ function collectFiles(
       || rootRelative.endsWith('/evcrate/migration-inventory.json')
       || rootRelative.endsWith('/evcrate/projection-inventory.json')) continue;
     const text = bytes.includes(0) ? '' : new TextDecoder('utf-8').decode(bytes);
-    if (/\.claude(?:[\\/]|$)/u.test(text.replace(/(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/gu, ''))
-      || relativePath.includes('bin/lib/advisor/')) {
+    if (/\.claude(?:[\\/]|$)/u.test(text.replace(/(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/gu, ''))) {
       diagnostics.push({ path: relativePath, kind: 'file', code: 'unsafe' });
     }
   }

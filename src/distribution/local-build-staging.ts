@@ -1,14 +1,13 @@
-import { chmodSync, copyFileSync, existsSync, lstatSync, mkdirSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { existsSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { getProjectionAdapter } from '../adapters/registry.js';
 import { vscodeAdapter } from '../adapters/vscode/index.js';
 import { createProjectionBuildContext } from '../adapters/types.js';
 import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { createStagedRoot, writeAtomicFile, type StagedRoot } from '../filesystem/atomic.js';
 import { hashFile, treeHash } from '../filesystem/hashing.js';
-import { ADVISOR_CONTROLLER_FILES, controllerHashes, validateAdvisorControllerProjection } from '../manifests/controller.js';
 import { loadSelectedManifests, loadTargetManifestRegistry, manifestAdapterHashes, manifestSourceHashes } from '../manifests/registry.js';
-import type { TargetManifest, TargetManifestRegistry } from '../manifests/types.js';
+import type { TargetManifest } from '../manifests/types.js';
 import { PERSISTED_TARGETS, normalizeTarget, type PersistedTarget } from '../protocol/validation.js';
 import {
   deriveManifestView,
@@ -76,8 +75,6 @@ export function prepareSharedBuildInputs(packageRoot: string): SharedBuildInputs
   const canonicalHarnessRoot = join(sourceRoot, '.claude');
   const registryPath = join(packageRoot, '.evcrate', 'targets', 'manifest.json');
   const registry = loadTargetManifestRegistry(registryPath);
-  const controllerBinSource = join(sourceRoot, '.evcrate', 'bin');
-  const cHashes = controllerHashes(controllerBinSource);
   const targetsRegistryPath = join(packageRoot, '.evcrate', 'targets');
   const targetsRegistryHash = existsSync(targetsRegistryPath) ? treeHash(targetsRegistryPath) : undefined;
 
@@ -89,36 +86,11 @@ export function prepareSharedBuildInputs(packageRoot: string): SharedBuildInputs
     agentsMdHash: hashFile(join(canonicalHarnessRoot, 'AGENTS.md')),
     registryPath,
     registry,
-    controllerBinSource,
-    controllerHashes: cHashes,
     targetsRegistryHash,
     runtimeRoot: join(packageRoot, 'dist')
   };
 }
 
-export function stageAdvisorController(
-  sourceBin: string,
-  stageBin: string
-): Record<string, unknown> {
-  mkdirSync(stageBin, { recursive: true });
-  for (const entry of ADVISOR_CONTROLLER_FILES) {
-    const src = join(sourceBin, entry);
-    const dst = join(stageBin, entry);
-    mkdirSync(dirname(dst), { recursive: true });
-    copyFileSync(src, dst);
-    if ((entry === 'evcrate-advisor' || entry === 'evcrate-advice-mode') && process.platform !== 'win32') {
-      try {
-        chmodSync(dst, (lstatSync(dst).mode & 0o777) | 0o111);
-      } catch (error) {
-        throw new ControlPlaneError(
-          'PUBLICATION_FAILED',
-          `Failed to set executable mode on staged advisor controller ${dst}: ${(error as Error).message}`
-        );
-      }
-    }
-  }
-  return validateAdvisorControllerProjection(sourceBin, stageBin);
-}
 
 export function buildAndStageTarget(
   manifest: TargetManifest,
@@ -205,12 +177,9 @@ export async function assembleLocalStage(
       targetFacts = await pool.run(selectedTargets);
     }
 
-    const stageBin = join(stagePath, '.evcrate', 'bin');
-    const controllerMetadata = stageAdvisorController(shared.controllerBinSource, stageBin);
-
     const liveSourceRoot = join(packageRoot, '.evcrate', 'source');
-    const stagedOutputs = new Map<string, string>([['.evcrate', join(stagePath, '.evcrate')]]);
-    const localOutputs = new Map<string, string>([['.evcrate', join(liveSourceRoot, '.evcrate')]]);
+    const stagedOutputs = new Map<string, string>();
+    const localOutputs = new Map<string, string>();
     for (const fact of targetFacts) {
       for (const [key, val] of fact.stagedOutputs) stagedOutputs.set(key, val);
       for (const [key] of fact.localOutputs) localOutputs.set(key, localProjectionPath(liveSourceRoot, key));
@@ -223,9 +192,9 @@ export async function assembleLocalStage(
 
       // Derive target and aggregate views before writing manifests into the stage.
       const singleViews = targetFacts.map((fact) =>
-        deriveManifestView([fact], shared, stagePath, controllerMetadata, fact.manifest.id)
+        deriveManifestView([fact], shared, stagePath, fact.manifest.id)
       );
-      const aggregateView = deriveManifestView(targetFacts, shared, stagePath, controllerMetadata);
+      const aggregateView = deriveManifestView(targetFacts, shared, stagePath);
 
       // Write every derived manifest atomically into the stage.
       for (const singleView of singleViews) {
@@ -266,7 +235,6 @@ export async function assembleLocalStage(
       targetFacts,
       shared,
       stagePath,
-      controllerMetadata,
       selectedTargets.length === 1 ? selectedTargets[0] : undefined
     );
     mkdirSync(dirname(view.stagedManifestPath), { recursive: true });

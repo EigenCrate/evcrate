@@ -4,12 +4,11 @@ import { assertExactKeys, assertSafeBoundedJson, boundedText } from '../protocol
 import { isPlainObject, parseJsonDocument } from '../protocol/json.js';
 import { hashBytes, hashFile, readBoundedFile, treeHash } from '../filesystem/hashing.js';
 import { assertNoSymlinkAncestors, normalizeRelativePath } from '../filesystem/paths.js';
-import { ADVISOR_CONTROLLER_FILES, controllerHashes } from '../manifests/controller.js';
 import type { BuildManifest } from '../manifests/types.js';
 
 export const MAX_BUILD_MANIFEST_BYTES = 8 * 1024 * 1024;
 const HASH = /^[a-f0-9]{64}$/u;
-const MANIFEST_KEYS = ['schema_version', 'source_hashes', 'adapter_hashes', 'controller_hashes', 'owners', 'output_hashes', 'validation', 'home_policy'] as const;
+const MANIFEST_KEYS = ['schema_version', 'source_hashes', 'adapter_hashes', 'owners', 'output_hashes', 'validation', 'home_policy'] as const;
 function fail(code: 'PROTOCOL_INVALID' | 'PATH_UNSAFE' | 'PUBLICATION_FAILED'): never { throw new ControlPlaneError(code); }
 function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -55,25 +54,23 @@ function owners(value: unknown): Readonly<Record<string, string>> {
   }
   return Object.freeze(Object.fromEntries(entries));
 }
-function controllerHashValues(value: unknown): Readonly<Record<string, string>> {
-  const result = hashes(value);
-  const expected = new Set(ADVISOR_CONTROLLER_FILES.map((entry) => `.evcrate/bin/${entry}`));
-  const keys = Object.keys(result);
-  if (keys.length !== expected.size || keys.some((key) => !expected.has(key))) fail('PROTOCOL_INVALID');
-  return result;
-}
 export function validateBuildManifest(value: unknown): BuildManifest {
   assertSafeBoundedJson(value, MAX_BUILD_MANIFEST_BYTES);
+  if (isPlainObject(value) && (value.schema_version === 1 || value.schema_version === 2)) {
+    throw new ControlPlaneError('PROTOCOL_INVALID', 'Obsolete build manifest; run npm run build && npm run generate:registry && npm run generate:manifests to regenerate current artifacts.');
+  }
   assertExactKeys(value, MANIFEST_KEYS, 'PROTOCOL_INVALID');
   const data = value as Record<string, unknown>;
-  if (data.schema_version !== 2) fail('PROTOCOL_INVALID');
+  if (data.schema_version !== 3) fail('PROTOCOL_INVALID');
+  assertExactKeys(data.validation, ['complete', 'symlinks', 'target_registry'], 'PROTOCOL_INVALID');
   const validation = record(data.validation);
+  if (validation.complete !== true || validation.symlinks !== 'rejected'
+    || validation.target_registry !== 'validated') fail('PROTOCOL_INVALID');
   const homePolicy = record(data.home_policy);
   const manifest = {
-    schema_version: 2 as const,
+    schema_version: 3 as const,
     source_hashes: hashes(data.source_hashes),
     adapter_hashes: hashes(data.adapter_hashes),
-    controller_hashes: controllerHashValues(data.controller_hashes),
     owners: owners(data.owners),
     output_hashes: hashes(data.output_hashes),
     validation: Object.freeze({ ...validation }),
@@ -128,14 +125,9 @@ export function verifyOutputHashes(manifest: BuildManifest, outputs: Readonly<Re
     fail('PUBLICATION_FAILED');
   }
 }
-export function verifyControllerHashes(manifest: BuildManifest, controllerRoot: string): void {
-  const actual = controllerHashes(controllerRoot);
-  if (!sameRecord(actual, manifest.controller_hashes)) fail('PUBLICATION_FAILED');
-}
 export interface BuildVerificationOptions {
   readonly manifestPath: string;
   readonly outputRoots: Readonly<Record<string, string>>;
-  readonly controllerRoot: string;
   readonly sourceHashes?: Readonly<Record<string, string>>;
   readonly adapterHashes?: Readonly<Record<string, string>>;
   readonly manifest?: BuildManifest;
@@ -145,7 +137,6 @@ export function verifyBuild(options: BuildVerificationOptions): BuildManifest {
   if (manifest.validation.complete !== true) fail('PUBLICATION_FAILED');
   if (options.sourceHashes !== undefined && !sameRecord(manifest.source_hashes, options.sourceHashes)) fail('PUBLICATION_FAILED');
   if (options.adapterHashes !== undefined && !sameRecord(manifest.adapter_hashes, options.adapterHashes)) fail('PUBLICATION_FAILED');
-  if (options.controllerRoot !== undefined) verifyControllerHashes(manifest, options.controllerRoot);
   verifyOutputHashes(manifest, options.outputRoots);
   return manifest;
 }

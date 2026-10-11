@@ -1,7 +1,7 @@
 import type { ProjectionBuildContext } from '../types.js';
 import { BRIDGE_SOURCE } from './bridge.js';
 import { copyFile, filesUnder, invalid, parseJson, writeJson } from './common.js';
-import { isProductionControllerArtifact, textBytes, writeProjectionFile } from '../projection-utils.js';
+import { isProductionArtifact, textBytes, writeProjectionFile } from '../projection-utils.js';
 import { renderHarness } from './text.js';
 
 const EVENTS: Record<string, [string, string]> = { SessionStart: ['sessionStart', 'session-start'], SubagentStart: ['subagentStart', 'subagent-start'], PreToolUse: ['preToolUse', 'pre-tool-use'], PostToolUse: ['postToolUse', 'post-tool-use'], PreCompact: ['preCompact', 'pre-compact'], SessionEnd: ['sessionEnd', 'session-end'] };
@@ -42,8 +42,8 @@ function hookConfig(events: Record<string, unknown>): Record<string, unknown> {
   return { version: 1, hooks };
 }
 export function convertHooks(context: ProjectionBuildContext, transform: (value: string) => string): HookAudit {
-  const copiedHooks: string[] = []; for (const file of filesUnder(context, 'hooks')) { const relative = file.path.slice('hooks/'.length); if (isProductionControllerArtifact(relative)) continue; copyFile(context, file.path, `evcrate/hooks/${relative}`, (value) => transform(translate(value, relative))); copiedHooks.push(relative); }
-  const copiedScripts: string[] = []; for (const file of filesUnder(context, 'scripts')) { const relative = file.path.slice('scripts/'.length); if (relative.includes('advise-state') || isProductionControllerArtifact(relative) || relative === 'commands_data.yaml' || relative === 'skills_data.yaml') continue; copyFile(context, file.path, `evcrate/scripts/${relative}`, (value) => transform(renderHarness(value))); copiedScripts.push(relative); }
+  const copiedHooks: string[] = []; for (const file of filesUnder(context, 'hooks')) { const relative = file.path.slice('hooks/'.length); if (isProductionArtifact(relative)) continue; copyFile(context, file.path, `evcrate/hooks/${relative}`, (value) => transform(translate(value, relative))); copiedHooks.push(relative); }
+  const copiedScripts: string[] = []; for (const file of filesUnder(context, 'scripts')) { const relative = file.path.slice('scripts/'.length); if (isProductionArtifact(relative) || relative === 'commands_data.yaml' || relative === 'skills_data.yaml') continue; copyFile(context, file.path, `evcrate/scripts/${relative}`, (value) => transform(renderHarness(value))); copiedScripts.push(relative); }
   copiedScripts.push('commands_data.yaml', 'skills_data.yaml', 'scanner-layout.json');
   const bridge = textBytes(BRIDGE_SOURCE); writeProjectionFile(context, '.copilot/evcrate/hooks/copilot-hook-bridge.cjs', bridge, true);
   copyFile(context, '.evcrateignore', 'evcrate/.evcrateignore'); copyFile(context, '.evcrateignore', '.evcrateignore');

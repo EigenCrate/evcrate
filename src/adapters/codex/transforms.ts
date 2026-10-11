@@ -115,12 +115,7 @@ export function rewriteCommandGuidance(text: string, known: ReadonlySet<string>)
 }
 
 export function addWorkflowFallback(text: string): string {
-  let result = text;
-  for (const name of ['advice-activation.md', 'plan-progress.md', 'advisor-mentoring.md', 'advisory-interview.md']) {
-    const local = `.codex/workflows/${name}`; const home = `~/.codex/workflows/${name}`;
-    const marker = `\`${local}\``; if (!result.includes(`${marker} if present`)) result = result.replace(marker, `${marker} if present; otherwise read \`${home}\` (the published install)`);
-  }
-  return result;
+  return text;
 }
 
 export function renderHarnessScriptReferences(text: string): string {
@@ -147,66 +142,5 @@ export function transformResourceText(text: string, known: ReadonlySet<string>):
   return addWorkflowFallback(rewriteCommandGuidance(applyReplacements(text), known));
 }
 
-export function renderAdvisoryCapabilities(text: string, target = 'codex'): string {
-  const start = '<!-- EVCRATE_ADVISORY_CAPABILITIES_START -->'; const end = '<!-- EVCRATE_ADVISORY_CAPABILITIES_END -->';
-  if ((text.match(new RegExp(start, 'g')) ?? []).length !== 1 || (text.match(new RegExp(end, 'g')) ?? []).length !== 1) throw new Error('Malformed advisory capability markers');
-  const begin = text.indexOf(start); const finish = text.indexOf(end, begin); const canonical = text.slice(begin + start.length, finish).trim();
-  if (canonical !== '<!-- EVCRATE_CAPABILITY: advise-inline/v1 -->\n<!-- EVCRATE_CAPABILITY: advise-agent-relay/claude/v1 -->') throw new Error('Malformed advisory capability markers');
-  const relay = `ADVISE_AGENT_RELAY_UNSUPPORTED_${target.toUpperCase()}`;
-  const block = `${start}\n<!-- EVCRATE_CAPABILITY: advise-inline/v1 -->\n<!-- EVCRATE_CAPABILITY: advise-agent-relay/unsupported/${target}/v1 -->\n<!-- EVCRATE_CAPABILITY_ERROR: ${relay} -->\n${end}`;
-  return `${text.slice(0, begin)}${block}${text.slice(finish + end.length)}`;
-}
 
-export function renderInlineAdvise(body: string): string {
-  const relay = 'ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX';
-  const capability = renderAdvisoryCapabilities(body);
-  const start = capability.indexOf('<!-- EVCRATE_ADVISORY_CAPABILITIES_START -->');
-  const marker = '<!-- EVCRATE_ADVISORY_CAPABILITIES_END -->';
-  const end = capability.indexOf(marker) + marker.length;
-  return `<!-- generated target: codex -->
-${capability.slice(start, end)}
-
-Use this command for candid technical or architectural advice. \`$evc-cmd-advise\` is
-separate from \`--advice\` checkpoint mentorship: it first converges on the
-problem, then provides advice.
-
-## Parse input
-
-Count exact, case-sensitive, whitespace-delimited standalone \`--agent\` tokens.
-Reject two or more tokens. One token requests relay only when it is final after
-trailing whitespace; remove only that token, its separator, and trailing whitespace
-from the prompt. If a final token requests relay, return \`${relay}\` and say:
-\`Run $evc-cmd-advise <prompt> without --agent for inline advice.\` Do not invoke an advisor,
-create relay state, or silently continue in inline mode.
-
-## Inline interview
-
-Run in the main session. Do not invoke a subagent or create persistent state.
-
-1. Analyze only bounded local context relevant to the prompt or URL.
-2. Ask exactly one concise substantive question per turn using \`request_user_input\`.
-   Never batch questions or infer an answer. Stop after eight discovery questions.
-3. Present one concise reframed problem and require explicit \`confirm\` or \`correct\`.
-   Permit at most two confirmation/correction cycles. On exhaustion, return
-   \`INTERVIEW_NOT_CONVERGED\` and write no report.
-4. After confirmation, write a concise Markdown report with exactly these headings:
-   \`## Reframed problem\`, \`## Recommendation\`, \`## Alternatives/tradeoffs\`,
-   \`## Risks\`, \`## Assumptions/evidence gaps\`, \`## Success checks\`,
-   \`## Next actions\`, and \`## Unresolved questions\`.
-5. Write the sanitized report to the active \`<plan>/reports\` directory, or
-   \`plans/reports\` when there is no active plan. Never include credentials,
-   environment values, tool traces, fetched page bodies, or model reasoning.
-`;
-}
-
-export function renderAdvisoryInterview(body: string): string {
-  let projected = renderAdvisoryCapabilities(body);
-  projected = projected.replace('The second marker is a Claude-only capability claim. Generated targets must\nreplace it with their tested capability or an explicit unsupported result;\npresence of a generated file is never runtime proof.', "The second marker records this target's explicit `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX` relay rejection.\nGenerated-file presence is never runtime proof.");
-  projected = projected.replaceAll('`design a cache --agent` | Claude relay | `design a cache`', '`design a cache --agent` | `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX` | no inline interview');
-  projected = projected.replaceAll('`design a cache --agent ` | Claude relay | `design a cache`', '`design a cache --agent ` | `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX` | no inline interview');
-  projected = projected.replaceAll('`--agent` | Claude relay, empty prompt | empty; normal empty-input handling', '`--agent` | `ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX` | no inline interview');
-  const relay = projected.indexOf('## Relay turn envelope');
-  if (relay < 0) throw new Error('Canonical advisory interview workflow is missing relay contract');
-  return `${projected.slice(0, relay)}## Unsupported relay\n\nA final standalone \`--agent\` returns \`ADVISE_AGENT_RELAY_UNSUPPORTED_CODEX\` before advisor delegation, state creation, or inline-interview work. Users can run \`$evc-cmd-advise <prompt>\` for inline advice.\n`;
-}
 export function isBinary(file: ResourceGraphFile): boolean { return file.bytes.slice(0, 1024).includes(0) || /\.(?:coverage|dll|dylib|exe|gif|gz|jpeg|jpg|pdf|png|pyc|pyo|so|tar|zip)$/iu.test(file.path); }

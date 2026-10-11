@@ -3,6 +3,7 @@ argument-hint: "[technical-question]"
 description: "Answer technical and architectural questions."
 ---
 
+
 ## Context
 Technical question or architecture challenge: 
 <questions>$ARGUMENTS</questions>

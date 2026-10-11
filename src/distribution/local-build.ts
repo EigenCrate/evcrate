@@ -68,7 +68,6 @@ export async function runLocalBuild(
     const pairs: PromotionPair[] = [];
 
     for (const [name, stagedPath] of result.stagedOutputs) {
-      if (name === '.evcrate') continue;
       const localPath = result.localOutputs.get(name)!;
       pairs.push({ source: stagedPath, destination: localPath });
     }
@@ -121,7 +120,6 @@ export async function runAllManifestsBuild(
     const pairs: PromotionPair[] = [];
 
     for (const [name, stagedPath] of result.stagedOutputs) {
-      if (name === '.evcrate') continue;
       const localPath = result.localOutputs.get(name)!;
       pairs.push({ source: stagedPath, destination: localPath });
     }
@@ -158,9 +156,7 @@ export async function runAllManifestsBuild(
       if (entry.target === 'aggregate') continue;
       const targetManifest = readBuildManifest(entry.manifestPath);
       const manifestDef = result.selectedManifests.find((s) => s.id === entry.target)!;
-      const targetOutputs: Record<string, string> = {
-        '.evcrate': join(packageRoot, '.evcrate', 'source', '.evcrate')
-      };
+      const targetOutputs: Record<string, string> = {};
       for (const root of manifestDef.outputRoots) {
         targetOutputs[root] = localProjectionPath(join(packageRoot, '.evcrate', 'source'), root);
       }

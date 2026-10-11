@@ -39,13 +39,15 @@ test('package metadata includes the CLI, declarations, and required runtime asse
   const files = output[0].files.map(({ path }) => path);
   for (const expected of [
     'dist/cli/evcrate.js', 'dist/index.js', 'dist/index.d.ts',
-    '.evcrate/source/.evcrate/bin/evcrate-advisor', '.evcrate/targets/manifest.json'
+    '.evcrate/source/.claude', '.evcrate/targets/manifest.json'
   ]) assert.ok(files.includes(expected) || files.some((file) => file.startsWith(expected)), expected);
   assert.equal(files.some((f) => f.startsWith('distribution/') || f.startsWith('distribute.py')), false);
   assert.equal(files.some((f) => f.startsWith('plans/')), false, 'Packaged artifact must not contain plans/');
   assert.equal(packageMetadata.private, true, 'Package must be marked private: true');
   assert.equal(packageMetadata.publishConfig, undefined, 'Package must not declare publishConfig');
   assert.equal(packageMetadata.dependencies, undefined, 'Package must declare zero production dependencies');
+  assert.deepEqual(packageMetadata.bin, { evcrate: 'dist/cli/evcrate.js' });
+  assert.equal(files.some((path) => path.startsWith('.evcrate/source/.evcrate/') || path.startsWith('viewer/')), false);
 });
 
 test('importing the sealed package entrypoint has no process or output side effect', () => {

@@ -177,3 +177,74 @@ test('WRQ-058 & prepareWindowsPredecessor: qualified release downloads, verifies
     fs.rmSync(outDir, { recursive: true, force: true });
   }
 });
+
+test('WRQ-059: prepareWindowsPredecessor accepts qualified evcrate-private-release/v1 predecessor and rejects tampered controller_closure_digest', async () => {
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-pred-v1-src-'));
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-pred-v1-dest-'));
+
+  try {
+    const version = '2.11.0';
+    const ctrlData = Buffer.from('historical controller data\n');
+    const ctrlSha = (await import('node:crypto')).default.createHash('sha256').update(ctrlData).digest('hex');
+    const { createMinimalValidRecords } = await import('../installers/fixtures/fixture-records.mjs');
+    const records = [
+      ...createMinimalValidRecords(version),
+      {
+        path: '.evcrate/source/.evcrate/bin/historical.cjs',
+        data: ctrlData,
+        mode: 0o644,
+        size: ctrlData.length,
+        sha256: ctrlSha
+      }
+    ];
+
+    buildWindowsTestReleaseSet({ outputDir: fixtureDir, version, records, schema: 'evcrate-private-release/v1' });
+    const mockRelease = makeMockRelease(version, { qualified: true });
+
+    const downloadFn = async (asset, destPath) => {
+      const src = path.join(fixtureDir, asset.name);
+      fs.copyFileSync(src, destPath);
+    };
+
+    const result = await prepareWindowsPredecessor({
+      candidateVersion: '2.12.0',
+      outputDir: outDir,
+      releases: [mockRelease],
+      downloadFn
+    });
+
+    assert.equal(result.kind, QUALIFIED_KIND);
+    assert.equal(result.version, version);
+    assert.equal(result.files.length, 4);
+
+    // Tamper with controller_closure_digest in metadata
+    const outDirTamper = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-pred-v1-tamper-'));
+    try {
+      const tamperMetaFn = async (asset, destPath) => {
+        const src = path.join(fixtureDir, asset.name);
+        if (asset.name.endsWith('.release.json')) {
+          const metaObj = JSON.parse(fs.readFileSync(src, 'utf8'));
+          metaObj.controller_closure_digest = 'f'.repeat(64);
+          fs.writeFileSync(destPath, JSON.stringify(metaObj));
+        } else {
+          fs.copyFileSync(src, destPath);
+        }
+      };
+
+      await assert.rejects(
+        () => prepareWindowsPredecessor({
+          candidateVersion: '2.12.0',
+          outputDir: outDirTamper,
+          releases: [mockRelease],
+          downloadFn: tamperMetaFn
+        }),
+        /Predecessor controller closure digest mismatch/u
+      );
+    } finally {
+      fs.rmSync(outDirTamper, { recursive: true, force: true });
+    }
+  } finally {
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
+});

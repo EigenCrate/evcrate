@@ -115,25 +115,23 @@ test('phase08-qualification: untrusted workspace documents honest safety boundar
 });
 
 // -----------------------------------------------------------------------------
-// 6. Wrong Harness Isolation & Relay Rejection
+// 6. Prompt Reminder Isolation
 // -----------------------------------------------------------------------------
-test('phase08-qualification: wrong harness rejects advisor relay without state mutation', () => {
+test('phase08-qualification: prompt reminder preserves session-state isolation', () => {
   const result = runWrongHarnessScenario();
   assert.equal(result.ok, true);
-  assert.equal(result.checks.hasSkillRule, true);
-  assert.equal(result.checks.hasWorkflowRule, true);
-  assert.equal(result.checks.relayExitPass, true);
+  assert.equal(result.checks.reminderPass, true);
   assert.equal(result.checks.noStateMutationPass, true);
 
   const receiptPath = path.join(REPORTS_ROOT, 'wrong-harness-isolation/receipt.md');
   assert.ok(fs.existsSync(receiptPath));
   const receipt = fs.readFileSync(receiptPath, 'utf8');
-  assert.ok(receipt.includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE'));
+  assert.ok(receipt.includes('Prompt Reminder Isolation'));
 
   const eventsPath = path.join(REPORTS_ROOT, 'wrong-harness-isolation/events-redacted.jsonl');
   assert.ok(fs.existsSync(eventsPath));
   const eventsContent = fs.readFileSync(eventsPath, 'utf8');
-  assert.ok(eventsContent.includes('ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE'));
+  assert.ok(eventsContent.includes('promptReminderIsolation'));
 });
 
 // -----------------------------------------------------------------------------
@@ -155,7 +153,7 @@ test('phase08-qualification: diagnostic protocol probes exercise host envelopes'
 // -----------------------------------------------------------------------------
 // 8. Context Ledger & Index Completeness
 // -----------------------------------------------------------------------------
-test('phase08-qualification: qualification index covers all 50 matrix capabilities (C01-C50)', () => {
+test('phase08-qualification: qualification index retains capability coverage without retired C37/C38 rows', () => {
   writeUnexercisedAndUnsupportedReceipts();
   generateQualificationIndex();
 
@@ -174,9 +172,13 @@ test('phase08-qualification: qualification index covers all 50 matrix capabiliti
     assert.ok(index.includes(ctx), `Index must reference ${ctx}`);
   }
 
-  // Verify all 50 capability IDs C01 to C50 appear in index
-  for (let i = 1; i <= 50; i++) {
-    const id = `C${String(i).padStart(2, '0')}`;
-    assert.ok(index.includes(`**${id}**`), `Capability ${id} must be in qualification index`);
+  const retiredIds = new Set(['C37', 'C38']);
+  const expectedIds = Array.from({ length: 50 }, (_, i) => `C${String(i + 1).padStart(2, '0')}`)
+    .filter(id => !retiredIds.has(id));
+  const actualIds = [...index.matchAll(/^\|\s*\*\*(C\d{2})\*\*\s*\|/gm)]
+    .map(match => match[1]);
+  assert.deepEqual(actualIds, expectedIds, 'Index must contain every retained capability exactly once');
+  for (const id of retiredIds) {
+    assert.ok(!actualIds.includes(id), `Retired capability ${id} must not have a qualification row`);
   }
 });

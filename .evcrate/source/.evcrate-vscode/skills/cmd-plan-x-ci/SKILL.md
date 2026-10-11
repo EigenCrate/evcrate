@@ -6,6 +6,7 @@ disable-model-invocation: true
 argument-hint: "[github-actions-url]"
 ---
 
+
 Activate `planning` skill.
 
 ## Github Actions URL

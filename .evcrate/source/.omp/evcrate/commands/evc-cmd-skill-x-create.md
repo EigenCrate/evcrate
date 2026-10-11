@@ -3,6 +3,7 @@ argument-hint: "[prompt-or-llms-or-github-url]"
 description: "Create a new agent skill"
 ---
 
+
 Ultrathink.
 Use `skill-creator` and `claude-code` skills.
 Use `docs-seeker` skills to search for documentation if needed.

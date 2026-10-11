@@ -4,14 +4,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
 import {
-  ADVISOR_CONTROLLER_FILES, buildManifestBytes, controllerHashes, loadSelectedManifests,
+  buildManifestBytes, loadSelectedManifests,
   loadTargetManifest, loadTargetManifestRegistry, manifestAdapterHashes, manifestSourceHashes,
-  readBuildManifest, validateAdvisorControllerProjection, validateAdvisorControllerSource, validateBuildManifest, validateManifestSet, verifyBuild
+  readBuildManifest, validateBuildManifest, validateManifestSet, verifyBuild
 } from '../../dist/index.js';
 
 const packageRoot = process.cwd();
 const registryPath = join(packageRoot, '.evcrate', 'targets', 'manifest.json');
-const controllerRoot = join(packageRoot, '.evcrate', 'source', '.evcrate', 'bin');
 const temporaryRoots = [];
 function temporaryDirectory() {
   const root = mkdtempSync(join(tmpdir(), 'evcrate-manifest-'));
@@ -39,106 +38,20 @@ test('schema-2 registry selection and input hashes follow persisted target decla
   assert.ok(Object.keys(manifestAdapterHashes(manifests, packageRoot)).length > 0);
 });
 
-test('verified build checks complete metadata, independent roots, and controller bytes', () => {
+test('verified build checks complete metadata and independent harness roots', () => {
   const root = temporaryDirectory();
   const manifestPath = join(root, '.evcrate', 'build-manifest.json');
   mkdirSync(join(root, '.evcrate'), { recursive: true });
   const outputRoots = Object.fromEntries([
-    '.agents/skills', '.antigravity', '.claude', '.codex', '.copilot', '.evcrate',
+    '.agents/skills', '.antigravity', '.claude', '.codex', '.copilot',
     '.omp', '.pi', 'AGENTS.md'
   ].map((name) => [name, join(packageRoot, '.evcrate', 'source', name)]));
   writeFileSync(manifestPath, buildManifestBytes({
-    sourceHashes: {}, adapterHashes: {}, controllerHashes: controllerHashes(controllerRoot),
-    owners: {}, outputRoots, validation: { complete: true }, homePolicy: {}
+    sourceHashes: {}, adapterHashes: {},
+    owners: {}, outputRoots, validation: { complete: true, symlinks: 'rejected', target_registry: 'validated' }, homePolicy: {}
   }));
-  assert.equal(verifyBuild({ manifestPath, outputRoots, controllerRoot, sourceHashes: {}, adapterHashes: {} }).schema_version, 2);
+  assert.equal(verifyBuild({ manifestPath, outputRoots, sourceHashes: {}, adapterHashes: {} }).schema_version, 3);
   assert.throws(() => verifyBuild({ manifestPath, outputRoots: { ...outputRoots, '.wrong': outputRoots['.claude'] } }), code('PUBLICATION_FAILED'));
-});
-test('controller verifier rejects an extra production tree entry', () => {
-  const root = temporaryDirectory();
-  const copy = join(root, 'bin');
-  cpSync(controllerRoot, copy, { recursive: true });
-  writeFileSync(join(copy, 'lib', 'advisor', 'extra.cjs'), 'module.exports = {}');
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-});
-test('controller closure enforces complete inventory, regular files, and require boundaries', () => {
-  const hashes = controllerHashes(controllerRoot);
-  assert.equal(Object.keys(hashes).length, ADVISOR_CONTROLLER_FILES.length);
-  const root = temporaryDirectory();
-  const copy = join(root, 'bin');
-  cpSync(controllerRoot, copy, { recursive: true });
-  writeFileSync(join(copy, 'viewer.js'), 'export const viewer = true;');
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-  rmSync(join(copy, 'viewer.js'));
-  writeFileSync(join(copy, 'lib', 'advisor', 'runner.cjs'), "require('lodash');\n");
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-});
-test('controller closure rejects a missing helper module or invalid helper launch header', () => {
-  const copy = join(temporaryDirectory(), 'bin');
-  cpSync(controllerRoot, copy, { recursive: true });
-  const helper = join(copy, 'evcrate-advice-mode');
-  const source = readFileSync(helper, 'utf8');
-  writeFileSync(helper, source.replace('#!/usr/bin/env node', '#!/bin/sh'));
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-  writeFileSync(helper, source);
-  rmSync(join(copy, 'lib', 'advisor', 'activation.cjs'));
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-});
-test('controller validator accepts valid Mach-O binary assets and rejects truncated or invalid binary', () => {
-  const root = temporaryDirectory();
-  const copy = join(root, 'bin');
-  cpSync(controllerRoot, copy, { recursive: true });
-
-  const arm64Node = join(copy, 'lib', 'advisor', 'native', 'darwin', 'prebuilt', 'darwin-arm64', 'advisor-native.node');
-  writeFileSync(arm64Node, Buffer.from([0x01, 0x02]));
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-
-  writeFileSync(arm64Node, Buffer.alloc(100));
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-});
-test('controller closure rejects non-loader requiring native .node addon', () => {
-  const root = temporaryDirectory();
-  const copy = join(root, 'bin');
-  cpSync(controllerRoot, copy, { recursive: true });
-
-  const runnerPath = join(copy, 'lib', 'advisor', 'runner.cjs');
-  const original = readFileSync(runnerPath, 'utf8');
-  writeFileSync(runnerPath, `${original}\nrequire('./native/darwin/prebuilt/darwin-arm64/advisor-native.node');\n`);
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-});
-test('controller validator treats native text assets (.cs and .ps1) as owned text data, not JavaScript modules', () => {
-  const root = temporaryDirectory();
-  const copy = join(root, 'bin');
-  cpSync(controllerRoot, copy, { recursive: true });
-
-  const csPath = join(copy, 'lib', 'advisor', 'windows-native.cs');
-  const originalCs = readFileSync(csPath, 'utf8');
-
-  const ps1Path = join(copy, 'lib', 'advisor', 'windows-native.ps1');
-  const originalPs1 = readFileSync(ps1Path, 'utf8');
-
-  // Reject UTF-8 BOM in native text assets.
-  writeFileSync(csPath, `\uFEFF${originalCs}`);
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-  writeFileSync(csPath, originalCs);
-
-  writeFileSync(ps1Path, `\uFEFF${originalPs1}`);
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-  writeFileSync(ps1Path, originalPs1);
-
-  // 3. Reject requiring a native text asset from a JavaScript module
-  const runnerPath = join(copy, 'lib', 'advisor', 'runner.cjs');
-  const originalRunner = readFileSync(runnerPath, 'utf8');
-  writeFileSync(runnerPath, `${originalRunner}\nrequire('./windows-native.cs');\n`);
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-  writeFileSync(runnerPath, `${originalRunner}\nrequire('./windows-native.ps1');\n`);
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
-  writeFileSync(runnerPath, originalRunner);
-
-  // 4. Reject arbitrary executable file kinds in controller (no broad executable allowance)
-  const execPath = join(copy, 'lib', 'advisor', 'helper.exe');
-  writeFileSync(execPath, 'binary');
-  assert.throws(() => validateAdvisorControllerSource(copy), code('PATH_UNSAFE'));
 });
 
 
@@ -211,20 +124,27 @@ test('build manifest reader accepts documents up to its declared bound', () => {
   const directory = join(root, '.evcrate');
   mkdirSync(directory);
   writeFileSync(join(directory, 'build-manifest.json'), JSON.stringify({
-    schema_version: 2, source_hashes: {}, adapter_hashes: {}, controller_hashes: controllerHashes(controllerRoot),
-    owners: {}, output_hashes: {}, validation: { complete: true, padding: 'x'.repeat(70_000) }, home_policy: {}
+    schema_version: 3, source_hashes: {}, adapter_hashes: {},
+    owners: Object.fromEntries(Array.from({ length: 3000 }, (_, index) => [`files/${index}.md`, 'baseline'])),
+    output_hashes: {}, validation: { complete: true, symlinks: 'rejected', target_registry: 'validated' }, home_policy: {}
   }));
   assert.equal(readBuildManifest(join(directory, 'build-manifest.json')).validation.complete, true);
 });
 test('build manifest validator rejects unsafe keys and incomplete shape', () => {
   const digest = 'a'.repeat(64);
   const value = {
-    schema_version: 2, source_hashes: { '../escape': digest }, adapter_hashes: {},
-    controller_hashes: {}, owners: {}, output_hashes: {}, validation: {}, home_policy: {}
+    schema_version: 3, source_hashes: { '../escape': digest }, adapter_hashes: {},
+    owners: {}, output_hashes: {}, validation: { complete: true, symlinks: 'rejected', target_registry: 'validated' }, home_policy: {}
   };
   assert.throws(() => validateBuildManifest(value), code('PROTOCOL_INVALID'));
-  const valid = { ...value, source_hashes: { 'source/file': digest }, controller_hashes: controllerHashes(controllerRoot) };
-  assert.equal(validateBuildManifest(valid).schema_version, 2);
+  const valid = { ...value, source_hashes: { 'source/file': digest } };
+  assert.equal(validateBuildManifest(valid).schema_version, 3);
+  for (const schema_version of [1, 2]) {
+    assert.throws(() => validateBuildManifest({ ...valid, schema_version }),
+      (error) => error.code === 'PROTOCOL_INVALID' && /regenerate/u.test(error.detail));
+  }
+  assert.throws(() => validateBuildManifest({ ...valid, controller_hashes: {} }), code('PROTOCOL_INVALID'));
+  assert.throws(() => validateBuildManifest({ ...valid, validation: { ...valid.validation, advisor_controller: 'validated' } }), code('PROTOCOL_INVALID'));
 });
 test('resource roots reject sensitive metadata declarations', () => {
   const root = temporaryDirectory();

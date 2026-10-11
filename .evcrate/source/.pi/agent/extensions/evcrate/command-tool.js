@@ -9,15 +9,12 @@ export function createCommandDispatchState() {
   return { count: 0, names: new Set() };
 }
 
-export async function dispatchManagedCommand({ name, args = "", handoff = null }, context, options = {}) {
+export async function dispatchManagedCommand({ name, args = "" }, context, options = {}) {
   const state = options.state || createCommandDispatchState();
   const agentRoot = options.agentRoot || getAgentRoot();
   const find = options.find || ((commandName) => findManagedCommand(commandName, agentRoot));
   if (typeof name !== "string" || !name) throw new Error("evcrate_command requires a discovered command name");
   if (typeof args !== "string") throw new Error("evcrate_command requires raw string args");
-  if (handoff !== null && (!handoff || typeof handoff !== "object" || Array.isArray(handoff))) {
-    throw new Error("evcrate_command handoff must be an object or null");
-  }
   if (state.count >= (options.maxDepth || MAX_COMMAND_DEPTH)) throw new Error("evcrate_command maximum nesting depth reached");
   if (state.count >= (options.maxInvocations || MAX_COMMAND_INVOCATIONS)) throw new Error("evcrate_command invocation limit reached");
   if (state.names.has(name)) throw new Error(`evcrate_command cycle detected at ${name}`);
@@ -37,10 +34,9 @@ export async function dispatchManagedCommand({ name, args = "", handoff = null }
         source: "model-tool",
         command: canonicalCommand,
         rawArguments: args,
-        handoff,
       },
     });
-    return { command: name, canonicalCommand, handoff, body: expanded.body, state };
+    return { command: name, canonicalCommand, body: expanded.body, state };
   } catch (error) {
     state.count -= 1;
     state.names.delete(name);
@@ -62,14 +58,10 @@ export async function registerCommandTool(pi, options = {}) {
   pi.registerTool({
     name: "evcrate_command",
     label: "EVCrate Command",
-    description: "Expand one discovered EVCrate command and carry any direct activation handoff for this agent run.",
+    description: "Expand one discovered EVCrate command with its original raw arguments for this agent run.",
     parameters: Type.Object({
       name: Type.String({ description: "Discovered EVCrate command name, without a slash" }),
       args: Type.Optional(Type.String({ description: "Original raw command arguments; never shell-normalized" })),
-      handoff: Type.Optional(Type.Unsafe({
-        type: "object",
-        description: "Direct pre-run or same-run handoff from advice-activation.md; forwarded unchanged for shared-helper validation",
-      })),
     }),
     async execute(_id, params, _signal, _update, context) {
       const command = findManagedCommand(params.name, agentRoot);
@@ -84,7 +76,6 @@ export async function registerCommandTool(pi, options = {}) {
         const result = await dispatchManagedCommand({
           name: params.name,
           args: params.args ?? "",
-          handoff: params.handoff ?? null,
         }, context, {
           ...options,
           pi,
@@ -106,7 +97,6 @@ export async function registerCommandTool(pi, options = {}) {
             command: result.command,
             canonicalCommand: result.canonicalCommand,
             source: "model-tool",
-            handoff: result.handoff,
           },
         };
       } catch (error) {

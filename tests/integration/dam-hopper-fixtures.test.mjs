@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  validateDiagnosticResult,
   validateResourceResult
 } from '../../dist/protocol/index.js';
 import { detectCounselFields } from './dam-hopper-errors.mjs';
@@ -45,13 +44,6 @@ test('dam-hopper scope mutation and publish fixtures match protocol v1 schema', 
   assert.equal(detectCounselFields(publish), false);
 });
 
-test('dam-hopper health qualification fixture matches diagnostic v1 schema', () => {
-  const { response } = readFixture('health-qualification.json');
-  assert.doesNotThrow(() => validateDiagnosticResult(response));
-  assert.equal(response.protocol, 'evcrate-advisor-diagnostic');
-  assert.equal(response.status, 'QUALIFIED');
-  assert.equal(detectCounselFields(response), false);
-});
 
 test('dam-hopper conflict and error fixtures match protocol schema', () => {
   const { casConflict, validationError } = readFixture('conflict-and-errors.json');
@@ -63,7 +55,6 @@ test('dam-hopper conflict and error fixtures match protocol schema', () => {
 });
 
 test('dam-hopper negative proxy fixtures trigger counsel detection', () => {
-  const { counselPayloadInResourceRequest, counselPayloadInHealthRequest } = readFixture('negative-proxy.json');
+  const { counselPayloadInResourceRequest } = readFixture('negative-proxy.json');
   assert.equal(detectCounselFields(counselPayloadInResourceRequest), true);
-  assert.equal(detectCounselFields(counselPayloadInHealthRequest), true);
 });

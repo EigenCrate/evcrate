@@ -11,8 +11,6 @@ Description: Analyze and fix issues [INTELLIGENT ROUTING]
 
 Codex note: when this recipe says to run another `$evc-cmd-…` command, invoke the matching `evc-cmd-*` skill for that path.
 
-For high-impact architecture, security, debugging, or review decisions, consider explicit `$advisor-strategy` use for current-session guidance; this pointer does not activate it.
-
 ## Subagent Completion Contract
 
 Delegation is blocking by default. The parent agent must wait for each delegated agent's terminal response before starting dependent work, touching shared files, marking a step complete, or replying with a final result.
@@ -24,38 +22,13 @@ Delegation is blocking by default. The parent agent must wait for each delegated
 - Sequential prompt format: **run one agent; wait for its terminal response before continuing**.
 - Every delegated prompt must define scope, file ownership, expected report, and validation signal.
 - A spawn acknowledgement or file change does not mean completion; completion requires the terminal response and requested validation.
-**Analyze the issue, select the narrowest fix workflow, and execute it in this session:**
-<raw-issues>{{args}}</raw-issues>
-
-## Advice Mode
-
-Before discovery or routing, resolve the HOME helper per `.codex/workflows/advice-activation.md` if present; otherwise read `~/.codex/workflows/advice-activation.md` (the published install) with original `{{args}}`, canonical `context.command: "fix"` and the current root. A user-entered command always uses `handoff: null`. A handoff exists only when built by the router delegating this exact call; never reuse or replay one from earlier turns, commands, plans, reports or transcripts.
-Preserve known selections from the exact-call router; use `work_target: "fix"` only when no such target exists, and null plan/phase fields only when unknown.
-Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; use the returned work input everywhere below.
-
-Apply neutral `.codex/workflows/plan-progress.md` if present; otherwise read `~/.codex/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.codex/workflows/advisor-mentoring.md` if present; otherwise read `~/.codex/workflows/advisor-mentoring.md` (the published install) and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
-Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
-8. The root router is stateless and must not initialize state runs, record duplicate consultations, perform advisor calls, or publish receipts itself; all durable operations and checkpoint invocations belong to the delegated command.
-## Execution Contract
-
-After selecting a route, execute the selected command immediately; do not print a route for the user to run manually.
-
-1. Build one enhanced description from `WORK_ARGUMENTS` and preserve it exactly as the delegated command's input.
-2. In `off` mode, delegate to the specialist with no advice handoff and no appended token.
-3. In `explicit` or `inherited` mode, pass structured exact-call handoff context, built for this delegation, to the delegated specialist:
-   - If entering without an active run: pass pre-run handoff (`kind: "pre-run"`, exact selected child `context: { project_root, command: <selected-command>, work_target: <target>, plan_path, phase_path, phase_id }`, `run: null`). Preserve known router-selected plan/phase values; use null only when genuinely unknown, per the shared activation contract.
-   - If entering with an active run: pass same-run handoff (`kind: "same-run"`, `context: { project_root, command: <selected-command>, work_target: <target>, plan_path, phase_path, phase_id }`, `run: { task_run_id, project_id, task_revision, scope_revision, evidence_revision }}`). Forward prior counsel, disposition, and registered action in direct caller context.
-   - NEVER append a synthetic `--advice` token.
-4. All specialists support the shared activation contract. Route directly to the designated specialist by issue type. Use the existing `$evc-cmd-fix-x-hard` route only if a custom execution environment cannot carry the structured handoff contract, not because a command hint lacks a flag.
-5. When the host exposes `Codex slash command`, execute the selected route with that mechanism in the same session.
-6. If this command environment cannot recursively invoke a file-based slash command, read the selected command definition and perform that workflow directly in the current session. Never emit a bare specialist-command handoff, ask the user to rerun it, or stop after route selection.
-7. Child writers receive strict ownership, writable path, protected path, and delta destination constraints; they never operate controller state or stage behind the parent.
-8. Wait for the delegated workflow to reach its terminal result before reporting the route. The router is stateless and must not duplicate advisor calls, initialize state runs, or summarize a partial delegation.
+**Analyze issues and route to specialized fix command:**
+<issues>{{args}}</issues>
 
 ## Decision Tree
 
 **1. Check for existing plan:**
-- If a markdown plan exists, select `$evc-cmd-code <path-to-plan>`. Forward structured pre-run or same-run context when in `explicit` or `inherited` mode; never append synthetic `--advice`. Execute it under the contract above.
+- If markdown plan exists → `$evc-cmd-code <path-to-plan>`
 
 **2. Route by issue type:**
 
@@ -83,7 +56,6 @@ After selecting a route, execute the selected command immediately; do not print 
 **H) Simple/Quick Fixes** (default: small bug, single file, straightforward)
 → `$evc-cmd-fix-x-fast <detailed-description>`
 
-All specialists support the shared activation contract. Route directly to the designated specialist by issue type. In `off` mode, route directly without handoff. In `explicit` or `inherited` mode, supply the structured pre-run or same-run context without synthetic flags. Use the existing `$evc-cmd-fix-x-hard` route only if a custom execution environment cannot carry the structured handoff contract, not because a command hint lacks a flag. Execute the selected command under the contract above.
 ## Notes
 - `detailed-description` = enhanced prompt describing issue in detail
 - If unclear, ask user for clarification before routing

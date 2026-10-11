@@ -11,7 +11,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # Constants and schemas
-$SCHEMA_RELEASE = 'evcrate-private-release/v1'
+$SCHEMA_RELEASE = 'evcrate-private-release/v2'
 $SCHEMA_JOURNAL = 'evcrate-install-journal/v1'
 $SCHEMA_RECEIPT = 'evcrate-installer-receipt/v1'
 $SCHEMA_OWNED = 'evcrate-installer-owned/v1'
@@ -42,54 +42,6 @@ foreach ($name in @(
     [void]$DOS_DEVICE_NAMES.Add($name)
 }
 
-$ADVISOR_CONTROLLER_FILES = @(
-    'evcrate-advisor',
-    'evcrate-advice-mode',
-    'lib/advisor/activation.cjs',
-    'lib/advisor/adapter-contract.cjs',
-    'lib/advisor/adapter-registry.cjs',
-    'lib/advisor/adapters/claude.cjs',
-    'lib/advisor/adapters/codex.cjs',
-    'lib/advisor/adapters/omp.cjs',
-    'lib/advisor/adapters/omp-parser.cjs',
-    'lib/advisor/adapters/pi.cjs',
-    'lib/advisor/checkpoint-contract.cjs',
-    'lib/advisor/contracts-v2.cjs',
-    'lib/advisor/controller-envelope.cjs',
-    'lib/advisor/controller.cjs',
-    'lib/advisor/darwin-platform.cjs',
-    'lib/advisor/errors.cjs',
-    'lib/advisor/generated/advisor-contract-runtime.js',
-    'lib/advisor/generated/advisor-metrics.js',
-    'lib/advisor/generated/canonical-json.js',
-    'lib/advisor/generated/json.js',
-    'lib/advisor/history-contract.cjs',
-    'lib/advisor/history-prune.cjs',
-    'lib/advisor/history-query.cjs',
-    'lib/advisor/history-store.cjs',
-    'lib/advisor/isolated-workspace.cjs',
-    'lib/advisor/json-document.cjs',
-    'lib/advisor/managed-checkpoint.cjs',
-    'lib/advisor/native/darwin/advisor-native.c',
-    'lib/advisor/native/darwin/advisor-native.h',
-    'lib/advisor/native/darwin/prebuilt/artifacts.json',
-    'lib/advisor/native/darwin/prebuilt/darwin-arm64/advisor-native.node',
-    'lib/advisor/native/darwin/prebuilt/darwin-x64/advisor-native.node',
-    'lib/advisor/native/darwin/process.c',
-    'lib/advisor/native/darwin/storage.c',
-    'lib/advisor/policy-schema.cjs',
-    'lib/advisor/profile.cjs',
-    'lib/advisor/runner.cjs',
-    'lib/advisor/runtime-brief.generated.cjs',
-    'lib/advisor/state-baseline.cjs',
-    'lib/advisor/state-contract.cjs',
-    'lib/advisor/state-human.cjs',
-    'lib/advisor/state-io.cjs',
-    'lib/advisor/task-state.cjs',
-    'lib/advisor/windows-native.cs',
-    'lib/advisor/windows-native.ps1',
-    'lib/advisor/windows-platform.cjs'
-)
 
 # ---------------------------------------------------------------------------
 # Canonical JSON serialization helper (matches RFC 8785 & EVCrate contract)
@@ -529,10 +481,33 @@ function Validate-ReleaseMetadata {
     param(
         $Metadata,
         [string]$ArchivePath,
-        [string]$ArchiveSha256
+        [string]$ArchiveSha256,
+        $RecordedReceipt = $null
     )
-    if ($Metadata.schema -ne $SCHEMA_RELEASE) {
-        throw [System.InvalidOperationException]::new("Invalid metadata schema: $($Metadata.schema), expected $SCHEMA_RELEASE")
+    $historical = $Metadata.schema -eq 'evcrate-private-release/v1'
+    if ($historical -and ($null -eq $RecordedReceipt -or $RecordedReceipt.schema -ne $SCHEMA_RECEIPT -or
+        $RecordedReceipt.version -ne $Metadata.version -or $RecordedReceipt.archive_sha256 -ne $ArchiveSha256 -or
+        $RecordedReceipt.inventory_digest -ne $Metadata.inventory_digest -or
+        $RecordedReceipt.archive_name -ne [System.IO.Path]::GetFileName($ArchivePath))) {
+        throw [System.InvalidOperationException]::new('Old release assets require repair of a recorded matching predecessor snapshot; use the predecessor installer for fresh installation or regenerate v2 assets.')
+    }
+    $keys = @('schema', 'version', 'tag', 'source_commit', 'node_floor', 'inventory_digest', 'build_manifest_digests', 'platforms', 'installers', 'mutable_paths')
+    if ($historical) { $keys += 'controller_closure_digest' }
+    $actualKeys = @($Metadata.PSObject.Properties.Name)
+    if ((-not $historical -and $Metadata.schema -ne $SCHEMA_RELEASE) -or $actualKeys.Count -ne $keys.Count -or
+        @($actualKeys | Where-Object { $_ -notin $keys }).Count -ne 0 -or
+        $Metadata.version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$' -or
+        $Metadata.tag -ne "v$($Metadata.version)" -or $Metadata.source_commit -notmatch '^[a-f0-9]{40}$' -or
+        $Metadata.node_floor -ne '>=22.19.0' -or $Metadata.inventory_digest -notmatch '^[a-f0-9]{64}$' -or
+        ($historical -and $Metadata.controller_closure_digest -notmatch '^[a-f0-9]{64}$') -or
+        ($Metadata.mutable_paths -join '|') -ne ($MUTABLE_PATHS -join '|')) {
+        throw [System.InvalidOperationException]::new('Invalid release metadata schema or fields')
+    }
+    if ((@($Metadata.build_manifest_digests.PSObject.Properties.Name | Sort-Object) -join '|') -ne 'all|antigravity|claude|codex|copilot|omp|pi|vscode' -or
+        @($Metadata.build_manifest_digests.PSObject.Properties | Where-Object { $_.Value -notmatch '^[a-f0-9]{64}$' }).Count -ne 0 -or
+        (@($Metadata.platforms.PSObject.Properties.Name | Sort-Object) -join '|') -ne 'linux-x64|windows-x64' -or
+        (@($Metadata.installers.PSObject.Properties.Name | Sort-Object) -join '|') -ne 'install.ps1|install.sh') {
+        throw [System.InvalidOperationException]::new('Invalid release inventory metadata')
     }
     $winPlatform = $Metadata.platforms.'windows-x64'
     if ($null -eq $winPlatform) {
@@ -1425,7 +1400,32 @@ function Perform-Install {
 
     # 3. Verify metadata
     $metadata = Parse-JsonFile -FilePath $Assets.metadataPath
-    Validate-ReleaseMetadata -Metadata $metadata -ArchivePath $Assets.archivePath -ArchiveSha256 $archiveSha
+    $recordedReceipt = $null
+    if ($IsRepair -and [System.IO.File]::Exists($Roots.currentJson)) {
+        $pointer = Parse-JsonFile -FilePath $Roots.currentJson
+        $predecessorDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($Roots.versionsDir, $pointer.version_dir))
+        Assert-ContainedPath -BasePath $Roots.versionsDir -CandidatePath $predecessorDir -AllowExact $false -Message 'Unsafe predecessor snapshot'
+        Assert-NoReparseAncestor -Path $predecessorDir -Description 'predecessor snapshot'
+        if (-not [System.IO.Directory]::Exists($predecessorDir) -or
+            -not [string]::Equals([System.IO.Path]::GetDirectoryName($predecessorDir),
+                [System.IO.Path]::GetFullPath($Roots.versionsDir), [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw [System.InvalidOperationException]::new('Unsafe predecessor snapshot')
+        }
+        # Only historical assets require receipt contents; current assets repair
+        # missing or corrupt receipts without bypassing snapshot path safety.
+        if ($metadata.schema -eq 'evcrate-private-release/v1') {
+            $receiptPath = [System.IO.Path]::Combine($predecessorDir, 'installer-receipt.json')
+            Assert-NoReparseAncestor -Path $receiptPath -Description 'predecessor receipt'
+            if (-not [System.IO.File]::Exists($receiptPath)) {
+                throw [System.InvalidOperationException]::new('Predecessor receipt must be a regular non-reparse file')
+            }
+            $recordedReceipt = Parse-JsonFile -FilePath $receiptPath
+            if ($recordedReceipt.snapshot_id -cne [System.IO.Path]::GetFileName($predecessorDir)) {
+                throw [System.InvalidOperationException]::new('Predecessor receipt snapshot mismatch')
+            }
+        }
+    }
+    Validate-ReleaseMetadata -Metadata $metadata -ArchivePath $Assets.archivePath -ArchiveSha256 $archiveSha -RecordedReceipt $recordedReceipt
 
     # 4. Idempotent check
     $oldSnapshotId = $null
@@ -1489,6 +1489,14 @@ function Perform-Install {
     if ($pkg.version -ne $metadata.version) {
         throw [System.InvalidOperationException]::new("package.json version $($pkg.version) does not match metadata $($metadata.version)")
     }
+    if ($metadata.schema -eq $SCHEMA_RELEASE -and (
+        $null -eq $pkg.PSObject.Properties['bin'] -or
+        $null -eq $pkg.bin -or $pkg.bin -isnot [System.Management.Automation.PSCustomObject] -or
+        @($pkg.bin.PSObject.Properties).Count -ne 1 -or
+        @($pkg.bin.PSObject.Properties.Name)[0] -cne 'evcrate' -or
+        $pkg.bin.evcrate -cne 'dist/cli/evcrate.js')) {
+        throw [System.InvalidOperationException]::new('Current package must expose only evcrate')
+    }
 
     # Verify build manifests
     if ($metadata.build_manifest_digests) {
@@ -1507,25 +1515,19 @@ function Perform-Install {
         }
     }
 
-    # Verify controller closure
-    if ($metadata.controller_closure_digest) {
-        $controllerDir = [System.IO.Path]::Combine($packageDir, '.evcrate', 'source', '.evcrate', 'bin')
-        if (-not [System.IO.Directory]::Exists($controllerDir)) {
-            throw [System.InvalidOperationException]::new('Controller closure directory missing from stage')
+    # Old recorded inventory is data, not a dependency on current runtime files.
+    if ($metadata.schema -eq 'evcrate-private-release/v1') {
+        $prefix = '.evcrate/source/.evcrate/bin/'
+        $map = @{}
+        foreach ($entry in $extractedRecords) {
+            if ($entry.path.StartsWith($prefix)) { $map[".evcrate/bin/$($entry.path.Substring($prefix.Length))"] = $entry.sha256 }
         }
-        $controllerMap = @{}
-        foreach ($entry in $ADVISOR_CONTROLLER_FILES) {
-            $entryFull = [System.IO.Path]::Combine($controllerDir, $entry.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
-            if (-not [System.IO.File]::Exists($entryFull)) {
-                throw [System.InvalidOperationException]::new("Controller file missing from stage: $entry")
-            }
-            $controllerMap[".evcrate/bin/$entry"] = Get-FileSha256Hex -FilePath $entryFull
+        $digest = Get-BytesSha256Hex -Bytes ([System.Text.Encoding]::UTF8.GetBytes("$(ConvertTo-CanonicalJson -InputObject $map)`n"))
+        if ($map.Count -eq 0 -or $digest -ne $metadata.controller_closure_digest) {
+            throw [System.InvalidOperationException]::new('Recorded predecessor controller digest mismatch')
         }
-        $closureJson = ConvertTo-CanonicalJson -InputObject $controllerMap
-        $computedClosureDigest = Get-BytesSha256Hex -Bytes ([System.Text.Encoding]::UTF8.GetBytes("$closureJson`n"))
-        if ($computedClosureDigest -ne $metadata.controller_closure_digest) {
-            throw [System.InvalidOperationException]::new("Controller closure digest $computedClosureDigest does not match metadata $($metadata.controller_closure_digest)")
-        }
+    } elseif (@($extractedRecords | Where-Object { $_.path.StartsWith('.evcrate/source/.evcrate/') }).Count -ne 0) {
+        throw [System.InvalidOperationException]::new('Current assets contain retired runtime files; regenerate the release')
     }
 
     # Verify inventory digest
