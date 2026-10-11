@@ -94,8 +94,9 @@ replace the canonical authoring tree.
 | Antigravity | `.agents/rules/evcrate-antigravity.md` includes `.antigravity/AGENTS.md` | `~/.gemini/config/AGENTS.md` | Native always-on rule / global standalone rule |
 
 OMP/Pi read bounded, nonempty UTF-8 payloads without symlink traversal; main
-contexts deliver once, then rebuild after compaction. OMP print skips input
-hooks: provider admission aborts an operation lacking an admitted context.
+contexts deliver once, then rebuild after compaction. When the OMP payload is
+unavailable or unsafe, OMP emits a warning and continues without blocking input
+or aborting provider requests.
 Pi consumes unsafe input; its child launch reads the installed payload before
 dispatch. A working-directory document is never a fallback.
 Pi marks startup-bearing messages separately from prompt reminders. When
