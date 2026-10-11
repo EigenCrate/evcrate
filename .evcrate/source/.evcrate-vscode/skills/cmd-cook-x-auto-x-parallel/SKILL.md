@@ -25,18 +25,18 @@ The implementation parent owns controller state and finalization; child writers 
 
 ## Positioning
 
-Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `/cmd-cook` first with `WORK_ARGUMENTS` and structured caller context per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install) (no synthetic flag).
+Use this only when work can be split into independent phases with clear dependencies and file ownership. If ownership, acceptance criteria, or side effects are unclear, run base `/evc:cmd-cook` first with `WORK_ARGUMENTS` and structured caller context per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install) (no synthetic flag).
 
 ## Workflow
 
 ### 1. Preflight & Research
-- Scout codebase with `/cmd-scout-x-ext` before planning
+- Scout codebase with `/evc:cmd-scout-x-ext` before planning
 - Define output, acceptance criteria, scope boundary, side-effect risks, and testing strategy
 - Use max 2 `evc-researcher` agents in parallel if tasks complex
 - Keep reports ≤150 lines
 
 ### 2. Parallel Planning
-- Trigger `/cmd-plan-x-parallel <detailed-instruction>`
+- Trigger `/evc:cmd-plan-x-parallel <detailed-instruction>`
 - Wait for plan with:
   - dependency graph
   - execution strategy

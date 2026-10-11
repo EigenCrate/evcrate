@@ -36,7 +36,7 @@ node .evcrate-vscode/evcrate/scripts/worktree.cjs info --json
 
 **For MONOREPO:** Use AskUserQuestion if project not specified:
 ```javascript
-// If user said "/cmd-worktree add auth" but multiple projects exist
+// If user said "/evc:cmd-worktree add auth" but multiple projects exist
 AskUserQuestion({
   questions: [{
     header: "Project",
@@ -111,7 +111,7 @@ node .evcrate-vscode/evcrate/scripts/worktree.cjs create "<SLUG>" --prefix <TYPE
 ## Example Session
 
 ```
-User: /cmd-worktree fix the login validation bug
+User: /evc:cmd-worktree fix the login validation bug
 
 Claude: [Runs: node .evcrate-vscode/evcrate/scripts/worktree.cjs info --json]
         [Detects: standalone repo, envFiles: [".env.example"]]

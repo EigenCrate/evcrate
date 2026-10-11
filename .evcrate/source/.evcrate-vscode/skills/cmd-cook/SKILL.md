@@ -21,12 +21,12 @@ Set `WORK_ARGUMENTS = result.work_arguments` and `ADVICE_MODE = result.mode`; us
 
 Apply neutral `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) in every mode. Only resolved `explicit` or `inherited` loads `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and follows its `## Caller lifecycle binding`; `off` keeps ordinary gates and uses only immutable in-repo receipts and sealed-path metadata, never `evcrate-advisor`, hard lifecycle or inference.
 Activation failures and repeated blockers follow the shared activation contract; neither history nor a checkpoint activates advice.
-This command is a stateless router; `/cmd-code` owns implementation and finalization. Delegate structured pre-run/same-run context per the activation contract, never initialize merely to route or append a synthetic flag.
+This command is a stateless router; `/evc:cmd-code` owns implementation and finalization. Delegate structured pre-run/same-run context per the activation contract, never initialize merely to route or append a synthetic flag.
 ---
 
 ## Role Responsibilities
 - You are an elite software engineering expert who specializes in system architecture design and technical decision-making. 
-- Your core mission is to collaborate with users to find the best possible solution, create a clear implementation plan, then hand off execution through `/cmd-code`.
+- Your core mission is to collaborate with users to find the best possible solution, create a clear implementation plan, then hand off execution through `/evc:cmd-code`.
 - You operate by the holy trinity of software engineering: **YAGNI** (You Aren't Gonna Need It), **KISS** (Keep It Simple, Stupid), and **DRY** (Don't Repeat Yourself). Every solution you propose must honor these principles.
 
 ---
@@ -47,20 +47,20 @@ This command is a stateless router; `/cmd-code` owns implementation and finaliza
 
 ## Command Contract
 
-`/cmd-cook` is the product-grade implementation workflow. Its job is to prevent coding before the repo, output, acceptance criteria, scope, risks, and test strategy are clear.
+`/evc:cmd-cook` is the product-grade implementation workflow. Its job is to prevent coding before the repo, output, acceptance criteria, scope, risks, and test strategy are clear.
 
 **Boundary:**
-- `/cmd-cook` owns discovery, preflight, research, planning, and handoff.
-- `/cmd-code` is the sole durable-state owner for implementation and substantive
+- `/evc:cmd-cook` owns discovery, preflight, research, planning, and handoff.
+- `/evc:cmd-code` is the sole durable-state owner for implementation and substantive
   finalization per `## Caller lifecycle binding`. It owns file edits,
   compile/typecheck, tests, code review, approval, docs/project updates, and
   finalization.
-- Do not edit code directly from `/cmd-cook`. Use `/cmd-code <plan-path>` after the plan is ready.
-- Root `/cmd-cook` delegates ownership to `/cmd-code`; do not mutate captured plan,
-  report, doc files, or Git index state after `/cmd-code` seals the run, and do not
+- Do not edit code directly from `/evc:cmd-cook`. Use `/evc:cmd-code <plan-path>` after the plan is ready.
+- Root `/evc:cmd-cook` delegates ownership to `/evc:cmd-code`; do not mutate captured plan,
+  report, doc files, or Git index state after `/evc:cmd-code` seals the run, and do not
   duplicate substantive finalization. When advice mode is active, phase-owned
-  configuration, onboarding, and selected Git decisions belong to `/cmd-code`'s
-  pre-outcome finalization and must be passed to `/cmd-code` before delegation/sealing.
+  configuration, onboarding, and selected Git decisions belong to `/evc:cmd-code`'s
+  pre-outcome finalization and must be passed to `/evc:cmd-code` before delegation/sealing.
 **Subagent synchronization:** Treat every planner, researcher, scout, tester, debugger, reviewer, project-manager, or docs-manager delegation as a blocking call. Wait for the terminal result, verify the requested report/artifact, and do not hand off, continue, or finalize from partial output. For parallel work, wait for every requested agent and require one result per agent.
 
 ## Workflow
@@ -75,7 +75,7 @@ This command is a stateless router; `/cmd-code` owns implementation and finaliza
 
 ### 2. Scout First
 
-* Use `/cmd-scout-x-ext` (preferred) or `/cmd-scout` (fallback) before proposing implementation details.
+* Use `/evc:cmd-scout-x-ext` (preferred) or `/evc:cmd-scout` (fallback) before proposing implementation details.
 * Scout for:
   - relevant code files and tests
   - docs and architecture references
@@ -95,7 +95,7 @@ Before planning implementation, write a concise preflight contract:
 * **Testing Strategy:** compile/typecheck, unit, integration, e2e, manual checks as relevant.
 * **Open Questions:** unresolved questions, or `none`.
 
-Do not hand off to `/cmd-code` until the preflight contract and plan are clear.
+Do not hand off to `/evc:cmd-code` until the preflight contract and plan are clear.
 
 ### 4. Research
 
@@ -124,21 +124,21 @@ Before handoff, verify the plan accounts for:
 
 ### 7. Implementation Handoff
 
-* Use `/cmd-code <plan-path>` Slash Command to implement the plan step by step without appending a synthetic `--advice` flag.
+* Use `/evc:cmd-code <plan-path>` Slash Command to implement the plan step by step without appending a synthetic `--advice` flag.
 * Pass direct structured downstream context per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install):
   - When `ADVICE_MODE` is `off`: pass no activation handoff.
   - When `ADVICE_MODE` is `explicit` or `inherited`:
     - If entering without an existing active run: pass pre-run handoff (`kind: "pre-run"`, `context: { project_root, command: "code", work_target: "<plan-path>", plan_path: "<plan-path>", phase_path, phase_id }`, `run: null`), preserving known phase_path and phase_id selections (null only when unknown). No UUID allocation or state init merely to hand off.
     - If entering with an existing active run: pass same-run handoff (`kind: "same-run"`, exact context and validated `run: { task_run_id, project_id, task_revision, scope_revision, evidence_revision }`), forwarding existing counsel and registered action context.
-* Never append a synthetic `--advice` flag to stand in for inheritance. Pass the plan path, any active run context, and any unresolved questions to `/cmd-code`.
-* In active advice mode, phase-owned configuration, onboarding, and selected Git decisions/execution belong to the implementation owner's pre-outcome finalization. Clarify any onboarding setup or commit preferences with the user and pass such decisions to `/cmd-code` before delegation/sealing.
-* In active advice mode, `/cmd-code` also owns required user approval/rejection and any accepted fix cycles before its final outcome and completion. Pass this requirement in the handoff; never return a sealed run to a corrective caller.
-* If the plan includes frontend work, ensure the `/cmd-code` handoff calls `evc-ui-ux-designer` and follows `./docs/design-guidelines.md`.
+* Never append a synthetic `--advice` flag to stand in for inheritance. Pass the plan path, any active run context, and any unresolved questions to `/evc:cmd-code`.
+* In active advice mode, phase-owned configuration, onboarding, and selected Git decisions/execution belong to the implementation owner's pre-outcome finalization. Clarify any onboarding setup or commit preferences with the user and pass such decisions to `/evc:cmd-code` before delegation/sealing.
+* In active advice mode, `/evc:cmd-code` also owns required user approval/rejection and any accepted fix cycles before its final outcome and completion. Pass this requirement in the handoff; never return a sealed run to a corrective caller.
+* If the plan includes frontend work, ensure the `/evc:cmd-code` handoff calls `evc-ui-ux-designer` and follows `./docs/design-guidelines.md`.
 * If the plan needs visual assets, include `ai-multimodal` and `media-processing` requirements in the plan.
 
 ### 8. Quality Gates & Lifecycle Ownership
 
-`/cmd-code` owns and enforces:
+`/evc:cmd-code` owns and enforces:
 
 * Compile/typecheck has no syntax errors.
 * Tests cover happy path, edge cases, and error cases.
@@ -152,12 +152,12 @@ Before handoff, verify the plan accounts for:
 ### 9. Project Management & Documentation
 
 Substantive plan progress, documentation, and roadmap updates belong to phase
-execution and are owned and finalized inside `/cmd-code` before sealing durable
+execution and are owned and finalized inside `/evc:cmd-code` before sealing durable
 completion under `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advisor-mentoring.md` (the published install) and neutral reconciliation in `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install).
 
-* Root `/cmd-cook` is a delegate router: it delegates this ownership to `/cmd-code` and
+* Root `/evc:cmd-cook` is a delegate router: it delegates this ownership to `/evc:cmd-code` and
   must not duplicate publication or durable controller operations. Do not mutate
-  captured plan, report, or doc files after `/cmd-code` seals its run, nor duplicate
+  captured plan, report, or doc files after `/evc:cmd-code` seals its run, nor duplicate
   substantive finalization.
 * Preserved historical snapshot protection applies across runs even in `off`
   mode; prior sealed paths remain immutable, while current-run registered
@@ -170,24 +170,24 @@ completion under `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workf
   `plan.md` remains untouched; startup and final output identify the overview
   instead of relying on stale `plan.md` display.
 * Under active advice mode, all phase-owned configuration, onboarding updates, and
-  selected Git transitions belong to `/cmd-code`'s pre-outcome finalization before
-  `state complete` seals the run. Root `/cmd-cook` delegates sealing to `/cmd-code` and
+  selected Git transitions belong to `/evc:cmd-code`'s pre-outcome finalization before
+  `state complete` seals the run. Root `/evc:cmd-cook` delegates sealing to `/evc:cmd-code` and
   performs no captured mutations or Git commands after seal.
 * Do not mark durable phase DONE prematurely or mutate captured evidence after
   complete. Do NOT prescribe copying DONE into captured files after sealing.
-* Parent plan-owning completion (`/cmd-code`) writes mandatory outside-snapshot
-  immutable phase completion receipts and live `progress.md` per `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install); root `/cmd-cook`
+* Parent plan-owning completion (`/evc:cmd-code`) writes mandatory outside-snapshot
+  immutable phase completion receipts and live `progress.md` per `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install); root `/evc:cmd-cook`
   does not duplicate publication.
 * In default mode, if the user rejects the changes, ask for the issues and route
-  back to `/cmd-code` with the plan and unresolved questions for a bounded fix cycle.
-* Under active advice mode, rejection and fixes are handled inside `/cmd-code` before
+  back to `/evc:cmd-code` with the plan and unresolved questions for a bounded fix cycle.
+* Under active advice mode, rejection and fixes are handled inside `/evc:cmd-code` before
   sealing. After its completion receipt, root output is read-only; do not route
   a completed run back into checkpoint, disposition, correction, or outcome work.
 ### 10. Onboarding
 
 * Under active advice mode: phase-owned configuration and onboarding setup belong
   to the implementation owner's pre-outcome finalization and were passed to
-  `/cmd-code` before sealing. After `/cmd-code` seals the run, provide readonly guidance
+  `/evc:cmd-code` before sealing. After `/evc:cmd-code` seals the run, provide readonly guidance
   only; perform no mutations to captured workspace paths or configuration files.
 * In default mode: preserve existing default-mode postimplementation behavior:
   * Instruct the user to get started with the feature if needed (for example: grab
@@ -205,7 +205,7 @@ completion under `## Caller lifecycle binding` in `.evcrate-vscode/evcrate/workf
   `<plan-dir>/progress.md`. Normal default plans with no history do not require,
   read, or output nonexistent progress links.
 * Under active advice mode: selected Git decisions and execution belong to the
-  implementation owner's pre-outcome finalization before sealing. After `/cmd-code`
+  implementation owner's pre-outcome finalization before sealing. After `/evc:cmd-code`
   seals the run, do not execute git commit or push commands or captured-file/selected-index
   mutations; emit readonly guidance or an uncaptured administrative receipt strictly
   outside the captured baseline snapshot only per `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install).

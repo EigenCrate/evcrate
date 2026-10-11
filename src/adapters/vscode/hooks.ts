@@ -62,7 +62,12 @@ export function convertVscodeHooks(context: ProjectionBuildContext): VscodeHookA
   // Portable help and catalog tools used by the projected procedures.
   const portableScripts = ['ev-help.py', 'scan_commands.py', 'scan_skills.py', 'generate_catalogs.py', 'win_compat.py'];
   for (const script of portableScripts) {
-    copyFile(context, `scripts/${script}`, `evcrate/scripts/${script}`, replaceHarnessPaths);
+    copyFile(context, `scripts/${script}`, `evcrate/scripts/${script}`, (value) => {
+      const withPaths = replaceHarnessPaths(value);
+      return script === 'ev-help.py'
+        ? withPaths.replace(/(?<![A-Za-z0-9_:-])\/evc-cmd-(?=[a-z0-9])/gu, '/evc:cmd-')
+        : withPaths;
+    });
   }
   copyFile(context, 'scripts/requirements.txt', 'evcrate/scripts/requirements.txt');
   const scripts = [

@@ -16,7 +16,7 @@ const mockCommands = {
     target: 'skills/cmd-plan-x-cro/SKILL.md',
     localName: 'cmd-plan-x-cro',
     targetName: 'cmd-plan-x-cro',
-    nativeInvocationName: '/cmd-plan-x-cro',
+    nativeInvocationName: '/evc:cmd-plan-x-cro',
     description: 'CRO plan procedure',
     disposition: 'approximated'
   },
@@ -27,7 +27,7 @@ const mockCommands = {
     target: 'skills/cmd-ask/SKILL.md',
     localName: 'cmd-ask',
     targetName: 'cmd-ask',
-    nativeInvocationName: '/cmd-ask',
+    nativeInvocationName: '/evc:cmd-ask',
     description: 'Ask question',
     disposition: 'approximated'
   }
@@ -84,9 +84,9 @@ test('references: replaceCommandPaths rewrites command file paths', () => {
   );
 });
 
-test('references: prompt transformation rewrites command invocations to local command names while preserving semantic IDs', () => {
-  const input = '/evc-cmd-plan-x-cro /evc-cmd-ask /plan/cro /plan:cro /evcrate:plan:cro /ask';
-  const expected = '/cmd-plan-x-cro /cmd-ask /plan/cro /plan:cro /evcrate:plan:cro /ask';
+test('references: prompt transformation rewrites command invocations and wildcard families to plugin-qualified names while preserving semantic IDs', () => {
+  const input = '/evc-cmd-plan-x-cro $evc-cmd-ask /evc-cmd-plan-x-* /evc-cmd-code* /plan/cro /plan:cro /evcrate:plan:cro /ask';
+  const expected = '/evc:cmd-plan-x-cro $evc:cmd-ask /evc:cmd-plan-x-* /evc:cmd-code* /plan/cro /plan:cro /evcrate:plan:cro /ask';
   assert.equal(transformVscodePrompt(input, mockCommands, mockSkills), expected);
 });
 

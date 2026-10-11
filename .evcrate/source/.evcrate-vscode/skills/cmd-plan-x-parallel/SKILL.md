@@ -21,7 +21,7 @@ $ARGUMENTS
 3. Use multiple `evc-researcher` agents (max 2 agents) in parallel to research for this task:
    Each agent research for a different aspect of the task and are allowed to perform max 5 tool calls.
 4. Analyze the codebase by reading `codebase-summary.md`, `code-standards.md`, `system-architecture.md` and `project-overview-pdr.md` file.
-   **ONLY PERFORM THIS FOLLOWING STEP IF `codebase-summary.md` is not available or older than 3 days**: Use `/cmd-scout <instructions>` slash command to search the codebase for files needed to complete the task.
+   **ONLY PERFORM THIS FOLLOWING STEP IF `codebase-summary.md` is not available or older than 3 days**: Use `/evc:cmd-scout <instructions>` slash command to search the codebase for files needed to complete the task.
 5. Main agent gathers all research and scout report filepaths, and pass them to `evc-planner` subagent with the prompt to create a parallel-optimized implementation plan.
 6. Main agent receives the implementation plan from `evc-planner` subagent, and ask user to review the plan
 
@@ -34,11 +34,11 @@ After plan creation, offer validation interview to confirm decisions before impl
 | Mode | Behavior |
 |------|----------|
 | `prompt` | Ask user: "Validate this plan with a brief interview?" → Yes (Recommended) / No |
-| `auto` | Automatically execute `/cmd-plan-x-validate {plan-path}` |
+| `auto` | Automatically execute `/evc:cmd-plan-x-validate {plan-path}` |
 | `off` | Skip validation step entirely |
 
 **If mode is `prompt`:** Use `AskUserQuestion` tool with options above.
-**If user chooses validation or mode is `auto`:** Execute `/cmd-plan-x-validate {plan-path}` SlashCommand.
+**If user chooses validation or mode is `auto`:** Execute `/evc:cmd-plan-x-validate {plan-path}` SlashCommand.
 
 ## Special Requirements for Parallel Execution
 

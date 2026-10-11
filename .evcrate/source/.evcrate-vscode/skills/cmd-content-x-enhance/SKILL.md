@@ -13,5 +13,5 @@ Enhance the copy based on reported issues:
 
 - If the user provides screenshots, use `ai-multimodal` skill to analyze and describe the issues in detail, ensuring the copywriter understands the context.
 - If the user provides videos, use `ai-multimodal` (`video-analysis`) skill to analyze video content and extract relevant copy issues.
-- Use `/cmd-scout-x-ext` (preferred) or `/cmd-scout` (fallback) slash command to search the codebase for files needed to complete the task
+- Use `/evc:cmd-scout-x-ext` (preferred) or `/evc:cmd-scout` (fallback) slash command to search the codebase for files needed to complete the task
 - Use `evc-copywriter` agent to write the enhanced copy into the code files, then report back to main agent.

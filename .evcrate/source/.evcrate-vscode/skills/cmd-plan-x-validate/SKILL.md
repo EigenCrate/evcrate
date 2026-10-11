@@ -14,7 +14,7 @@ Interview the user with critical questions to validate assumptions, confirm deci
 
 1. If `$ARGUMENTS` provided → Use that path
 2. Else check `## Plan Context` section → Use active plan path
-3. If no plan found → Ask user to specify path or run `/cmd-plan-x-hard` first
+3. If no plan found → Ask user to specify path or run `/evc:cmd-plan-x-hard` first
 
 ## Configuration (from injected context)
 

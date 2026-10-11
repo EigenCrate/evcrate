@@ -243,11 +243,11 @@ If $ALL_PHASES is `No`, wait for user confirmation before proceeding to the next
 All substantive summary-report files must be produced before the final outcome (during Step 5 finalization, authorized in the baseline manifest).
 When advice mode was active or when operating on a protected historical advice plan:
 - After sealing via `state complete` (or default completion on a protected plan), summary output is strictly read-only terminal output or an uncaptured administrative receipt outside the captured baseline snapshot identifying the sealed snapshot without claiming later unreviewed edits.
-- If this is the last phase: offer only read-only viewing of the sealed report and `<plan-dir>/progress.md`. Do not invoke `/cmd-plan-x-archive` or any preview operation that mutates prior sealed files; prior sealed paths remain unchanged.
+- If this is the last phase: offer only read-only viewing of the sealed report and `<plan-dir>/progress.md`. Do not invoke `/evc:cmd-plan-x-archive` or any preview operation that mutates prior sealed files; prior sealed paths remain unchanged.
 When operating on an untouched ordinary default plan:
 - Ordinary default behavior is unchanged. If this is the last phase, use `AskUserQuestion` tool to ask:
   - If user wants to preview the report with `/preview` slash command.
-  - If user wants to archive the plan with `/cmd-plan-x-archive` slash command.
+  - If user wants to archive the plan with `/evc:cmd-plan-x-archive` slash command.
 ---
 ## Critical Enforcement Rules
 

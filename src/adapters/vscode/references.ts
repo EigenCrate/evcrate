@@ -12,7 +12,7 @@ function protectSegments(value: string): {
   const saved: [string, string][] = [];
 
   const text = value.replace(URI_PATTERN, (original) => {
-    if (/^(?:claude|vscode):(?!\/\/)/iu.test(original)) return original;
+    if (/^(?:claude|vscode|evc):(?!\/\/)/iu.test(original)) return original;
     const token = `__EVCRATE_VSCODE_URI_${saved.length}__`;
     saved.push([token, original]);
     return token;
@@ -66,13 +66,13 @@ export function replaceCommandInvocations(
   for (const item of entries) {
     const canonicalStem = item.source.endsWith('.md') ? item.source.slice(0, -3) : item.source;
     if (canonicalStem !== item.localName) {
-      const pattern = new RegExp(`(?<![A-Za-z0-9_-])([/$])${escapeRegex(canonicalStem)}(?![A-Za-z0-9_-])`, 'gu');
-      rendered = rendered.replace(pattern, `$1${item.localName}`);
+      const pattern = new RegExp(`(?<![A-Za-z0-9_:-])([/$])${escapeRegex(canonicalStem)}(?![A-Za-z0-9_-])`, 'gu');
+      rendered = rendered.replace(pattern, `$1evc:${item.localName}`);
     }
   }
 
   // Rewrite wildcard command family references (e.g. /evc-cmd-plan-x-*, /evc-cmd-code*)
-  rendered = rendered.replace(/(?<![A-Za-z0-9_-])([/$])evc-cmd-(?=[a-z0-9])/gu, '$1cmd-');
+  rendered = rendered.replace(/(?<![A-Za-z0-9_:-])([/$])evc-cmd-(?=[a-z0-9])/gu, '$1evc:cmd-');
 
   return restoreSegments(rendered, guarded.protectedEntries);
 }

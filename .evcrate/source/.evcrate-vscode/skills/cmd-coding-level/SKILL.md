@@ -10,7 +10,7 @@ Set your coding experience level for tailored explanations and output format.
 
 ## Usage
 
-`/cmd-coding-level [0-5]`
+`/evc:cmd-coding-level [0-5]`
 
 ## Levels
 

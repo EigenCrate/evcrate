@@ -27,7 +27,7 @@ Think harder to scan the codebase and analyze it follow the Orchestration Protoc
 
 * Use 2 `evc-researcher` subagents in parallel to search up to max 5 sources for the user's request, idea validation, best practices, challenges, and find the best possible solutions.
 * Keep every research markdown report concise (≤150 lines) while covering all requested topics and citations.
-* Use `/cmd-scout-x-ext` (preferred) or `/cmd-scout` (fallback) slash command to search the codebase for files needed to complete the task
+* Use `/evc:cmd-scout-x-ext` (preferred) or `/evc:cmd-scout` (fallback) slash command to search the codebase for files needed to complete the task
 
 ### Code Review
 

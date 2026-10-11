@@ -93,7 +93,7 @@ Routine stack, plan, and design approvals are excluded unless explicitly classif
 irreversible, security-sensitive, or go/no-go. Otherwise continue the existing
 approval/action without a dispatcher checkpoint.
 ### 5. Parallel Planning & Implementation
-- Trigger `/cmd-plan-x-parallel <detailed-instruction>` for parallel-executable plan. In `explicit` or `inherited` mode, forward structured exact-call pre-run or same-run context built for that delegation; never append a synthetic `--advice` flag.
+- Trigger `/evc:cmd-plan-x-parallel <detailed-instruction>` for parallel-executable plan. In `explicit` or `inherited` mode, forward structured exact-call pre-run or same-run context built for that delegation; never append a synthetic `--advice` flag.
 - Reconcile plans and phase status via `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) before planning and before each parallel batch. An explicitly completed phase is a no-op; do not switch phases automatically.
 - For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched.
 - Read `plan.md` for dependency graph and execution strategy.

@@ -91,7 +91,7 @@ export function discoverVscodeCommands(context: ProjectionBuildContext): Record<
       target: `skills/${localName}/SKILL.md`,
       localName,
       targetName: localName,
-      nativeInvocationName: `/${localName}`,
+      nativeInvocationName: `/evc:${localName}`,
       description,
       argumentHint,
       disposition: 'approximated'

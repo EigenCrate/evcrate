@@ -71,13 +71,13 @@ Under `explicit` or `inherited` advice mode, this command directly coordinates p
 
 ### 1. Issue Analysis
 - Use `evc-debugger` subagent to analyze root causes
-- Use `/cmd-scout-x-ext` to find related files
+- Use `/evc:cmd-scout-x-ext` to find related files
 - Categorize issues by scope/area (frontend, backend, auth, payments, etc.)
 - Identify dependencies between issues
 
 ### 2. Parallel Fix Planning
 - In `explicit` or `inherited` advice mode with an active run, ensure plan generation and file ownership boundaries align with an accepted registered correction action within authorized scope (or resumed active action) before mutating plan files. Mutating plan files under disputed or unregistered counsel is forbidden.
-- Trigger `/cmd-plan-x-parallel <detailed-fix-instructions>` for parallel-executable fix plan. In `explicit` or `inherited` mode, pass structured pre-run or same-run context without appending synthetic `--advice`.
+- Trigger `/evc:cmd-plan-x-parallel <detailed-fix-instructions>` for parallel-executable fix plan. In `explicit` or `inherited` mode, pass structured pre-run or same-run context without appending synthetic `--advice`.
 - Reconcile plans and phase status via `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install) before planning and before each parallel batch. For advice-controlled plans, link navigation to `<plan-dir>/progress.md` before capture; old sealed plans remain untouched.
 - Wait for plan with dependency graph, execution strategy, file ownership matrix
 - Group independent fixes for parallel execution

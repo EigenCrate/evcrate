@@ -16,7 +16,7 @@ argument-hint: "[scope-or-prompt]"
 
 Main agent deeply analyzes the scope to LIST all potential edge cases FIRST:
 - Read `codebase-summary.md` for context
-- Use `/cmd-scout-x-ext` to find relevant files
+- Use `/evc:cmd-scout-x-ext` to find relevant files
 - **Think exhaustively** about what could go wrong:
   - Null/undefined scenarios
   - Boundary conditions (off-by-one, empty, max values)
@@ -90,8 +90,8 @@ Collect all verification reports:
 ### 5. Auto-Fix Pipeline
 
 **IF** unhandled/partial edge cases found:
-- Ask: "Found N unhandled edge cases. Fix with /cmd-fix-x-parallel? [Y/n]"
-- **IF yes:** Trigger `/cmd-fix-x-parallel` with unhandled list
+- Ask: "Found N unhandled edge cases. Fix with /evc:cmd-fix-x-parallel? [Y/n]"
+- **IF yes:** Trigger `/evc:cmd-fix-x-parallel` with unhandled list
 
 ### 6. Final Report
 
@@ -101,7 +101,7 @@ Collect all verification reports:
 ## Example
 
 ```
-User: /cmd-review-x-codebase-x-parallel auth module
+User: /evc:cmd-review-x-codebase-x-parallel auth module
 
 1. Ultrathink → Lists 12 edge cases for auth:
    - Empty password submission
@@ -119,7 +119,7 @@ User: /cmd-review-x-codebase-x-parallel auth module
 
 4. Aggregate → 8 handled, 3 unhandled, 1 partial
 
-5. Fix → User approves → /cmd-fix-x-parallel
+5. Fix → User approves → /evc:cmd-fix-x-parallel
 
 6. Final → Commit changes
 ```

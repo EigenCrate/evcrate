@@ -94,12 +94,35 @@ for (const target of targets) {
 
       const overview = invoke(script, [], foreign, install);
       assert.equal(overview.status, 0, overview.stderr + overview.stdout);
+      const categoryGuide = invoke(script, ['plan'], foreign, install);
+      assert.equal(categoryGuide.status, 0, categoryGuide.stderr + categoryGuide.stdout);
       const detail = invoke(script, ['plan:fast'], foreign, install);
       assert.equal(detail.status, 0, detail.stderr + detail.stdout);
       assert.ok(detail.stdout.includes(sentinel), detail.stdout);
       assert.ok(!detail.stdout.includes('Foreign catalog'), detail.stdout);
       const advice = invoke(script, ['advise'], foreign, install);
       assert.equal(advice.status, 0, advice.stderr + advice.stdout);
+      if (target === 'vscode') {
+        assert.ok(overview.stdout.includes('/evc:cmd-plan'), overview.stdout);
+        assert.ok(overview.stdout.includes('/evc:cmd-code'), overview.stdout);
+        assert.ok(overview.stdout.includes('/evc:cmd-help'), overview.stdout);
+        assert.ok(!overview.stdout.includes('/evc-cmd-'), overview.stdout);
+        assert.ok(categoryGuide.stdout.includes('/evc:cmd-plan-x-fast'), categoryGuide.stdout);
+        assert.ok(categoryGuide.stdout.includes('/evc:cmd-code'), categoryGuide.stdout);
+        assert.ok(!categoryGuide.stdout.includes('/evc-cmd-'), categoryGuide.stdout);
+        assert.ok(detail.stdout.includes('/evc:cmd-plan-x-fast'), detail.stdout);
+        assert.ok(!detail.stdout.includes('/evc-cmd-'), detail.stdout);
+        assert.ok(advice.stdout.includes('/evc:cmd-advise'), advice.stdout);
+        assert.ok(!advice.stdout.includes('/evc-cmd-'), advice.stdout);
+      } else {
+        assert.ok(overview.stdout.includes('/evc-cmd-plan'), overview.stdout);
+        assert.ok(overview.stdout.includes('/evc-cmd-code'), overview.stdout);
+        assert.ok(!overview.stdout.includes('/evc:cmd-'), overview.stdout);
+        assert.ok(categoryGuide.stdout.includes('/evc-cmd-plan-x-fast'), categoryGuide.stdout);
+        assert.ok(!categoryGuide.stdout.includes('/evc:cmd-'), categoryGuide.stdout);
+        assert.ok(detail.stdout.includes('/evc-cmd-plan-x-fast'), detail.stdout);
+        assert.ok(advice.stdout.includes('/evc-cmd-advise'), advice.stdout);
+      }
       if (target === 'claude') {
         assert.match(advice.stdout, /Claude-only relay/u);
         assert.doesNotMatch(advice.stdout, /ADVISE_AGENT_RELAY_UNSUPPORTED_/u);

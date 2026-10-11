@@ -29,7 +29,7 @@ or stage captured plans/evidence or their immutable receipts: exclude those
 plans from the archive candidates and provide read-only links instead. Ordinary
 uncaptured plans retain the confirmation and archive behavior below.
 
-### Step 2: Summarize the plans and document them with `/cmd-journal` slash command
+### Step 2: Summarize the plans and document them with `/evc:cmd-journal` slash command
 Use `AskUserQuestion` tool to ask if user wants to document journal entries or not.
 Skip this step if user selects "No".
 If user selects "Yes":
@@ -49,8 +49,8 @@ Start archiving the plans based on the user's choice:
 
 ### Step 5: Ask if user wants to commit the changes
 Use `AskUserQuestion` tool to ask if user wants to commit the changes with these options:
-- Stage and commit the changes (Use `/cmd-git-x-cm` slash command)
-- Commit and push the changes (Use `/cmd-git-x-cp` slash command)
+- Stage and commit the changes (Use `/evc:cmd-git-x-cm` slash command)
+- Commit and push the changes (Use `/evc:cmd-git-x-cp` slash command)
 - Nah, I'll do it later
 
 ## Output

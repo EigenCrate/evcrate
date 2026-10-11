@@ -141,7 +141,7 @@ active context rather than internally starting another review/advisor cycle.
        - PROCEED to Step 4 to complete planned finalization.
      - "Dispute advisor findings with evidence" →
        - When advice mode is active: parent records canonical `state disposition` (`action: "reject-with-evidence" | "need-evidence" | "reconcile"`, causal rationale, `correction: null`) without correction metadata, and collects read-only evidence or an explicit resolution while preserving the captured baseline.
-       - Stop and hand off with structured same-run context (`task_run_id`, revisions, baseline, prior counsel/disposition) to `/cmd-code` for fresh consultation per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install); do NOT internally start another review cycle and never append a synthetic `--advice` flag.
+       - Stop and hand off with structured same-run context (`task_run_id`, revisions, baseline, prior counsel/disposition) to `/evc:cmd-code` for fresh consultation per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install); do NOT internally start another review cycle and never append a synthetic `--advice` flag.
      - "Approve anyway" → PROCEED to Step 4
      - "Abort" → stop workflow
    ELSE:
@@ -149,7 +149,7 @@ active context rather than internally starting another review/advisor cycle.
      - "Abort" → stop workflow
 ```
 
-**Note:** No fix loop to respect speed intent. If user wants iterative fixes, use `/cmd-code` instead. If another review is necessary after fixes or if disputing current review requires new counsel, stop and hand off with the SAME active context rather than internally adding another cycle.
+**Note:** No fix loop to respect speed intent. If user wants iterative fixes, use `/evc:cmd-code` instead. If another review is necessary after fixes or if disputing current review requires new counsel, stop and hand off with the SAME active context rather than internally adding another cycle.
 
 **Critical issues:** Security vulnerabilities (XSS, SQL injection, OWASP), performance bottlenecks, architectural violations, principle violations.
 
@@ -198,7 +198,7 @@ Mark Step 3 complete in manage_todo_list, mark Step 4 in_progress.
   - Defer the single matching outcome until all Step 4 finalization work and final post-index validation have settled. Parent records ONE truthful `state outcome` reporting all actual changed paths and declared validation status matching exact schemas:
     - Path A (changes made): `action_id`, `episode_id`, `result: "resolved"`, declared validation status, `actual_changed_paths`.
     - Path B (no changes across whole phase): `action_id: null`, `episode_id: null`, `result: "resolved"`, declared validation status, `actual_changed_paths: []`.
-  - If another review is necessary, STOP and hand off with structured same-run context (`task_run_id`, baseline, outcome, revisions) to `/cmd-code` per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install); do NOT silently start another review/advisor cycle (strictly preserve the ONE-cycle limit) and never append a synthetic `--advice` flag.
+  - If another review is necessary, STOP and hand off with structured same-run context (`task_run_id`, baseline, outcome, revisions) to `/evc:cmd-code` per `.evcrate-vscode/evcrate/workflows/advice-activation.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/advice-activation.md` (the published install); do NOT silently start another review/advisor cycle (strictly preserve the ONE-cycle limit) and never append a synthetic `--advice` flag.
   - Otherwise, parent executes `state complete` to seal the task run. The durable completion receipt is authoritative; only then is the phase durably DONE.
   - At complete, parent publishes mandatory immutable phase completion receipt (outside baseline) AND updates mutable overview `<plan-dir>/progress.md` per `.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install). Publication failure does not reopen successful phase.
   - Preserve all sealed file/index identities; only the bounded receipt/overview publication above is allowed after sealing. Summary and archive branches cannot modify sealed paths. Output identifies `<plan-dir>/progress.md`.

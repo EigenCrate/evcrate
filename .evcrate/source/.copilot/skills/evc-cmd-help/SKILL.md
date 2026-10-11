@@ -152,7 +152,7 @@ EVCrate projects canonical resources into seven target harness formats:
 
 - **Plugin Bundle**: Generated at `.evcrate/source/.evcrate-vscode/`, published to project or HOME `.evcrate-vscode/`.
 - **Plugin Identity**: `evc`.
-- **Command Syntax**: Projects slash commands as manual skills with container-local names (e.g., `/cmd-plan`, displayed by VS Code as `evc cmd-plan`), forwarding arguments directly.
+- **Command Syntax**: Projects slash commands as manual skills (`skills/cmd-*/SKILL.md`) invoked with plugin-qualified syntax (e.g., `/evc:cmd-plan`, displayed by VS Code as `evc cmd-plan`), forwarding arguments directly.
 - **Activation**: User-controlled via VS Code's `chat.pluginLocations` setting; publication never touches editor configuration.
 - **Scope Recovery**: `evcrate recover --scope project|home` restores managed files without touching editor settings or user workspaces.
 - **Qualification**: Local bundle/helper execution does not establish native VS Code GUI qualification.

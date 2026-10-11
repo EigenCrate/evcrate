@@ -154,7 +154,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(commandsData.length, 70, 'All 70 commands must be in commands_data.yaml');
     const croCatalogItem = commandsData.find((c) => c.source === 'evc-cmd-plan-x-cro.md');
     assert.ok(croCatalogItem);
-    assert.equal(croCatalogItem.name, '/cmd-plan-x-cro');
+    assert.equal(croCatalogItem.name, '/evc:cmd-plan-x-cro');
     assert.equal(croCatalogItem.path, 'cmd-plan-x-cro/SKILL.md');
 
     const skillsDataPath = join(stageRoot, 'evcrate/scripts/skills_data.yaml');
@@ -199,7 +199,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
         target: `skills/${localName}/SKILL.md`,
         localName: localName,
         targetName: localName,
-        nativeInvocationName: `/${localName}`
+        nativeInvocationName: `/evc:${localName}`
       });
     }
 

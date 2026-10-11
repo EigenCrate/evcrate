@@ -19,7 +19,7 @@ $ARGUMENTS
 Canonical shape:
 
 ```text
-/cmd-take [mode] <source-repo-or-path> <feature> [local-notes]
+/evc:cmd-take [mode] <source-repo-or-path> <feature> [local-notes]
 ```
 
 Modes:
@@ -28,12 +28,12 @@ Modes:
 | --- | --- | --- |
 | `compare` | Read-only comparison of source and current project | Findings report; no plan or code |
 | `copy` | Direct reuse only when compatibility and license gates pass | Plan plus explicit approval; no implicit implementation |
-| `improve` | Reuse the behavior/idea and implement a deliberately better local version | Validated plan, then `/cmd-code` |
-| `port` | Adapt or reimplement the behavior for the current stack and architecture | Validated plan, then `/cmd-code` |
+| `improve` | Reuse the behavior/idea and implement a deliberately better local version | Validated plan, then `/evc:cmd-code` |
+| `port` | Adapt or reimplement the behavior for the current stack and architecture | Validated plan, then `/evc:cmd-code` |
 
 If mode is omitted, use `port`. Reject unknown modes instead of guessing.
 
-`take` owns intake, safe source inspection, comparison, challenge, and plan handoff. `/cmd-code` owns file edits, compile/typecheck, tests, code review, project updates, and finalization. `take` must not implement feature code directly.
+`take` owns intake, safe source inspection, comparison, challenge, and plan handoff. `/evc:cmd-code` owns file edits, compile/typecheck, tests, code review, project updates, and finalization. `take` must not implement feature code directly.
 
 ## Reuse Existing Commands
 
@@ -42,19 +42,19 @@ If mode is omitted, use `port`. Reject unknown modes instead of guessing.
 | Take decision | Invoke | Ownership after invocation |
 | --- | --- | --- |
 | `compare` | No plan or code command | `take` returns the read-only comparison report |
-| Small, local, low-risk transfer | `/cmd-plan-x-fast <take-prompt>` | `/cmd-plan-x-fast` creates the plan through `evc-planner` |
-| Unfamiliar, remote, cross-layer, dependency, auth, data, or license risk | `/cmd-plan-x-hard <take-prompt>` | `/cmd-plan-x-hard` coordinates up to 2 `evc-researcher` agents and `evc-planner` |
-| Independent phases with exclusive file ownership | `/cmd-plan-x-parallel <take-prompt>` | `/cmd-plan-x-parallel` creates the dependency graph and ownership matrix |
-| Any non-`compare` plan | `/cmd-plan-x-validate <plan-path>` | `/cmd-plan-x-validate` interviews the user and records decisions |
-| Sequential implementation | `/cmd-code <plan-path>` | `/cmd-code` implements, tests, reviews, and finalizes |
-| Validated plan with independent phases only | `/cmd-code-x-parallel <plan-path>` | `/cmd-code-x-parallel` delegates owned phases to `evc-fullstack-developer` |
+| Small, local, low-risk transfer | `/evc:cmd-plan-x-fast <take-prompt>` | `/evc:cmd-plan-x-fast` creates the plan through `evc-planner` |
+| Unfamiliar, remote, cross-layer, dependency, auth, data, or license risk | `/evc:cmd-plan-x-hard <take-prompt>` | `/evc:cmd-plan-x-hard` coordinates up to 2 `evc-researcher` agents and `evc-planner` |
+| Independent phases with exclusive file ownership | `/evc:cmd-plan-x-parallel <take-prompt>` | `/evc:cmd-plan-x-parallel` creates the dependency graph and ownership matrix |
+| Any non-`compare` plan | `/evc:cmd-plan-x-validate <plan-path>` | `/evc:cmd-plan-x-validate` interviews the user and records decisions |
+| Sequential implementation | `/evc:cmd-code <plan-path>` | `/evc:cmd-code` implements, tests, reviews, and finalizes |
+| Validated plan with independent phases only | `/evc:cmd-code-x-parallel <plan-path>` | `/evc:cmd-code-x-parallel` delegates owned phases to `evc-fullstack-developer` |
 
 Handoff rules:
 
-- Pass report paths and compact findings to `/cmd-plan-x-*`; do not paste full source or duplicate the planner's research workflow.
-- Pass the validated plan path plus mode, provenance, rejected material, and unresolved questions to `/cmd-code*`; do not duplicate implementation instructions from the code command.
-- Do not call `evc-planner`, `evc-tester`, `evc-debugger`, `evc-code-reviewer`, `evc-project-manager`, or `evc-docs-manager` directly for work already owned by `/cmd-plan` or `/cmd-code`. Direct delegation is allowed only for a focused read-only question before handoff or when the owning command explicitly requests it.
-- Do not use `/cmd-code-x-no-test` for `take`; transferred features require the normal `/cmd-code` quality gates. Do not use `/cmd-code-x-auto` or commit/push shortcuts unless the user explicitly requests that workflow and its gates remain intact.
+- Pass report paths and compact findings to `/evc:cmd-plan-x-*`; do not paste full source or duplicate the planner's research workflow.
+- Pass the validated plan path plus mode, provenance, rejected material, and unresolved questions to `/evc:cmd-code*`; do not duplicate implementation instructions from the code command.
+- Do not call `evc-planner`, `evc-tester`, `evc-debugger`, `evc-code-reviewer`, `evc-project-manager`, or `evc-docs-manager` directly for work already owned by `/evc:cmd-plan` or `/evc:cmd-code`. Direct delegation is allowed only for a focused read-only question before handoff or when the owning command explicitly requests it.
+- Do not use `/evc:cmd-code-x-no-test` for `take`; transferred features require the normal `/evc:cmd-code` quality gates. Do not use `/evc:cmd-code-x-auto` or commit/push shortcuts unless the user explicitly requests that workflow and its gates remain intact.
 - If a delegated command is unavailable, stop and report the missing command. Do not silently inline a weaker replacement workflow.
 - After a delegated command returns, inspect its report and verify its required gate evidence before continuing.
 
@@ -102,16 +102,16 @@ The main agent orchestrates; subagents return report paths and short summaries. 
 
 | Stage | Agent/command | When | Write boundary |
 | --- | --- | --- | --- |
-| Current-project map | `evc-scout` agent or `/cmd-scout` | Always for non-trivial scope | Read-only report |
+| Current-project map | `evc-scout` agent or `/evc:cmd-scout` | Always for non-trivial scope | Read-only report |
 | Source map | `evc-scout-external` for remote/separate/large source; `evc-scout` for a small local source | Always for non-`compare` work; always for `compare` unless already evidenced | Read-only report |
 | Independent risk/docs research | Up to 2 `evc-researcher` agents in parallel | Only if framework/version, dependency, license, security, or external API assumptions are unclear | Read-only report, max 150 lines |
-| Plan synthesis | `evc-planner` via `/cmd-plan-x-fast`, `/cmd-plan-x-hard`, or `/cmd-plan-x-parallel` | Required for `copy`, `improve`, and `port` | Plan files only |
-| Schema/data review | `evc-database-admin` | Only if persistence, migration, indexes, or data integrity is involved | Read-only findings unless assigned by `/cmd-code` |
-| UI review | `evc-ui-ux-designer` | Only if user-facing UI/UX is involved | Design report; implementation only through `/cmd-code` |
+| Plan synthesis | `evc-planner` via `/evc:cmd-plan-x-fast`, `/evc:cmd-plan-x-hard`, or `/evc:cmd-plan-x-parallel` | Required for `copy`, `improve`, and `port` | Plan files only |
+| Schema/data review | `evc-database-admin` | Only if persistence, migration, indexes, or data integrity is involved | Read-only findings unless assigned by `/evc:cmd-code` |
+| UI review | `evc-ui-ux-designer` | Only if user-facing UI/UX is involved | Design report; implementation only through `/evc:cmd-code` |
 | MCP/docs lookup | `evc-mcp-manager` | Only when MCP resources/tools are required | Read-only report |
-| Implementation | `/cmd-code <plan-path>`; `/cmd-code-x-parallel` only for independent phases | After validation; never for `compare` | Files owned by plan phase |
-| Verification | `evc-tester`, then `evc-debugger` on failures, then `evc-code-reviewer` | Required through `/cmd-code` after implementation | Reports; fixes follow code ownership |
-| Project/docs closeout | `/cmd-code` finalization, which delegates `evc-project-manager`/`evc-docs-manager` when required | After implementation is approved and docs/progress need updating | Plan/docs ownership only |
+| Implementation | `/evc:cmd-code <plan-path>`; `/evc:cmd-code-x-parallel` only for independent phases | After validation; never for `compare` | Files owned by plan phase |
+| Verification | `evc-tester`, then `evc-debugger` on failures, then `evc-code-reviewer` | Required through `/evc:cmd-code` after implementation | Reports; fixes follow code ownership |
+| Project/docs closeout | `/evc:cmd-code` finalization, which delegates `evc-project-manager`/`evc-docs-manager` when required | After implementation is approved and docs/progress need updating | Plan/docs ownership only |
 
 Delegation prompt template:
 
@@ -198,7 +198,7 @@ Classify each risk as `blocker`, `must resolve before code`, `test requirement`,
 
 ### `compare`
 
-Run Recon, Transfer Map, Analyze, and Challenge. Return a comparison report with evidence, compatibility matrix, recommended mode, rejected assumptions, and unresolved questions. Do not create a plan, edit product files, install dependencies, or call `/cmd-code`.
+Run Recon, Transfer Map, Analyze, and Challenge. Return a comparison report with evidence, compatibility matrix, recommended mode, rejected assumptions, and unresolved questions. Do not create a plan, edit product files, install dependencies, or call `/evc:cmd-code`.
 
 ### `copy`
 
@@ -225,11 +225,11 @@ Use the source as behavioral reference only. Reimplement with local abstractions
 
 Route to the existing plan command based on risk:
 
-- `/cmd-plan-x-fast` for a small, local, well-understood transfer with no schema/auth/security uncertainty.
-- `/cmd-plan-x-hard` for remote or unfamiliar sources, cross-layer work, dependencies, auth, data, licensing, or unresolved architectural assumptions; use at most 2 parallel `evc-researcher` agents.
-- `/cmd-plan-x-parallel` only when phases can have exclusive file ownership and genuinely independent work; otherwise use sequential `/cmd-code`.
+- `/evc:cmd-plan-x-fast` for a small, local, well-understood transfer with no schema/auth/security uncertainty.
+- `/evc:cmd-plan-x-hard` for remote or unfamiliar sources, cross-layer work, dependencies, auth, data, licensing, or unresolved architectural assumptions; use at most 2 parallel `evc-researcher` agents.
+- `/evc:cmd-plan-x-parallel` only when phases can have exclusive file ownership and genuinely independent work; otherwise use sequential `/evc:cmd-code`.
 
-Build one concise prompt for the selected `/cmd-plan-x-*` command containing the preflight contract, source/local report paths, transfer map, challenge matrix, chosen mode, rejected alternatives, and unresolved questions. The selected plan command delegates to `evc-planner`; do not invoke `evc-planner` a second time. Require the resulting plan to state:
+Build one concise prompt for the selected `/evc:cmd-plan-x-*` command containing the preflight contract, source/local report paths, transfer map, challenge matrix, chosen mode, rejected alternatives, and unresolved questions. The selected plan command delegates to `evc-planner`; do not invoke `evc-planner` a second time. Require the resulting plan to state:
 
 - behavior to preserve and behavior intentionally changed;
 - files/systems owned by each phase;
@@ -240,7 +240,7 @@ Build one concise prompt for the selected `/cmd-plan-x-*` command containing the
 - rollback and onboarding steps;
 - no implementation before validation.
 
-Run the existing `/cmd-plan-x-validate <plan-path>` before implementation. Let that command record the validation summary. If a validation answer changes mode, scope, data/auth behavior, license status, or public contract, return to the selected `/cmd-plan-x-*` command and re-plan before coding.
+Run the existing `/evc:cmd-plan-x-validate <plan-path>` before implementation. Let that command record the validation summary. If a validation answer changes mode, scope, data/auth behavior, license status, or public contract, return to the selected `/evc:cmd-plan-x-*` command and re-plan before coding.
 
 Required side-effect checklist:
 
@@ -255,7 +255,7 @@ Required side-effect checklist:
 
 ## Phase 4: Implementation Handoff and Quality Gates
 
-After validation, route to `/cmd-code <plan-path>` for sequential work or `/cmd-code-x-parallel <plan-path>` only when the plan proves exclusive ownership. Pass the mode, source provenance, report paths, explicit rejected material, unresolved questions, and required evidence. Do not duplicate discovery or the code workflow in the implementation prompt.
+After validation, route to `/evc:cmd-code <plan-path>` for sequential work or `/evc:cmd-code-x-parallel <plan-path>` only when the plan proves exclusive ownership. Pass the mode, source provenance, report paths, explicit rejected material, unresolved questions, and required evidence. Do not duplicate discovery or the code workflow in the implementation prompt.
 
 `take` must not re-run the implementation workflow itself. It only checks the delegated command's completion report for:
 
@@ -264,14 +264,14 @@ After validation, route to `/cmd-code <plan-path>` for sequential work or `/cmd-
 3. compile/typecheck/build checks pass with no syntax errors;
 4. tests cover happy path, edge cases, error paths, security-sensitive paths, and regressions;
 5. migrations/config/onboarding checks pass when applicable;
-6. `/cmd-code` invoked `evc-tester`; failures were investigated by `evc-debugger` and retested;
-7. `/cmd-code` invoked `evc-code-reviewer` for security, performance, architecture, compatibility, and YAGNI/KISS/DRY;
+6. `/evc:cmd-code` invoked `evc-tester`; failures were investigated by `evc-debugger` and retested;
+7. `/evc:cmd-code` invoked `evc-code-reviewer` for security, performance, architecture, compatibility, and YAGNI/KISS/DRY;
 8. critical review findings were fixed and retested, or explicitly accepted by the user;
-9. `/cmd-code` invoked `evc-project-manager`/`evc-docs-manager` only when required and after approval.
+9. `/evc:cmd-code` invoked `evc-project-manager`/`evc-docs-manager` only when required and after approval.
 
-For parallel implementation, trust `/cmd-code-x-parallel` to delegate phases to `evc-fullstack-developer` according to the plan's exclusive file-ownership matrix. No two agents may write the same file. `evc-database-admin` or `evc-ui-ux-designer` may be used only for conditional concerns identified in the plan.
+For parallel implementation, trust `/evc:cmd-code-x-parallel` to delegate phases to `evc-fullstack-developer` according to the plan's exclusive file-ownership matrix. No two agents may write the same file. `evc-database-admin` or `evc-ui-ux-designer` may be used only for conditional concerns identified in the plan.
 
-If any delegated gate fails: stop the success claim, preserve the failure evidence, return the failure to `/cmd-code` for its debugger/fix/retest loop, update the plan if scope or assumptions changed, and re-run the owning command. `take` must not patch implementation files directly.
+If any delegated gate fails: stop the success claim, preserve the failure evidence, return the failure to `/evc:cmd-code` for its debugger/fix/retest loop, update the plan if scope or assumptions changed, and re-run the owning command. `take` must not patch implementation files directly.
 
 ## Final Report
 
