@@ -1130,8 +1130,11 @@ function assertMarkerMatches(
     if (stagedWithoutPromotion && (marker.schema_version === 2 || marker.schema_version === 3)) {
       assertMarkerRecordRoots(marker, journal.destination_root, stateRoot);
       if (marker.scope !== journal.scope) fail('PATH_UNSAFE');
-      const previous = publicationMarkerRecord(marker, 'harness');
-      if (previous && (previous.status === 'complete' || previous.status === 'recovered')) return;
+      const shared = publicationMarkerRecord(marker, 'shared');
+      const harness = publicationMarkerRecord(marker, 'harness');
+      const sharedOk = shared === null || shared.status === 'complete' || shared.status === 'recovered';
+      const harnessOk = harness === null || harness.status === 'complete' || harness.status === 'recovered';
+      if ((shared !== null || harness !== null) && sharedOk && harnessOk) return;
     }
     if (marker.schema_version !== (journal.schema_version === 4 ? 3 : 2)
       || marker.scope !== journal.scope || journal.records === undefined) fail();

@@ -10,7 +10,7 @@ import {
   ControlPlaneError, MAX_RETAINED_RELEASE_AGE_MS, PERSISTED_TARGETS, publishApply, publishDryRun,
   publicationStateRoot, recoverPublication, resolveCurrentPublicationBuild,
   resolveInvocationContext, resolvePublicationProjectContext,
-  runLocalBuild
+  runLocalBuild, writeAtomicFile, canonicalJsonBytes, readOptionalPublicationMarker
 } from '../../dist/index.js';
 import { prepareFixtureWorkspace } from './parity-verification-helpers.mjs';
 
@@ -661,4 +661,59 @@ test('v4 journal and v3 marker strictly reject retired phases, null identity and
     writeFileSync(markerPath, markerBytes);
     assert.equal(recoverPublication(context).action, 'recovered');
   } finally { rmSync(home, { recursive: true, force: true }); }
+});
+
+test('publishApply converts v2 HOME marker with distinct shared and harness retained release IDs preserving tracked backup without RECOVERY_FAILED', () => {
+  const root = mkdtempSync(join(tmpdir(), 'evcrate-pub-v2-retained-'));
+  const home = join(root, 'home');
+  directory(home);
+  try {
+    const state = publicationStateRoot(home);
+    directory(join(state, 'release-rel-shared', 'backups'));
+    writeFileSync(join(state, 'release-rel-shared', 'backups', '0'), 'backup-shared');
+    directory(join(state, 'release-rel-harness', 'backups'));
+    writeFileSync(join(state, 'release-rel-harness', 'backups', '0'), 'backup-harness');
+
+    const v2Marker = {
+      schema_version: 2,
+      transaction_type: 'target-publication',
+      scope: 'home',
+      records: {
+        shared: {
+          phase: 'shared', scope: 'home', status: 'complete', release_id: 'rel-shared',
+          selected_targets: [], binding_order: ['.evcrate/bin'],
+          managed_paths: {}, previous_managed_paths: {},
+          build_manifest_path: '.evcrate/build-manifest.json', build_manifest_digest: 'a'.repeat(64),
+          transaction_dir: 'release-rel-shared', retained_release_id: 'rel-shared',
+          destination_root: resolve(home), durable_state_root: resolve(state),
+          workspace_root: resolve(state, 'release-rel-shared'), workspace_name: 'release-rel-shared',
+          project_identity: null, retention: 'bounded-one-home-release'
+        },
+        harness: {
+          phase: 'harness', scope: 'home', status: 'complete', release_id: 'rel-harness',
+          selected_targets: ['omp'], binding_order: ['.omp'],
+          managed_paths: { omp: { '.omp': ['AGENTS.md'] } }, previous_managed_paths: {},
+          build_manifest_path: '.evcrate/build-manifest.json', build_manifest_digest: 'a'.repeat(64),
+          transaction_dir: 'release-rel-harness', retained_release_id: 'rel-harness',
+          destination_root: resolve(home), durable_state_root: resolve(state),
+          workspace_root: resolve(state, 'release-rel-harness'), workspace_name: 'release-rel-harness',
+          project_identity: null, retention: 'bounded-one-home-release'
+        }
+      }
+    };
+    writeAtomicFile(join(state, 'release-marker.json'), canonicalJsonBytes(v2Marker));
+
+    const context = resolveInvocationContext({ packageRoot, home, targets: ['omp'] });
+    const result1 = publishApply(context);
+    assert.equal(typeof result1.phases[0].releaseId, 'string');
+
+    const marker1 = readOptionalPublicationMarker(join(state, 'release-marker.json'));
+    assert.equal(marker1?.schema_version, 3);
+
+    // Subsequent publish also succeeds idempotently
+    const result2 = publishApply(context);
+    assert.equal(typeof result2.phases[0].releaseId, 'string');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

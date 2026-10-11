@@ -300,16 +300,26 @@ function projectPriorOwnership(marker: Record<string, unknown> | null): PriorMan
   const layout = publicationStateLayout(marker.binding_order, selected, 'project');
   return publicationFlatOwnership(marker.managed_paths, selected, 'project', layout.generation);
 }
-function retainedMarkerId(marker: Record<string, unknown> | null): string | null {
-  const record = marker?.schema_version === 2 || marker?.schema_version === 3
-    ? publicationMarkerRecord(marker, 'harness') : marker;
-  const value = record?.retained_release_id;
+function parseRetainedId(value: unknown): string | null {
   if (value === undefined || value === null) return null;
   if (typeof value !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(value)) fail('RECOVERY_FAILED');
   return value;
 }
+function retainedMarkerIds(marker: Record<string, unknown> | null): readonly string[] {
+  if (marker?.schema_version === 2) {
+    const sharedId = parseRetainedId(publicationMarkerRecord(marker, 'shared')?.retained_release_id);
+    const harnessId = parseRetainedId(publicationMarkerRecord(marker, 'harness')?.retained_release_id);
+    const result: string[] = [];
+    if (sharedId !== null) result.push(sharedId);
+    if (harnessId !== null && harnessId !== sharedId) result.push(harnessId);
+    return Object.freeze(result);
+  }
+  const record = marker?.schema_version === 3 ? publicationMarkerRecord(marker, 'harness') : marker;
+  const id = parseRetainedId(record?.retained_release_id);
+  return Object.freeze(id !== null ? [id] : []);
+}
 function cleanupReleases(
-  stateRoot: string, current: string | null, prior: string | null, now: number
+  stateRoot: string, current: string | null, priors: readonly string[], now: number
 ): string | null {
   const candidates: Array<{ id: string; path: string; age: number; bytes: number }> = [];
   for (const name of readdirSync(stateRoot)) {
@@ -328,7 +338,7 @@ function cleanupReleases(
       fail('RECOVERY_FAILED');
     }
   }
-  const known = new Set([current, prior].filter((value): value is string => value !== null));
+  const known = new Set([current, ...priors].filter((value): value is string => value !== null));
   if (candidates.some(({ id }) => !known.has(id))) fail('RECOVERY_FAILED');
   const find = (id: string | null): { id: string; path: string; age: number; bytes: number } | undefined =>
     id === null ? undefined : candidates.find((candidate) => candidate.id === id);
@@ -336,8 +346,13 @@ function cleanupReleases(
   if (current !== null && retained === undefined) fail('RECOVERY_FAILED');
   if (retained !== undefined && (retained.age >= MAX_RETAINED_RELEASE_AGE_MS || retained.bytes > MAX_RETAINED_RELEASE_BYTES)) retained = undefined;
   if (retained === undefined) {
-    retained = find(prior);
-    if (retained !== undefined && (retained.age >= MAX_RETAINED_RELEASE_AGE_MS || retained.bytes > MAX_RETAINED_RELEASE_BYTES)) retained = undefined;
+    for (const prior of priors) {
+      const candidate = find(prior);
+      if (candidate !== undefined && candidate.age < MAX_RETAINED_RELEASE_AGE_MS && candidate.bytes <= MAX_RETAINED_RELEASE_BYTES) {
+        retained = candidate;
+        break;
+      }
+    }
   }
   for (const candidate of candidates) {
     if (candidate !== retained) removePath(candidate.path);
@@ -647,7 +662,7 @@ function applyTransaction(
     if (descriptor.retention === 'bounded-one-home-release') {
       retainedReleaseId = cleanupReleases(
         descriptor.durableStateRoot, retain ? descriptor.releaseId : null,
-        retainedMarkerId(previousMarker), options.now?.() ?? Date.now()
+        retainedMarkerIds(previousMarker), options.now?.() ?? Date.now()
       );
       if (retainedReleaseId !== (retain ? descriptor.releaseId : null)) {
         writeRelease(descriptor.durableStateRoot, {

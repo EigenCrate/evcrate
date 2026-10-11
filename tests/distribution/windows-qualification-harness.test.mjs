@@ -258,6 +258,36 @@ test('Harness Verification: verifyPredecessorAssets verifies valid 4-file Window
   }
 });
 
+test('Harness Verification: verifyPredecessorAssets verifies valid v1 Windows release set and rejects missing controller_closure_digest', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-pred-v1-test-'));
+  try {
+    buildWindowsTestReleaseSet({
+      outputDir: tmpDir,
+      version: '1.0.0',
+      commit: VALID_COMMIT,
+      schema: 'evcrate-private-release/v1'
+    });
+
+    const predResult = verifyPredecessorAssets(tmpDir);
+    assert.equal(predResult.version, '1.0.0');
+    assert.equal(predResult.tag, 'v1.0.0');
+    assert.equal(predResult.sourceCommit, VALID_COMMIT);
+    assert.equal(predResult.files.length, 4);
+
+    // Tamper with controller_closure_digest to be invalid
+    const metaFile = path.join(tmpDir, 'evcrate-v1.0.0.release.json');
+    const metaObj = JSON.parse(fs.readFileSync(metaFile, 'utf8'));
+    delete metaObj.controller_closure_digest;
+    fs.writeFileSync(metaFile, JSON.stringify(metaObj));
+    assert.throws(
+      () => verifyPredecessorAssets(tmpDir),
+      /Predecessor v1 metadata missing or invalid controller_closure_digest/u
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
 test('Harness Verification: verifyCandidateReceipt verifies valid candidate.json', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-rcpt-test-'));
   try {

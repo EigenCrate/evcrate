@@ -430,8 +430,13 @@ export function verifyPredecessorAssets(predecessorDir) {
   const metaPath = path.join(predecessorDir, metaFile);
   const metadata = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
 
-  if (metadata.schema !== SCHEMA_RELEASE) {
-    throw new Error(`Predecessor metadata schema mismatch: expected "${SCHEMA_RELEASE}", got "${metadata.schema}"`);
+  if (metadata.schema !== SCHEMA_RELEASE && metadata.schema !== 'evcrate-private-release/v1') {
+    throw new Error(`Predecessor metadata schema mismatch: expected "${SCHEMA_RELEASE}" or "evcrate-private-release/v1", got "${metadata.schema}"`);
+  }
+  if (metadata.schema === 'evcrate-private-release/v1') {
+    if (!metadata.controller_closure_digest || !/^[a-f0-9]{64}$/u.test(metadata.controller_closure_digest)) {
+      throw new Error('Predecessor v1 metadata missing or invalid controller_closure_digest');
+    }
   }
   if (metadata.version !== version) {
     throw new Error(`Predecessor metadata version mismatch: expected "${version}", got "${metadata.version}"`);

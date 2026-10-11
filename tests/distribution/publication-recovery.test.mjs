@@ -10,7 +10,8 @@ import {
   recoverAndMigrateHomeStateUnlocked, recoverAndMigrateProjectStateUnlocked, writeAtomicFile,
   readPublicationJournal, normalizeTarget, validatePublishRequestPayload, validateRecoverResultPayload,
   createPublicationPlanSet, resolveInvocationContext, resolvePublicationProjectContext,
-  runAllManifestsBuild, publicationStateRoot, publishDryRun, publishApply
+  runAllManifestsBuild, publicationStateRoot, publishDryRun, publishApply,
+  publicationSnapshot
 } from '../../dist/index.js';
 import { prepareFixtureWorkspace } from './parity-verification-helpers.mjs';
 
@@ -1239,6 +1240,222 @@ test('current markers retain only disjoint inherited predecessor residuals', () 
       writeAtomicFile(path, canonicalJsonBytes(malformed));
       assert.throws(() => readOptionalPublicationMarker(path));
     }
+  } finally {
+    rmSync(value.root, { recursive: true, force: true });
+  }
+});
+
+test('historical schema-3 HOME Codex journal with current-generation .agents/skills recovers cleanly', () => {
+  const value = fixture('evcrate-rec-codex-cur-');
+  try {
+    const { home, state } = value;
+    const release = 'hist-codex-cur';
+    const txDir = `release-${release}`;
+    const txRoot = directory(join(state, txDir));
+    const dest = join(home, '.agents', 'skills', 'test-skill', 'SKILL.md');
+    directory(dirname(dest));
+    writeFileSync(dest, 'before\n');
+    const binDir = directory(join(home, '.evcrate', 'bin'));
+    writeFileSync(join(binDir, 'evcrate-advisor'), 'bin\n');
+
+    const statTx = lstatSync(txRoot);
+    const statState = lstatSync(state);
+    const beforeBin = publicationSnapshot(binDir, true);
+    const beforeDest = publicationSnapshot(dest, false);
+
+    const operations = [
+      {
+        target: 'advisor-controller',
+        binding: '.evcrate/bin',
+        local_root: '.evcrate/bin',
+        relative_path: '.evcrate/bin',
+        kind: 'directory',
+        action: 'noop',
+        destination: '.evcrate/bin',
+        before: beforeBin,
+        backup: null,
+        intendedHash: beforeBin.hash,
+        intended: beforeBin,
+        promoted: false
+      },
+      {
+        target: 'codex',
+        binding: '.agents/skills',
+        local_root: '.agents/skills',
+        relative_path: 'test-skill/SKILL.md',
+        kind: 'file',
+        action: 'noop',
+        destination: '.agents/skills/test-skill/SKILL.md',
+        before: beforeDest,
+        backup: null,
+        intendedHash: beforeDest.hash,
+        intended: beforeDest,
+        promoted: false
+      }
+    ];
+
+    const journal = {
+      schema_version: 3,
+      transaction_type: 'target-publication',
+      status: 'promoting',
+      logical_phase: 'combined',
+      release_id: release,
+      home_root: resolve(home),
+      destination_root: resolve(home),
+      durable_state_root: resolve(state),
+      workspace_root: resolve(txRoot),
+      workspace_name: txDir,
+      workspace_device: Number(statTx.dev),
+      workspace_inode: Number(statTx.ino),
+      workspace_parent_device: Number(statState.dev),
+      workspace_parent_inode: Number(statState.ino),
+      project_identity: null,
+      retention: 'bounded-one-home-release',
+      transaction_dir: txDir,
+      selected_targets: ['codex'],
+      binding_order: ['.evcrate/bin', '.agents/skills', '.codex'],
+      previous_managed_paths: { codex: { '.agents/skills': ['test-skill/SKILL.md'] } },
+      managed_paths: { codex: { '.agents/skills': ['test-skill/SKILL.md'] } },
+      build_manifest_path: '.evcrate/build-manifest.json',
+      build_manifest_digest: 'a'.repeat(64),
+      retained_release_id: null,
+      retain_transaction: false,
+      operation_count: 2,
+      operations_digest: hashBytes(canonicalJsonBytes(operations)),
+      operations,
+      scope: 'home',
+      lock_paths: [join(resolve(state), 'publish.lock')],
+      lock_order: ['home'],
+      records: {
+        shared: {
+          phase: 'shared', scope: 'home', status: 'promoting', release_id: release,
+          selected_targets: [], binding_order: ['.evcrate/bin'],
+          managed_paths: {}, previous_managed_paths: {},
+          build_manifest_path: '.evcrate/build-manifest.json', build_manifest_digest: 'a'.repeat(64),
+          transaction_dir: txDir, retained_release_id: null,
+          destination_root: resolve(home), durable_state_root: resolve(state),
+          workspace_root: resolve(txRoot), workspace_name: txDir,
+          project_identity: null, retention: 'bounded-one-home-release'
+        },
+        harness: {
+          phase: 'harness', scope: 'home', status: 'promoting', release_id: release,
+          selected_targets: ['codex'], binding_order: ['.agents/skills', '.codex'],
+          managed_paths: { codex: { '.agents/skills': ['test-skill/SKILL.md'] } },
+          previous_managed_paths: { codex: { '.agents/skills': ['test-skill/SKILL.md'] } },
+          build_manifest_path: '.evcrate/build-manifest.json', build_manifest_digest: 'a'.repeat(64),
+          transaction_dir: txDir, retained_release_id: null,
+          destination_root: resolve(home), durable_state_root: resolve(state),
+          workspace_root: resolve(txRoot), workspace_name: txDir,
+          project_identity: null, retention: 'bounded-one-home-release'
+        }
+      }
+    };
+
+    writeAtomicFile(join(state, 'release-marker.json'), canonicalJsonBytes({
+      schema_version: 2,
+      transaction_type: 'target-publication',
+      scope: 'home',
+      records: journal.records
+    }));
+    writeAtomicFile(join(state, 'publication-journal.json'), canonicalJsonBytes(journal));
+    const outcome = recoverPublicationUnlocked(state, home);
+    assert.equal(outcome.action, 'rolled-back');
+    assert.equal(outcome.releaseId, release);
+    assert.equal(existsSync(join(state, 'publication-journal.json')), false);
+  } finally {
+    rmSync(value.root, { recursive: true, force: true });
+  }
+});
+
+test('staged-without-promotion v4 journal recovers on terminal shared-only v2 marker and rejects in-progress marker', () => {
+  const value = fixture('evcrate-rec-v2-term-');
+  try {
+    const { home, state } = value;
+    const v2MarkerData = {
+      schema_version: 2,
+      transaction_type: 'target-publication',
+      scope: 'home',
+      records: {
+        shared: {
+          phase: 'shared', scope: 'home', status: 'complete', release_id: 'prior-rel',
+          selected_targets: [], binding_order: ['.evcrate/bin'],
+          managed_paths: {}, previous_managed_paths: {},
+          build_manifest_path: '.evcrate/build-manifest.json', build_manifest_digest: 'a'.repeat(64),
+          transaction_dir: 'release-prior-rel', retained_release_id: null,
+          destination_root: resolve(home), durable_state_root: resolve(state),
+          workspace_root: resolve(state, 'release-prior-rel'), workspace_name: 'release-prior-rel',
+          project_identity: null, retention: 'bounded-one-home-release'
+        },
+        harness: null
+      }
+    };
+    writeAtomicFile(join(state, 'release-marker.json'), canonicalJsonBytes(v2MarkerData));
+
+    const releaseId = 'v4-staged-rel';
+    const txDir = `release-${releaseId}`;
+    const txRoot = directory(join(state, txDir));
+    const statTx = lstatSync(txRoot);
+    const statParent = lstatSync(state);
+
+    const v4Journal = {
+      schema_version: 4,
+      transaction_type: 'target-publication',
+      status: 'staged',
+      release_id: releaseId,
+      home_root: resolve(home),
+      transaction_dir: txDir,
+      selected_targets: ['omp'],
+      binding_order: ['.omp'],
+      previous_managed_paths: {},
+      managed_paths: { omp: { '.omp': ['AGENTS.md'] } },
+      build_manifest_path: '.evcrate/build-manifest.json',
+      build_manifest_digest: 'a'.repeat(64),
+      retained_release_id: null,
+      retain_transaction: false,
+      operation_count: 0,
+      operations_digest: hashBytes(canonicalJsonBytes([])),
+      operations: [],
+      scope: 'home',
+      destination_root: resolve(home),
+      durable_state_root: resolve(state),
+      workspace_root: resolve(txRoot),
+      workspace_name: txDir,
+      workspace_device: Number(statTx.dev),
+      workspace_inode: Number(statTx.ino),
+      workspace_parent_device: Number(statParent.dev),
+      workspace_parent_inode: Number(statParent.ino),
+      project_identity: null,
+      retention: 'bounded-one-home-release',
+      lock_paths: [join(resolve(state), 'publish.lock')],
+      lock_order: ['home'],
+      logical_phase: 'harness',
+      records: {
+        harness: {
+          phase: 'harness', scope: 'home', status: 'promoting', release_id: releaseId,
+          selected_targets: ['omp'], binding_order: ['.omp'],
+          managed_paths: { omp: { '.omp': ['AGENTS.md'] } }, previous_managed_paths: {},
+          build_manifest_path: '.evcrate/build-manifest.json', build_manifest_digest: 'a'.repeat(64),
+          transaction_dir: txDir, retained_release_id: null,
+          destination_root: resolve(home), durable_state_root: resolve(state),
+          workspace_root: resolve(txRoot), workspace_name: txDir,
+          project_identity: null, retention: 'bounded-one-home-release'
+        }
+      }
+    };
+
+    writeAtomicFile(join(state, 'publication-journal.json'), canonicalJsonBytes(v4Journal));
+    const outcome = recoverPublicationUnlocked(state, home);
+    assert.equal(outcome.action, 'rolled-back');
+    assert.equal(outcome.releaseId, releaseId);
+    assert.equal(existsSync(join(state, 'publication-journal.json')), false);
+
+    // Negative: marker with in-progress (promoting) shared record fails
+    const corruptMarker = structuredClone(v2MarkerData);
+    corruptMarker.records.shared.status = 'promoting';
+    writeAtomicFile(join(state, 'release-marker.json'), canonicalJsonBytes(corruptMarker));
+    directory(txRoot);
+    writeAtomicFile(join(state, 'publication-journal.json'), canonicalJsonBytes(v4Journal));
+    assert.throws(() => recoverPublicationUnlocked(state, home));
   } finally {
     rmSync(value.root, { recursive: true, force: true });
   }

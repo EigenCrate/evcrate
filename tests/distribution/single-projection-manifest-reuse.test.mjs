@@ -14,6 +14,7 @@ import {
   readBuildManifest,
   runAllManifestsBuild,
   runLocalBuild,
+  verifyOutputHashes,
 } from '../../dist/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -153,12 +154,15 @@ describe('Phase 02: Single-Projection Manifest Reuse', () => {
       }
 
       // Verify each individual target build manifest validates
+      // Verify each individual target build manifest validates and matches its output map
       for (const target of PERSISTED_TARGETS) {
         const targetBuild = result.targetBuilds.get(target);
         assert.ok(targetBuild, `Target build for ${target} must exist`);
         assert.equal(targetBuild.selectedManifests.length, 1);
         assert.equal(targetBuild.selectedManifests[0].id, target);
         assert.ok(targetBuild.manifest.home_policy[target], `Home policy for ${target} must be present`);
+        assert.deepEqual(Object.keys(targetBuild.outputPaths).sort(), Object.keys(targetBuild.manifest.output_hashes).sort());
+        assert.doesNotThrow(() => verifyOutputHashes(targetBuild.manifest, targetBuild.outputPaths));
       }
     });
 

@@ -7,7 +7,7 @@ import {
   validateResourceRequestPayload, validateResourceResultPayload, validateScopeRequestPayload,
   validateScopeResultPayload, validateScopeRevisionVector, validatePublishRequestPayload,
   validatePublishDryRunResultPayload, validatePublishApplyResultPayload, validateRecoverRequestPayload,
-  validateRecoverResultPayload
+  validateRecoverResultPayload, publicationStateLayout
 } from '../../dist/protocol/index.js';
 import { ControlPlaneError, exitCodeForError, serializeControlPlaneError } from '../../dist/errors/index.js';
 
@@ -263,5 +263,30 @@ test('Phase 8 publication payloads enforce scope, phase order, identity, and emp
   assert.throws(() => validateRecoverResultPayload({
     ...rolledBack, phases: [rolledBack.phases[0], { ...rolledBack.phases[1], bindingOrder: [] }]
   }));
+});
+
+test('publicationStateLayout validates current and predecessor historical HOME layouts and enforces shared flag', () => {
+  // 1. Current-generation historical shared HOME Codex layout includes .evcrate/bin and .agents/skills
+  const curCodex = publicationStateLayout(['.evcrate/bin', '.agents/skills', '.codex'], ['codex'], 'home', true);
+  assert.equal(curCodex.generation, 'current');
+  assert.deepEqual(curCodex.bindingOrder, ['.evcrate/bin', '.agents/skills', '.codex']);
+
+  // 2. Current-generation historical shared HOME OMP layout includes .evcrate/bin and .omp
+  const curOmp = publicationStateLayout(['.evcrate/bin', '.omp'], ['omp'], 'home', true);
+  assert.equal(curOmp.generation, 'current');
+  assert.deepEqual(curOmp.bindingOrder, ['.evcrate/bin', '.omp']);
+
+  // 3. Predecessor-generation historical shared HOME Codex layout includes .evcrate/bin and .agents
+  const predCodex = publicationStateLayout(['.evcrate/bin', '.agents', '.codex'], ['codex'], 'home', true);
+  assert.equal(predCodex.generation, 'predecessor');
+  assert.deepEqual(predCodex.bindingOrder, ['.evcrate/bin', '.agents', '.codex']);
+
+  // 4. Current-generation unshared HOME Codex layout excludes .evcrate/bin
+  const newCodex = publicationStateLayout(['.agents/skills', '.codex'], ['codex'], 'home', false);
+  assert.equal(newCodex.generation, 'current');
+  assert.deepEqual(newCodex.bindingOrder, ['.agents/skills', '.codex']);
+
+  // 5. Unshared HOME layout rejects .evcrate/bin
+  assert.throws(() => publicationStateLayout(['.evcrate/bin', '.agents/skills', '.codex'], ['codex'], 'home', false));
 });
 

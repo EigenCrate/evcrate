@@ -114,7 +114,9 @@ export function publicationStateLayout(
     if (shared) wanted.unshift('.evcrate/bin');
     if (new Set(wanted).size !== wanted.length) invalidResourcePayload();
     const expected = scope === 'home'
-      ? (generation === 'current' ? PUBLICATION_BINDING_ORDER : PREDECESSOR_BINDING_ORDER)
+      ? (generation === 'current'
+          ? (shared ? ['.evcrate/bin', ...PUBLICATION_BINDING_ORDER] : PUBLICATION_BINDING_ORDER)
+          : PREDECESSOR_BINDING_ORDER)
         .filter((binding) => wanted.includes(binding))
       : wanted;
     if (bindings.length === expected.length && bindings.every((binding, index) => binding === expected[index])) {

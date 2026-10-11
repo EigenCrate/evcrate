@@ -39,9 +39,19 @@ export function buildWindowsTestReleaseSet(options = {}) {
     throw new Error('outputDir is required for buildWindowsTestReleaseSet');
   }
 
-  const sortedRecords = [...records].sort((a, b) => compareCodePoints(a.path, b.path));
+  const allRecords = [...records];
+  if (options.schema === 'evcrate-private-release/v1' && !allRecords.some((r) => r.path.startsWith('.evcrate/source/.evcrate/bin/'))) {
+    const defaultCtrl = Buffer.from('console.log("fixture controller");\n');
+    allRecords.push({
+      path: '.evcrate/source/.evcrate/bin/fixture-controller.cjs',
+      mode: 0o644,
+      size: defaultCtrl.length,
+      sha256: crypto.createHash('sha256').update(defaultCtrl).digest('hex'),
+      data: defaultCtrl
+    });
+  }
+  const sortedRecords = allRecords.sort((a, b) => compareCodePoints(a.path, b.path));
   const buildManifestDigests = computeBuildManifestDigests(sortedRecords);
-
   const installSh = getRealInstallerEntry('install.sh', projectRoot);
   const installPs1 = getRealInstallerEntry('install.ps1', projectRoot);
 
@@ -105,9 +115,34 @@ export function buildWindowsTestReleaseSet(options = {}) {
         sha256
       });
     }
-
     fileRecords.sort((a, b) => compareCodePoints(a.name, b.name));
 
+    let finalMetadata = archiveResult.metadata;
+    if (options.schema === 'evcrate-private-release/v1') {
+      const prefix = '.evcrate/source/.evcrate/bin/';
+      const map = {};
+      for (const rec of sortedRecords) {
+        if (rec.path.startsWith(prefix)) {
+          map[`.evcrate/bin/${rec.path.slice(prefix.length)}`] = rec.sha256;
+        }
+      }
+      const sortedMap = Object.fromEntries(Object.entries(map).sort(([a], [b]) => compareCodePoints(a, b)));
+      const controllerClosureDigest = options.controllerClosureDigest || (
+        crypto.createHash('sha256').update(JSON.stringify(sortedMap) + '\n').digest('hex')
+      );
+      finalMetadata = {
+        ...archiveResult.metadata,
+        schema: 'evcrate-private-release/v1',
+        controller_closure_digest: controllerClosureDigest
+      };
+      const metaDst = path.join(outputDir, metaName);
+      fs.writeFileSync(metaDst, JSON.stringify(finalMetadata));
+      const metaRec = fileRecords.find((r) => r.name === metaName);
+      if (metaRec) {
+        metaRec.size = fs.statSync(metaDst).size;
+        metaRec.sha256 = crypto.createHash('sha256').update(fs.readFileSync(metaDst)).digest('hex');
+      }
+    }
     return {
       outputDir,
       version,
@@ -121,7 +156,7 @@ export function buildWindowsTestReleaseSet(options = {}) {
       metadataPath: path.join(outputDir, metaName),
       installPs1Name: 'install.ps1',
       installPs1Path: path.join(outputDir, 'install.ps1'),
-      metadata: archiveResult.metadata,
+      metadata: finalMetadata,
       inventoryDigest: archiveResult.inventoryDigest,
       archiveSha256: archiveResult.platforms['windows-x64'].sha256,
       files: fileRecords

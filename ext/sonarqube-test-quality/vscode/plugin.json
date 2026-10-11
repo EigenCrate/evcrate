@@ -1,8 +1,0 @@
-{
-  "name": "sonarqube-test-quality",
-  "version": "1.0.0",
-  "description": "SonarQube issue triage, Java test quality, and coverage verification",
-  "skills": [
-    "skills/sonarqube-test-quality"
-  ]
-}
