@@ -3,7 +3,6 @@
   "name": "pi",
   "adapter": "dist/adapters/pi/index.js",
   "adapter_sources": [
-    "dist/adapters/advisory.js",
     "dist/adapters/catalog-data.js",
     "dist/adapters/catalog-types.js",
     "dist/adapters/pi/agents.js",

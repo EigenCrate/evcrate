@@ -3,7 +3,6 @@
   "name": "codex",
   "adapter": "dist/adapters/codex/index.js",
   "adapter_sources": [
-    "dist/adapters/advisory.js",
     "dist/adapters/catalog-data.js",
     "dist/adapters/catalog-types.js",
     "dist/adapters/codex/hooks.js",
