@@ -27,6 +27,15 @@ test('tool-inputs: normalizes read operations and aliases', () => {
   assert.equal(norm2.kind, 'read');
   assert.deepEqual(norm2.operands, ['docs/readme.md']);
 
+  // Host native filePath parameter
+  const norm3 = normalizeLocalTool('read/readFile', { filePath: 'src/index.ts' });
+  assert.equal(norm3.kind, 'read');
+  assert.deepEqual(norm3.operands, ['src/index.ts']);
+
+  const norm4 = normalizeLocalTool('readFile', { FilePath: 'src/config.ts' });
+  assert.equal(norm4.kind, 'read');
+  assert.deepEqual(norm4.operands, ['src/config.ts']);
+
   // Missing path returns unqualified
   const unq = normalizeLocalTool('read_file', {});
   assert.equal(unq.kind, 'unqualified');
@@ -47,6 +56,25 @@ test('tool-inputs: normalizes edit operations including batch and patch forms', 
   });
   assert.equal(multi.kind, 'edit');
   assert.deepEqual(multi.operands, ['src/a.ts', 'src/b.ts']);
+
+  // Host concrete createFile and replaceString with filePath
+  const cf = normalizeLocalTool('createFile', { filePath: 'src/new-file.ts' });
+  assert.equal(cf.kind, 'edit');
+  assert.deepEqual(cf.operands, ['src/new-file.ts']);
+
+  const rs = normalizeLocalTool('replaceString', { filePath: 'src/existing.ts' });
+  assert.equal(rs.kind, 'edit');
+  assert.deepEqual(rs.operands, ['src/existing.ts']);
+
+  // Host multiReplaceString with replacements array containing filePath
+  const mrs = normalizeLocalTool('multiReplaceString', {
+    replacements: [
+      { filePath: 'src/mod-a.ts' },
+      { filePath: 'src/mod-b.ts' }
+    ]
+  });
+  assert.equal(mrs.kind, 'edit');
+  assert.deepEqual(mrs.operands, ['src/mod-a.ts', 'src/mod-b.ts']);
 
   // Patch header extraction
   const patch = normalizeLocalTool('apply_patch', {
@@ -78,6 +106,12 @@ test('tool-inputs: normalizes search, subagent, and unrelated tools', () => {
   assert.equal(glob.kind, 'search');
   assert.equal(glob.pattern, '**/*.ts');
   assert.deepEqual(glob.operands, ['tests']);
+
+  // Host directory listing
+  const listDir = normalizeLocalTool('search/listDirectory', { path: 'src/adapters' });
+  assert.equal(listDir.kind, 'search');
+  assert.equal(listDir.pattern, '*');
+  assert.deepEqual(listDir.operands, ['src/adapters']);
 
   // Subagent
   const sub = normalizeLocalTool('runSubagent', { agentName: 'evc-planner', prompt: 'plan something' });
@@ -269,4 +303,92 @@ test('policy: unqualified tool fails closed with deny', () => {
   const pol = evaluateLocalPolicies(op);
   assert.equal(pol.decision, 'deny');
   assert.ok(pol.reason.includes('PreToolUse security policy denied unqualified tool'));
+});
+
+test('policy: paired regressions for native host tool permissions and policy gates', () => {
+  // 1. Native readFile with filePath variants
+  const readPermitted = evaluateLocalPolicies(normalizeLocalTool('readFile', { filePath: 'src/utils/math.ts' }));
+  assert.equal(readPermitted.decision, 'none');
+
+  const readScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('readFile', { filePath: 'node_modules/lodash/index.js' }));
+  assert.equal(readScoutBlocked.decision, 'deny');
+  assert.ok(readScoutBlocked.reason.includes('Scout policy blocked'));
+
+  const readPrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('read/readFile', { FilePath: '.env.local' }));
+  assert.equal(readPrivacyAsk.decision, 'ask');
+  assert.ok(readPrivacyAsk.reason.includes('privacy-sensitive'));
+
+  // 2. Native createFile and replaceString with filePath
+  const createPermitted = evaluateLocalPolicies(normalizeLocalTool('createFile', { filePath: 'src/components/card.tsx' }));
+  assert.equal(createPermitted.decision, 'none');
+
+  const createScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('createFile', { filePath: '.git/hooks/pre-commit' }));
+  assert.equal(createScoutBlocked.decision, 'deny');
+
+  const replacePrivacyAsk = evaluateLocalPolicies(normalizeLocalTool('replaceString', { filePath: 'config/master.key' }));
+  assert.equal(replacePrivacyAsk.decision, 'ask');
+
+  // 3. Native multiReplaceString multi-operand denial
+  const multiAllPermitted = evaluateLocalPolicies(normalizeLocalTool('multiReplaceString', {
+    replacements: [{ filePath: 'src/a.ts' }, { filePath: 'src/b.ts' }]
+  }));
+  assert.equal(multiAllPermitted.decision, 'none');
+
+  const multiOneBlocked = evaluateLocalPolicies(normalizeLocalTool('multiReplaceString', {
+    replacements: [{ filePath: 'src/a.ts' }, { filePath: 'vendor/cache/pkg.json' }]
+  }));
+  assert.equal(multiOneBlocked.decision, 'deny');
+
+  // 4. Native listDirectory with path
+  const listPermitted = evaluateLocalPolicies(normalizeLocalTool('listDirectory', { path: 'src/services' }));
+  assert.equal(listPermitted.decision, 'none');
+
+  const listScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('listDirectory', { path: 'node_modules' }));
+  assert.equal(listScoutBlocked.decision, 'deny');
+});
+
+test('policy: native search parameters normalize scope and block protected directories', () => {
+  // P2 regression: search/textSearch with includePattern targeting node_modules/** and includeIgnoredFiles
+  const textSearchBlocked = evaluateLocalPolicies(normalizeLocalTool('search/textSearch', {
+    query: 'API_KEY',
+    includePattern: 'node_modules/**',
+    includeIgnoredFiles: true
+  }));
+  assert.equal(textSearchBlocked.decision, 'deny');
+  assert.ok(textSearchBlocked.reason.includes('Scout policy blocked'));
+
+  // search/textSearch with array of includePatterns containing blocked directory
+  const textSearchArrayBlocked = evaluateLocalPolicies(normalizeLocalTool('search/textSearch', {
+    query: 'secret',
+    includePattern: ['src/**', 'node_modules/**']
+  }));
+  assert.equal(textSearchArrayBlocked.decision, 'deny');
+
+  // search/textSearch with permitted includePattern
+  const textSearchPermitted = evaluateLocalPolicies(normalizeLocalTool('search/textSearch', {
+    query: 'export function',
+    folder: 'src',
+    includePattern: '**/*.ts'
+  }));
+  assert.equal(textSearchPermitted.decision, 'none');
+
+  // P2 regression: search/fileSearch with query glob targeting node_modules/**
+  const fileSearchBlocked = evaluateLocalPolicies(normalizeLocalTool('search/fileSearch', {
+    query: 'node_modules/**'
+  }));
+  assert.equal(fileSearchBlocked.decision, 'deny');
+  assert.ok(fileSearchBlocked.reason.includes('Scout policy blocked'));
+
+  // search/fileSearch with query targeting .git/
+  const fileSearchGitBlocked = evaluateLocalPolicies(normalizeLocalTool('search/fileSearch', {
+    query: '.git/config'
+  }));
+  assert.equal(fileSearchGitBlocked.decision, 'deny');
+
+  // search/fileSearch with permitted query in specific folder
+  const fileSearchPermitted = evaluateLocalPolicies(normalizeLocalTool('search/fileSearch', {
+    query: '*.ts',
+    folder: 'src/adapters'
+  }));
+  assert.equal(fileSearchPermitted.decision, 'none');
 });

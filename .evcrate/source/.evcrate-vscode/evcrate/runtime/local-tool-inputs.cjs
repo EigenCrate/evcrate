@@ -7,7 +7,9 @@ const READ_TOOL_NAMES = {
   read_file: true,
   view: true,
   readfile: true,
-  read: true
+  read: true,
+  'read/readfile': true,
+  copilot_readfile: true
 };
 
 const EDIT_TOOL_NAMES = {
@@ -16,8 +18,17 @@ const EDIT_TOOL_NAMES = {
   editfiles: true,
   str_replace_editor: true,
   apply_patch: true,
+  applypatch: true,
   write: true,
-  create: true
+  create: true,
+  createfile: true,
+  copilot_createfile: true,
+  replacestring: true,
+  copilot_replacestring: true,
+  insertedit: true,
+  copilot_insertedit: true,
+  multireplacestring: true,
+  copilot_multireplacestring: true
 };
 
 const TERMINAL_TOOL_NAMES = {
@@ -32,13 +43,22 @@ const TERMINAL_TOOL_NAMES = {
 const GREP_TOOL_NAMES = {
   grep_search: true,
   grep: true,
-  rg: true
+  rg: true,
+  textsearch: true,
+  'search/textsearch': true,
+  copilot_findtextinfiles: true
 };
 
 const GLOB_TOOL_NAMES = {
   file_search: true,
   glob: true,
-  find: true
+  find: true,
+  filesearch: true,
+  'search/filesearch': true,
+  copilot_findfiles: true,
+  listdirectory: true,
+  'search/listdirectory': true,
+  copilot_listdirectory: true
 };
 
 const SUBAGENT_TOOL_NAMES = {
@@ -56,8 +76,11 @@ const UNRELATED_TOOL_NAMES = {
   manage_todo_list: true,
   todowrite: true,
   view_image: true,
+  copilot_viewimage: true,
   read_resource: true,
-  list_resources: true
+  list_resources: true,
+  getterminaloutput: true,
+  killterminal: true
 };
 
 const CANONICAL_BLOCKED_DIR_NAMES = {
@@ -124,6 +147,72 @@ function extractCommandOperands(command) {
 
   return operands;
 }
+function extractGlobRoot(pattern) {
+  if (typeof pattern !== 'string') return undefined;
+  let normalized = pattern.trim().replace(/\\/g, '/');
+  while (normalized.startsWith('./')) normalized = normalized.slice(2);
+  while (normalized.startsWith('/')) normalized = normalized.slice(1);
+  const wildcardIndex = normalized.search(/[*?[{]/);
+  let dirPrefix;
+  if (wildcardIndex === -1) {
+    dirPrefix = normalized;
+  } else {
+    const prefix = normalized.slice(0, wildcardIndex);
+    const lastSlash = prefix.lastIndexOf('/');
+    if (lastSlash === -1) {
+      return undefined;
+    }
+    dirPrefix = prefix.slice(0, lastSlash);
+  }
+  dirPrefix = dirPrefix.trim();
+  while (dirPrefix.endsWith('/')) dirPrefix = dirPrefix.slice(0, -1);
+  return dirPrefix || undefined;
+}
+
+function collectSearchOperands(toolInput, extraOperand) {
+  const operands = [];
+  const directPath =
+    toolInput.path ||
+    toolInput.folder ||
+    toolInput.SearchPath ||
+    toolInput.filePath ||
+    toolInput.FilePath ||
+    toolInput.dirPath ||
+    toolInput.DirPath ||
+    toolInput.directoryPath ||
+    toolInput.DirectoryPath;
+  if (typeof directPath === 'string' && directPath.trim()) {
+    operands.push(directPath.trim());
+  }
+
+  const rawIncludes =
+    toolInput.includePattern ||
+    toolInput.filesToInclude ||
+    toolInput.include ||
+    toolInput.includes ||
+    toolInput.includePatterns;
+  if (typeof rawIncludes === 'string' && rawIncludes.trim()) {
+    for (const item of rawIncludes.split(',')) {
+      const trimmed = item.trim();
+      if (trimmed) operands.push(trimmed);
+    }
+  } else if (Array.isArray(rawIncludes)) {
+    for (const item of rawIncludes) {
+      if (typeof item === 'string' && item.trim()) {
+        operands.push(item.trim());
+      }
+    }
+  }
+
+  if (typeof extraOperand === 'string' && extraOperand.trim()) {
+    const trimmedExtra = extraOperand.trim();
+    if (!operands.includes(trimmedExtra)) {
+      operands.push(trimmedExtra);
+    }
+  }
+
+  return operands;
+}
 
 function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   const toolName = (rawToolName || '').trim();
@@ -160,7 +249,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 1. Read operations
   if (READ_TOOL_NAMES[lowerName]) {
-    const rawPath = toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
+    const rawPath = toolInput.filePath || toolInput.FilePath || toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
     if (typeof rawPath !== 'string' || !rawPath.trim()) {
       return {
         kind: 'unqualified',
@@ -186,15 +275,29 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   // 2. Edit operations
   if (EDIT_TOOL_NAMES[lowerName]) {
     const collectedPaths = [];
-    const directPath = toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
+    const directPath = toolInput.filePath || toolInput.FilePath || toolInput.path || toolInput.file_path || toolInput.target_file || toolInput.TargetFile;
     if (typeof directPath === 'string' && directPath.trim()) {
       collectedPaths.push(directPath);
     }
 
     if (Array.isArray(toolInput.files)) {
       for (const item of toolInput.files) {
-        if (item && typeof item === 'object' && typeof item.path === 'string' && item.path.trim()) {
-          collectedPaths.push(item.path);
+        if (item && typeof item === 'object') {
+          const itemPath = item.filePath || item.FilePath || item.path || item.file_path || item.target_file || item.TargetFile;
+          if (typeof itemPath === 'string' && itemPath.trim()) {
+            collectedPaths.push(itemPath);
+          }
+        }
+      }
+    }
+
+    if (Array.isArray(toolInput.replacements)) {
+      for (const item of toolInput.replacements) {
+        if (item && typeof item === 'object') {
+          const itemPath = item.filePath || item.FilePath || item.path || item.file_path || item.target_file || item.TargetFile;
+          if (typeof itemPath === 'string' && itemPath.trim()) {
+            collectedPaths.push(itemPath);
+          }
         }
       }
     }
@@ -271,8 +374,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
         originalInput: toolInput
       };
     }
-    const pathOperand = toolInput.path || toolInput.folder || toolInput.SearchPath;
-    const operandsToValidate = typeof pathOperand === 'string' && pathOperand.trim() ? [pathOperand] : [];
+    const operandsToValidate = collectSearchOperands(toolInput);
     const checked = validateOperands(operandsToValidate);
     if (typeof checked === 'string') {
       return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
@@ -290,7 +392,8 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
 
   // 5. File search operations
   if (GLOB_TOOL_NAMES[lowerName]) {
-    const pattern = toolInput.pattern || toolInput.query;
+    const isListDir = lowerName.includes('listdirectory');
+    const pattern = toolInput.pattern || toolInput.query || (isListDir ? '*' : undefined);
     if (typeof pattern !== 'string' || !pattern.trim()) {
       return {
         kind: 'unqualified',
@@ -299,8 +402,8 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
         originalInput: toolInput
       };
     }
-    const folderOperand = toolInput.folder || toolInput.path || toolInput.DirectoryPath;
-    const operandsToValidate = typeof folderOperand === 'string' && folderOperand.trim() ? [folderOperand] : [];
+    const globRoot = extractGlobRoot(pattern);
+    const operandsToValidate = collectSearchOperands(toolInput, globRoot);
     const checked = validateOperands(operandsToValidate);
     if (typeof checked === 'string') {
       return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
@@ -362,5 +465,7 @@ module.exports = {
   MAX_OPERANDS,
   MAX_OPERAND_BYTES,
   extractCommandOperands,
+  extractGlobRoot,
+  collectSearchOperands,
   normalizeLocalTool
 };

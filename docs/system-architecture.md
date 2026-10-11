@@ -127,13 +127,27 @@ HOME, native byte limits, disabled settings sources, and managed-only policies.
 VS Code GUI and Antigravity native execution remain unavailable in the Phase12
 environment; generated-file/runtime bridge checks are not native qualification.
 
-`vscode` projects an isolated Agent Plugins 1.0 bundle at `.evcrate/source/.evcrate-vscode/`,
-Registration is strictly user-controlled via VS Code's `chat.pluginLocations` setting;
-EVCrate publication never mutates user editor settings. Copilot CLI (`copilot`) and
-VS Code Local (`vscode`) remain distinct targets with separate formats, hook protocols,
-and runtime lifecycles. Neither target is a controller backend; both direct advisor workflows
-to the shared controller at `$HOME/.evcrate/bin/evcrate-advisor`. Standalone `--agent` relay
-on `vscode` is rejected with `ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`.
+`vscode` projects an isolated Agent Plugins 1.0 bundle at `.evcrate/source/.evcrate-vscode/`.
+Default publication is inert and never mutates editor settings; explicit opt-in registration
+(`--register-vscode-settings` or interactive first-time TTY prompt; suppressed by
+`--no-register-vscode-settings`) surgically updates `chat.pluginLocations` in workspace or
+User `settings.json`, while `evcrate recover` repairs only published artifacts and never
+touches editor settings or agent-authored docs. Copilot CLI (`copilot`) and VS Code Local
+(`vscode`) remain distinct targets; neither is a controller backend, both invoke
+`$HOME/.evcrate/bin/evcrate-advisor`, and standalone `--agent` relay on `vscode` fails with
+`ADVISE_AGENT_RELAY_UNSUPPORTED_VSCODE`. In `src/adapters/vscode/metadata-tools.ts`,
+`mapAgentTools` projects canonical tool intent to pinned VS Code `1.140.0` / Copilot Chat
+`0.68.0` frontmatter references (`read/readFile`, `search/fileSearch`, `search/textSearch`,
+`search/listDirectory`, `runInTerminal`, `getTerminalOutput`, `killTerminal`,
+`agent/runSubagent`, `todo`, `editFiles`, `createFile`, `multiReplaceString`) without broad
+groups, runtime discovery, or extra extensions. It preserves `tools: []` deny-all, omitted-tool
+inheritance, `Task`-derived `canDelegate` (`agents: ['*']` vs. leaf `agents: []`), and direct
+`todo` (disabled by the host in child subagents), while keeping frontmatter references distinct
+from model-facing names (`copilot_readFile`, `manage_todo_list`) and hook operands (`filePath`/`path`
+normalized in `tool-inputs.ts` and `runtime-sources.ts`). `evcrate/agent-tool-audit.json`
+records build declarations, not effective host grants. Linux x64 is qualified across N01–N10 and
+W01–W04 (candidate tree `81792bf2...`); Windows Local qualification, incident closure, and
+production rollout remain blocked pending affected-host verification and operator approval.
 
 ### Snyk specialist composition: local porting boundary
 
