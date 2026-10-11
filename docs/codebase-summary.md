@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Maintained:** 2026-10-11
+**Maintained:** 2026-10-12
 **Source:** Canonical resources and TypeScript control-plane contracts for the completed advisor subsystem retirement cutover and VS Code `evc`/`cmd-*` container mapping; live vendor/native-host qualification remains separate.
 **Package:** Private npm package `evcrate` 2.11.0; Node `>=22.19.0`.
 Single binary: `evcrate` (`dist/cli/evcrate.js`).
@@ -137,6 +137,14 @@ Phase 09 establishes documentation, controlled rollout, and lifecycle governance
 
 - **Namespace decoupling:** `src/adapters/vscode/metadata-tools.ts` separates canonical source tool intent, host frontmatter tool references (`read/readFile`, `runInTerminal`, `search/fileSearch`, `search/textSearch`, `search/listDirectory`, `todo`, `web/fetch`, `edit/editNotebook`), model invocation spellings, and hook event names.
 - **Dual-authority parameter normalization:** `src/adapters/vscode/tool-inputs.ts` and `runtime-sources.ts:LOCAL_TOOL_INPUTS_SOURCE` (projected to `.evcrate-vscode/evcrate/runtime/local-tool-inputs.cjs`) normalize host `filePath`, `FilePath`, `dirPath`, batch edit paths (`files`, `replacements`), notebook `filePath`/`editType`/`cellId`, `web/fetch` HTTP(S) `urls`/`query`, and terminal helper tools (`getTerminalOutput`, `killTerminal`).
+
+### VS Code runtime model bindings companion (Phase 01 native feasibility - proposed & gated)
+
+- **Offline spike artifact**: Developed and verified in isolated temporary directory `/tmp/evcrate-phase01-spike/`; temporary directory removed. Artifact packaging and SHA-256 digest are recorded in [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md). Production code files remain unmodified.
+- **Offline test harness**: 10/10 automated harness checks passed on Linux; inspected/pinned host version: VS Code 1.140.0 commit `07f806f999227108933c2e30515b26eecc1fda74`. Verified model selector formatting (`name (vendor)`), catalog ambiguity detection (`SELECTOR_AMBIGUOUS`), binding precedence layering (root actor override > user actor override > root/user tiers), fail-closed rejection of unsupported remote authorities (`vscode-remote://`, `wsl://`), local `file:///` acceptance, simulated generation retention bounds, frontmatter contracts across 4 actor types, simulated in-turn generation immutability, and root/instance storage isolation as recorded in [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md) and [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md).
+- **Proposed scope and local-only boundary**: Proposed companion scope is local-only (`file://`); these contexts remain unqualified pending native evidence.
+- **Native execution boundaries & unresolved proof**: Live editor qualification gates (live selector emission, child subagent lookup logging, cross-source plugin hook attachment, live cached-selection race/recovery) remain **NOT RUN / BLOCKED** pending an authorized interactive qualification session with live Copilot Chat authentication. Host execution proof for plugin-owned hooks on extension-attributed actors, mid-turn actor removal, and active-session generation retention remains unestablished.
+- **Cutover gating**: Phase 02+ static cutover is strictly gated and cannot proceed until native runtime gates are observed and documented. The existing static VS Code Local projection at `.evcrate/source/.evcrate-vscode/` remains authoritative and unchanged.
 ## Phase 01 launchability and identity
 
 Publication execution intent is derived from the published relative path and published shebang bytes (with explicit launcher roles), not from source permission metadata. The plan carries execution intent separately from content hashes and CAS identity: a content-equal no-op stays a no-op, while new or changed POSIX launchers receive the required execute bit. Required staging/install chmod failures are errors rather than successful fallbacks.

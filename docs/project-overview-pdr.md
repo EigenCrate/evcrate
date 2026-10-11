@@ -306,6 +306,14 @@ not qualification of the current source cutover or inline interview.
 
 **Container-aware naming acceptance:** Canonical `evc-cmd-*` commands become `.evcrate-vscode/skills/cmd-*/SKILL.md`, preserving `-x-` nesting and semantic command IDs. Copilot Chat displays `evc cmd-*`; `/<plugin-name>:<skill-name>` resolves to `/evc:cmd-*` without duplicate `evc` prefixing. `replaceCommandInvocations` in `src/adapters/vscode/references.ts` rewrites `/evc-cmd-*` and `$evc-cmd-*`, including wildcard families, to local `/cmd-*` and `$cmd-*`. Shared `ev-help.py` discovers both `evc-cmd-*` and `cmd-*` skill directories.
 
+### FR-26: VS Code runtime model bindings companion (Phase 01 Native Feasibility - Proposed & Gated)
+
+**Requirement:** A private companion extension using proposed `chatPromptFiles` API (`registerCustomAgentProvider`) for dynamic runtime model bindings, isolated from the static projection. Proposed support scope is local-only (`file://`): local single-folder projects, local HOME installations, multi-root workspaces, and partitioned local profiles; these contexts remain unqualified pending native evidence. Remote authorities (`vscode-remote://`, `wsl://`) are unsupported and must fail closed.
+
+**Offline feasibility acceptance:** 10/10 automated harness checks PASS on Linux; inspected/pinned host version: VS Code 1.140.0 commit `07f806f999227108933c2e30515b26eecc1fda74`. Verified model selector formatting (`name (vendor)`), catalog ambiguity detection (`SELECTOR_AMBIGUOUS`), hierarchical precedence layering (root actor override > user actor override > root/user tiers), fail-closed rejection of unsupported remote authorities, local file URI acceptance, simulated generation retention bounds, frontmatter contracts, simulated in-turn generation immutability, and root/instance storage isolation as recorded in [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md) and [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md). Temporary spike directory removed; artifact packaging and digest recorded in report; production code files unmodified.
+
+**Native editor qualification stop gate:** Native runtime execution gates (live selector emission, child subagent lookup logging, cross-source plugin hook attachment, live cached-selection race/recovery) remain **NOT RUN / BLOCKED** pending an authorized interactive qualification session with live Copilot Chat authentication. In accordance with Phase 01 stop gates, Phase 02+ static cutover is strictly gated and cannot proceed until native runtime gates are observed and documented. The existing static VS Code Local projection at `.evcrate/source/.evcrate-vscode/` remains authoritative and unchanged.
+
 ## Non-functional requirements
 
 | Area | Requirement |

@@ -392,6 +392,16 @@ the matching hosted x64 matrix, not broad Windows runtime parity. GUI/native
 host availability, model access, and safe report-writing capability must be
 reported explicitly; unavailable rows remain unqualified.
 
+## Proposed VS Code runtime model bindings (planning only)
+<a id="proposed-vs-code-runtime-model-bindings--planning-only"></a>
+
+A private companion extension utilizing VS Code's proposed `chatPromptFiles` API (`registerCustomAgentProvider`) is planned to enable dynamic user-controlled runtime model bindings for VS Code Local while preserving immutable agent intent and canonical Claude tiers across the other six targets. This companion remains proposed; existing static VS Code Local projection at `.evcrate/source/.evcrate-vscode/` remains authoritative and unmodified.
+
+- **Scope and Bounds**: Proposed support scope is local-only (`file://`): local single-folder projects, local HOME installations, local multi-root workspaces, and partitioned local profiles; these contexts remain unqualified pending native evidence. Remote authorities (`vscode-remote://`, `wsl://`) are unsupported and fail closed.
+- **Feasibility Status (Phase 01)**: Offline feasibility evaluation is complete (10/10 automated harness checks PASS on Linux; inspected/pinned host version: VS Code 1.140.0 commit `07f806f999227108933c2e30515b26eecc1fda74`). As documented in [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md) and [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md), the offline spike verified model selector formatting (`name (vendor)`), catalog ambiguity detection (`SELECTOR_AMBIGUOUS`), hierarchical precedence layering (root actor override > user actor override > root/user tiers), fail-closed rejection of unsupported remote authorities, local file URI acceptance, simulated generation retention bounds, frontmatter contracts across 4 actor types, simulated in-turn generation immutability, and storage isolation. The temporary spike directory was removed; artifact packaging and digest are recorded in the report.
+- **Native Editor Boundary & Unresolved Proofs**: Native editor runtime qualification gates remain **NOT RUN / BLOCKED** pending an authorized interactive qualification session with live Copilot Chat authentication. Host execution proof remains unestablished for: (1) whether extension-attributed actors trigger plugin-owned runtime hooks (`local-hook-bridge.cjs`), (2) host behavior on mid-turn provider actor removal, and (3) live generation-retention bounds under active editor sessions.
+- **Production Cutover Stop Gate**: In accordance with Phase 01 stop gates, production cutover (Phase 02+) remains strictly gated; no static cutover or companion code migration may proceed until native runtime gates are qualified.
+
 ## Related documents
 
 - [Project overview and PDR](./project-overview-pdr.md)

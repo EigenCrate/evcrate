@@ -2,8 +2,14 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-11
+**Updated:** 2026-10-12
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-12 — docs(vscode): native feasibility evaluation for runtime model bindings companion (Phase 01)
+
+- Evaluated proposed `chatPromptFiles` API (`registerCustomAgentProvider`) for private companion model bindings on Linux x86_64 host (pinned candidate VS Code 1.140.0 commit `07f806f999227108933c2e30515b26eecc1fda74`).
+- Offline spike test harness passed 10/10 checks as documented in [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md) and [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md). Validated selector formatting, ambiguity rejection (`SELECTOR_AMBIGUOUS`), precedence layering, fail-closed remote authority rejection (`vscode-remote://`, `wsl://`), local file URI acceptance, simulated generation retention bounds, frontmatter contracts, simulated in-turn generation immutability, and storage isolation. Temporary spike removed; artifact packaging and digest recorded in report.
+- Native runtime qualification gates remain **NOT RUN / BLOCKED** pending an authorized interactive editor session with live Copilot Chat authentication; Phase 02+ production cutover is gated. Existing static projection remains unchanged.
 
 ### 2026-10-11 — feat(vscode): shorten plugin identity and use container-local command names
 
