@@ -473,6 +473,72 @@ function extractCommandOperands(command) {
 
   return operands;
 }
+function extractGlobRoot(pattern) {
+  if (typeof pattern !== 'string') return undefined;
+  let normalized = pattern.trim().replace(/\\\\/g, '/');
+  while (normalized.startsWith('./')) normalized = normalized.slice(2);
+  while (normalized.startsWith('/')) normalized = normalized.slice(1);
+  const wildcardIndex = normalized.search(/[*?[{]/);
+  let dirPrefix;
+  if (wildcardIndex === -1) {
+    dirPrefix = normalized;
+  } else {
+    const prefix = normalized.slice(0, wildcardIndex);
+    const lastSlash = prefix.lastIndexOf('/');
+    if (lastSlash === -1) {
+      return undefined;
+    }
+    dirPrefix = prefix.slice(0, lastSlash);
+  }
+  dirPrefix = dirPrefix.trim();
+  while (dirPrefix.endsWith('/')) dirPrefix = dirPrefix.slice(0, -1);
+  return dirPrefix || undefined;
+}
+
+function collectSearchOperands(toolInput, extraOperand) {
+  const operands = [];
+  const directPath =
+    toolInput.path ||
+    toolInput.folder ||
+    toolInput.SearchPath ||
+    toolInput.filePath ||
+    toolInput.FilePath ||
+    toolInput.dirPath ||
+    toolInput.DirPath ||
+    toolInput.directoryPath ||
+    toolInput.DirectoryPath;
+  if (typeof directPath === 'string' && directPath.trim()) {
+    operands.push(directPath.trim());
+  }
+
+  const rawIncludes =
+    toolInput.includePattern ||
+    toolInput.filesToInclude ||
+    toolInput.include ||
+    toolInput.includes ||
+    toolInput.includePatterns;
+  if (typeof rawIncludes === 'string' && rawIncludes.trim()) {
+    for (const item of rawIncludes.split(',')) {
+      const trimmed = item.trim();
+      if (trimmed) operands.push(trimmed);
+    }
+  } else if (Array.isArray(rawIncludes)) {
+    for (const item of rawIncludes) {
+      if (typeof item === 'string' && item.trim()) {
+        operands.push(item.trim());
+      }
+    }
+  }
+
+  if (typeof extraOperand === 'string' && extraOperand.trim()) {
+    const trimmedExtra = extraOperand.trim();
+    if (!operands.includes(trimmedExtra)) {
+      operands.push(trimmedExtra);
+    }
+  }
+
+  return operands;
+}
 
 function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
   const toolName = (rawToolName || '').trim();
@@ -634,8 +700,7 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
         originalInput: toolInput
       };
     }
-    const pathOperand = toolInput.path || toolInput.folder || toolInput.SearchPath;
-    const operandsToValidate = typeof pathOperand === 'string' && pathOperand.trim() ? [pathOperand] : [];
+    const operandsToValidate = collectSearchOperands(toolInput);
     const checked = validateOperands(operandsToValidate);
     if (typeof checked === 'string') {
       return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
@@ -663,8 +728,8 @@ function normalizeLocalTool(rawToolName, rawToolInput, toolUseId, contextCwd) {
         originalInput: toolInput
       };
     }
-    const folderOperand = toolInput.folder || toolInput.path || toolInput.filePath || toolInput.FilePath || toolInput.dirPath || toolInput.DirPath || toolInput.DirectoryPath;
-    const operandsToValidate = typeof folderOperand === 'string' && folderOperand.trim() ? [folderOperand] : [];
+    const globRoot = extractGlobRoot(pattern);
+    const operandsToValidate = collectSearchOperands(toolInput, globRoot);
     const checked = validateOperands(operandsToValidate);
     if (typeof checked === 'string') {
       return { kind: 'unqualified', toolName, reason: checked, originalInput: toolInput };
@@ -726,6 +791,8 @@ module.exports = {
   MAX_OPERANDS,
   MAX_OPERAND_BYTES,
   extractCommandOperands,
+  extractGlobRoot,
+  collectSearchOperands,
   normalizeLocalTool
 };
 `;
@@ -929,6 +996,16 @@ function evaluateLocalPolicies(operation, config = {}) {
       }
     }
   }
+    if (operation.kind === 'search' && operation.pattern) {
+      const patternCheck = matchesScoutPattern(operation.pattern, compiledScout);
+      if (patternCheck.blocked) {
+        return {
+          decision: 'deny',
+          reason: 'Scout policy blocked search pattern "' + operation.pattern + '" matching .evcrateignore pattern "' + patternCheck.pattern + '"',
+          warnings: []
+        };
+      }
+    }
 
   if (operation.kind === 'search' && operation.pattern && isBroadPattern(operation.pattern)) {
     const isRootSearch = operation.operands.length === 0 || operation.operands.every(

@@ -346,3 +346,49 @@ test('policy: paired regressions for native host tool permissions and policy gat
   const listScoutBlocked = evaluateLocalPolicies(normalizeLocalTool('listDirectory', { path: 'node_modules' }));
   assert.equal(listScoutBlocked.decision, 'deny');
 });
+
+test('policy: native search parameters normalize scope and block protected directories', () => {
+  // P2 regression: search/textSearch with includePattern targeting node_modules/** and includeIgnoredFiles
+  const textSearchBlocked = evaluateLocalPolicies(normalizeLocalTool('search/textSearch', {
+    query: 'API_KEY',
+    includePattern: 'node_modules/**',
+    includeIgnoredFiles: true
+  }));
+  assert.equal(textSearchBlocked.decision, 'deny');
+  assert.ok(textSearchBlocked.reason.includes('Scout policy blocked'));
+
+  // search/textSearch with array of includePatterns containing blocked directory
+  const textSearchArrayBlocked = evaluateLocalPolicies(normalizeLocalTool('search/textSearch', {
+    query: 'secret',
+    includePattern: ['src/**', 'node_modules/**']
+  }));
+  assert.equal(textSearchArrayBlocked.decision, 'deny');
+
+  // search/textSearch with permitted includePattern
+  const textSearchPermitted = evaluateLocalPolicies(normalizeLocalTool('search/textSearch', {
+    query: 'export function',
+    folder: 'src',
+    includePattern: '**/*.ts'
+  }));
+  assert.equal(textSearchPermitted.decision, 'none');
+
+  // P2 regression: search/fileSearch with query glob targeting node_modules/**
+  const fileSearchBlocked = evaluateLocalPolicies(normalizeLocalTool('search/fileSearch', {
+    query: 'node_modules/**'
+  }));
+  assert.equal(fileSearchBlocked.decision, 'deny');
+  assert.ok(fileSearchBlocked.reason.includes('Scout policy blocked'));
+
+  // search/fileSearch with query targeting .git/
+  const fileSearchGitBlocked = evaluateLocalPolicies(normalizeLocalTool('search/fileSearch', {
+    query: '.git/config'
+  }));
+  assert.equal(fileSearchGitBlocked.decision, 'deny');
+
+  // search/fileSearch with permitted query in specific folder
+  const fileSearchPermitted = evaluateLocalPolicies(normalizeLocalTool('search/fileSearch', {
+    query: '*.ts',
+    folder: 'src/adapters'
+  }));
+  assert.equal(fileSearchPermitted.decision, 'none');
+});

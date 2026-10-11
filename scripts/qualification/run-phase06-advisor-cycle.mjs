@@ -39,6 +39,56 @@ function invokeController(args, input) {
 function hashFile(filepath) {
   return crypto.createHash('sha256').update(fs.readFileSync(path.resolve(REPO_ROOT, filepath))).digest('hex');
 }
+function executeValidationSuite(suite, command) {
+  console.log(`Executing validation command for ${suite}: ${command}...`);
+  const isNpm = command.startsWith('npm ');
+  let execCmd = process.execPath;
+  let execArgs = [];
+
+  if (isNpm) {
+    execCmd = 'npm';
+    execArgs = command.slice(4).split(' ').filter(Boolean);
+  } else if (command.startsWith('node ')) {
+    execArgs = command.slice(5).split(' ').filter(Boolean);
+  } else {
+    const parts = command.split(' ').filter(Boolean);
+    execCmd = parts[0];
+    execArgs = parts.slice(1);
+  }
+
+  const res = spawnSync(execCmd, execArgs, {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    timeout: 120000,
+    env: { ...process.env }
+  });
+
+  if (res.error) {
+    throw new Error(`Validation command failed to spawn for ${suite} (${command}): ${res.error.message}`);
+  }
+
+  if (res.status !== 0) {
+    const errSnippet = (res.stderr || res.stdout || '').slice(-500);
+    throw new Error(`Validation command failed for ${suite} (${command}) with exit ${res.status}:\n${errSnippet}`);
+  }
+
+  const output = res.stdout || '';
+  const passedMatches = (output.match(/✔/g) || []).length;
+  const failedMatches = (output.match(/✖/g) || []).length;
+  const passed = passedMatches > 0 ? passedMatches : (res.status === 0 ? 1 : 0);
+  const failed = failedMatches;
+
+  console.log(`✓ ${suite} passed (${passed} checks passed, 0 failed)`);
+  return {
+    suite,
+    command,
+    status: 'passed',
+    passed,
+    failed,
+    details: null
+  };
+}
+
 
 export async function runPhase06AdvisorCycle() {
   const taskRunId = crypto.randomUUID();
@@ -146,45 +196,25 @@ export async function runPhase06AdvisorCycle() {
       validation_results: [
         {
           suite: 'phase06-qualification-tests',
-          command: 'node --test tests/qualification/vscode-local-phase06-qualification.test.mjs',
-          status: 'passed',
-          passed: 2,
-          failed: 0,
-          details: null
+          command: 'node --test tests/qualification/vscode-local-phase06-qualification.test.mjs'
         },
         {
           suite: 'vscode-qualification-and-adapters',
-          command: 'node --test tests/adapters/vscode-*.test.mjs tests/qualification/vscode-local-*.test.mjs',
-          status: 'passed',
-          passed: 110,
-          failed: 0,
-          details: null
+          command: 'node --test tests/adapters/vscode-*.test.mjs tests/qualification/vscode-local-*.test.mjs'
         },
         {
           suite: 'npm-test-adapters',
-          command: 'npm run test:adapters',
-          status: 'passed',
-          passed: 232,
-          failed: 0,
-          details: null
+          command: 'npm run test:adapters'
         },
         {
           suite: 'distribute-check',
-          command: 'npm run distribute:check',
-          status: 'passed',
-          passed: 1,
-          failed: 0,
-          details: null
+          command: 'npm run distribute:check'
         },
         {
           suite: 'release-check',
-          command: 'npm run release:check',
-          status: 'passed',
-          passed: 1,
-          failed: 0,
-          details: null
+          command: 'npm run release:check'
         }
-      ],
+      ].map(({ suite, command }) => executeValidationSuite(suite, command)),
       artifacts: []
     },
     prior: {

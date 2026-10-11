@@ -538,6 +538,20 @@ export async function runPhase06DocsWorkflow(options = {}) {
       const skillContent = skillExists ? fs.readFileSync(skillPath, 'utf8') : '';
 
       // Phase 1: Parallel Codebase Scouting with evc-scout subagents
+      const scout1Call = invokeHook(productionBridge, 'SubagentStart', {
+        session_id: 'sess-w03-coord',
+        subagent_name: 'evc-scout',
+        prompt: 'Scout slice A: src/module-a.js'
+      }, { PLUGIN_ROOT: candidateDir, VSCODE_PROJECT_DIR: fixtureWorkspaceDir }, fixtureWorkspaceDir);
+      rawEvents.push({ caseId, step: 'Phase1Scout1Start', ...scout1Call });
+
+      const scout2Call = invokeHook(productionBridge, 'SubagentStart', {
+        session_id: 'sess-w03-coord',
+        subagent_name: 'evc-scout',
+        prompt: 'Scout slice B: src/module-b.js'
+      }, { PLUGIN_ROOT: candidateDir, VSCODE_PROJECT_DIR: fixtureWorkspaceDir }, fixtureWorkspaceDir);
+      rawEvents.push({ caseId, step: 'Phase1Scout2Start', ...scout2Call });
+
       const scoutingPhaseRecord = {
         phase: 'Phase 1: Parallel Codebase Scouting',
         scoutsSpawned: 2,
@@ -596,6 +610,39 @@ export async function runPhase06DocsWorkflow(options = {}) {
         sectionsExtracted: ['Module Conventions', 'Data Flow'],
         staleAreasIdentified: ['computeOldMetrics', 'legacyProcess']
       };
+
+      // Phase 1.5: Reader agent tool invocation checks
+      const readDoc1 = invokeHook(productionBridge, 'PreToolUse', {
+        session_id: 'sess-w03-reader-1',
+        agent_name: 'evc-scout',
+        tool_name: 'read/readFile',
+        tool_input: { filePath: 'docs/project-overview-pdr.md' }
+      }, { PLUGIN_ROOT: candidateDir, VSCODE_PROJECT_DIR: fixtureWorkspaceDir }, fixtureWorkspaceDir);
+      rawEvents.push({ caseId, step: 'Phase15Reader1ToolUse', ...readDoc1 });
+
+      const readDoc2 = invokeHook(productionBridge, 'PreToolUse', {
+        session_id: 'sess-w03-reader-2',
+        agent_name: 'evc-scout',
+        tool_name: 'read/readFile',
+        tool_input: { filePath: 'docs/system-architecture.md' }
+      }, { PLUGIN_ROOT: candidateDir, VSCODE_PROJECT_DIR: fixtureWorkspaceDir }, fixtureWorkspaceDir);
+      rawEvents.push({ caseId, step: 'Phase15Reader2ToolUse', ...readDoc2 });
+
+      // Phase 2: Docs manager delegation and tool check
+      const docsMgrCall = invokeHook(productionBridge, 'SubagentStart', {
+        session_id: 'sess-w03-coord',
+        subagent_name: 'evc-docs-manager',
+        prompt: 'Update documentation from gathered facts'
+      }, { PLUGIN_ROOT: candidateDir, VSCODE_PROJECT_DIR: fixtureWorkspaceDir }, fixtureWorkspaceDir);
+      rawEvents.push({ caseId, step: 'Phase2DocsManagerStart', ...docsMgrCall });
+
+      const editDocCall = invokeHook(productionBridge, 'PreToolUse', {
+        session_id: 'sess-w03-docs-manager',
+        agent_name: 'evc-docs-manager',
+        tool_name: 'replaceString',
+        tool_input: { filePath: 'README.md', oldString: 'legacyProcess()', newString: 'processRecord()' }
+      }, { PLUGIN_ROOT: candidateDir, VSCODE_PROJECT_DIR: fixtureWorkspaceDir }, fixtureWorkspaceDir);
+      rawEvents.push({ caseId, step: 'Phase2DocsManagerToolUse', ...editDocCall });
 
       // Phase 2: Documentation update by evc-docs-manager (verified in W02)
       const docsUpdatePhaseRecord = {
@@ -657,6 +704,9 @@ export async function runPhase06DocsWorkflow(options = {}) {
       results.cases[caseId] = {
         title: 'Actual /evcrate-local cmd-docs-update',
         status: passed ? 'PASS' : 'FAIL',
+        executionType: 'workflow-model-simulation',
+        hostNativeAgentSessionsObserved: false,
+        harnessSubagentHooksExercised: true,
         skillExists,
         phase1Scouting: scoutingPhaseRecord,
         phase15ReaderBranch: {
@@ -745,6 +795,9 @@ Phase 06 qualifies the end-to-end documentation update workflow for the VS Code 
 
 All **3 workflow qualification cases passed (100%)** on the Linux workstation using the staged candidate plugin, live production hook bridge (\`local-hook-bridge.cjs\`), disposable multi-module codebase with seeded stale documentation facts, and installed reference validator.
 
+- **Workflow-Model & Hook Harness Verification:** **QUALIFIED (PASSED)** (3/3 cases passed).
+- **Host-Native Interactive Execution:** **NOT VERIFIED** (Requires live interactive Copilot session with active GUI / host process; offline qualification validates state machine transitions, hook protocol handoffs, size bounds, and documentation validator).
+
 Key outcomes:
 1. **W01 (Disjoint Scout tasks):** Two \`evc-scout\` subagents searched distinct source slices (\`src/module-a.js\`, \`src/module-b.js\`), retrieved unprovided tokens and function exports, left source files strictly unmodified, and returned grounded line evidence to the parent coordinator.
 2. **W02 (Canonical docs-manager with omitted tools):** Verified that \`evc-docs-manager\` frontmatter omits explicit \`tools:\`, inheriting default VS Code editing capabilities. Successfully updated disposable documentation files with facts from both scouting slices while preserving source code immutability and restricting modifications to authorized doc outputs.
@@ -789,13 +842,14 @@ Per the agreed qualification contract, the **Windows host evaluation is explicit
 
 ## 4. Platform Evaluation & Windows Boundary
 
-- **Linux x64:** **QUALIFIED (3/3 PASS)**
-  - Linux native execution verified all scouting, reading, editing, size check, and validation steps.
+- **Linux x64 (Hook-Harness & Workflow Model):** **QUALIFIED (3/3 PASS)**
+  - Linux execution verified all scouting, reading, editing, size check, and validation steps via hook bridge and schema normalization.
+- **Linux x64 (Host-Native Copilot Execution):** **NOT VERIFIED**
+  - Live interactive tool execution requires an active VS Code \`1.140.0\` / Copilot Chat \`0.68.0\` host session; offline execution records simulated acceptance only.
 - **Windows Local:** **BLOCKED**
   - **Reason:** Affected Windows native workstation is not available in the local Linux execution environment.
   - **Contract Compliance:** Per \`qualification-matrix.md\` lines 13–14: *"If Windows is unavailable, finish Linux native/workflow rows and automated checks; Phase 07 may review and hand over the immutable candidate with Windows marked blocked. Overall completion, Windows acceptance, incident closure and deployment remain blocked."*
   - **Disposition:** Windows rows (WW01–WW03) are explicitly recorded as blocked. Candidate handoff remains gated on operator-provided native Windows verification before production deployment.
-
 ---
 
 ## 5. Cryptographic Candidate Identity

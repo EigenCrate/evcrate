@@ -197,6 +197,16 @@ function evaluateLocalPolicies(operation, config = {}) {
       }
     }
   }
+    if (operation.kind === 'search' && operation.pattern) {
+      const patternCheck = matchesScoutPattern(operation.pattern, compiledScout);
+      if (patternCheck.blocked) {
+        return {
+          decision: 'deny',
+          reason: 'Scout policy blocked search pattern "' + operation.pattern + '" matching .evcrateignore pattern "' + patternCheck.pattern + '"',
+          warnings: []
+        };
+      }
+    }
 
   if (operation.kind === 'search' && operation.pattern && isBroadPattern(operation.pattern)) {
     const isRootSearch = operation.operands.length === 0 || operation.operands.every(
