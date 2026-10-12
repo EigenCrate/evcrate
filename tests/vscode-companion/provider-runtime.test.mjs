@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -136,23 +136,35 @@ test('generation-loader: loadAndStageGeneration validates paths, hashes, symlink
     assert.equal(res2.staged, null);
     assert.equal(res2.contributedCount, 1);
 
-    // syncPluginAgentsDir materializes com.github.copilot/agents/*.agent.md
-    const resSync = loadAndStageGeneration({
-      pluginFsPath: pluginDir,
-      baseStorageFsPath: storageDir,
-      rootIdentity: 'file:///work/proj',
-      instanceUuid: '11111111-2222-4333-8444-555555555555',
-      generationId: 3,
-      syncPluginAgentsDir: true,
-      currentUsage: { activeInstanceGenerations: 1, activeInstanceBytes: 100, persistentAuthorityBytes: 100 }
-    });
-    assert.equal(resSync.contributedCount, 1);
+    // syncPluginAgentsDir materializes com.github.copilot/agents/*.agent.md for unbound/bound and cleans missing
+    writeFileSync(join(pluginDir, 'evcrate', 'agent-intent.json'), JSON.stringify({
+      schema: 'evcrate-vscode-agent-intent-v1',
+      actors: { 'evc-planner': { templatePath: 'evcrate/agent-templates/evc-planner.md', templateSha256: tplDigest, intent: { mode: 'tier', tier: 'opus' } } }
+    }));
+    const baseSync = { pluginFsPath: pluginDir, baseStorageFsPath: storageDir, rootIdentity: 'file:///work/proj', instanceUuid: '11111111-2222-4333-8444-555555555555', syncPluginAgentsDir: true };
+    const resSyncUnbound = loadAndStageGeneration({ ...baseSync, generationId: 3, currentUsage: { activeInstanceGenerations: 1, activeInstanceBytes: 100, persistentAuthorityBytes: 100 } });
     const syncedAgentPath = join(pluginDir, 'com.github.copilot', 'agents', 'evc-planner.agent.md');
-    assert.ok(resSync.staged);
-    assert.equal(
-      readFileSync(syncedAgentPath, 'utf8').includes('name: evc-planner'),
-      true
-    );
+    assert.equal(resSyncUnbound.contributedCount, 1);
+    assert.equal(readFileSync(syncedAgentPath, 'utf8').includes('model:'), false);
+
+    const resSyncBound = loadAndStageGeneration({
+      ...baseSync, generationId: 4,
+      userBindings: { schema: 'evcrate-vscode-bindings-v1', revision: 1, tiers: { opus: { vendor: 'copilot', id: 'gpt-5.6-luna' } }, actors: {} },
+      catalog: [{ vendor: 'copilot', id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }],
+      currentUsage: { activeInstanceGenerations: 2, activeInstanceBytes: 200, persistentAuthorityBytes: 200 }
+    });
+    assert.equal(resSyncBound.contributedCount, 1);
+    assert.match(readFileSync(syncedAgentPath, 'utf8'), /model:\s*"GPT-5\.6 Luna \(copilot\)"/);
+
+    const resSyncMissing = loadAndStageGeneration({
+      ...baseSync, generationId: 5,
+      userBindings: { schema: 'evcrate-vscode-bindings-v1', revision: 2, tiers: { opus: { vendor: 'copilot', id: 'nonexistent-model' } }, actors: {} },
+      catalog: [{ vendor: 'copilot', id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' }],
+      currentUsage: { activeInstanceGenerations: 3, activeInstanceBytes: 300, persistentAuthorityBytes: 300 }
+    });
+    assert.equal(resSyncMissing.contributedCount, 0);
+    assert.equal(resSyncMissing.withheldReasons['evc-planner'], 'MODEL_NOT_FOUND');
+    assert.equal(existsSync(syncedAgentPath), false);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

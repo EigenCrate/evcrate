@@ -26,7 +26,7 @@ export async function handleConfigureAgentModels(
   if (!scopeChoice) return false;
 
   const tierOptions: ReadonlyArray<{ readonly label: string; readonly tier: CanonicalModelTier | 'all'; readonly description: string }> = [
-    { label: 'All Agents (Default Model)', tier: 'all', description: 'Bind one model to all agent tiers at once' },
+    { label: 'All Tiers (Default Model)', tier: 'all', description: 'Bind one default model to all 3 tiers (per-actor overrides still win)' },
     { label: 'opus', tier: 'opus', description: 'Planning & Architecture Tier (evc-planner, evc-brainstormer)' },
     { label: 'sonnet', tier: 'sonnet', description: 'Engineering & Review Tier (evc-fullstack-developer, evc-code-reviewer, evc-debugger, +2 more)' },
     { label: 'haiku', tier: 'haiku', description: 'Fast Discovery & Utility Tier (evc-scout, evc-tester, evc-git-manager, +6 more)' }
