@@ -188,7 +188,7 @@ invocation scope, separate from installation and proposed-API authorization.
 
 ### Snyk specialist composition: local porting boundary
 
-Canonical `.claude/agents/snyk-expert.md` orchestrates two canonical task packages: `skills/snyk-fix/` and independently reusable read-only `skills/dependency-upgrade-review/`. Existing resource import, registry and projection adapters own integration; no second generator or routing mechanism is introduced. The sealed standalone `ext/snyk-expert/` authoring snapshot is retained unchanged.
+Canonical `.claude/agents/snyk-expert.md` orchestrates two canonical task packages: `skills/snyk-fix/` and independently reusable read-only `skills/dependency-upgrade-review/`. Existing resource import, registry and projection adapters own integration; no second generator or routing mechanism is introduced. The earlier canonical porting baseline remains unchanged while the standalone extension `ext/snyk-expert/` evolves independently.
 
 The parent supplies a canonical absolute installed resource root distinct from the target root. The consuming context explicitly reads both entrypoints and all five references; serialized preload metadata is not reference-consumption evidence. Approval stays main-owned and bound to exact proposal/intent, scope and complete current baseline. Missing execution authority stops mutation; prompt instructions and tool lists are not an OS sandbox.
 
@@ -196,9 +196,10 @@ All current local projections include both skill packages. Antigravity intention
 
 Generation, resolved local links and constructed explicit-read procedure behavior are distinct from native child discovery, permission enforcement and live remediation. No all-target parity, production publication or fixed-finding claim follows from local porting. See the [qualification matrix](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md); Phase 05 live qualification remains incomplete.
 
-### Proposed standalone Snyk remediation cycles — planning only
+<a id="proposed-standalone-snyk-remediation-cycles--planning-only"></a>
+### Standalone Snyk remediation cycles — delivered instructions, operationally unqualified
 
-**Status:** Phases 01–06 complete (`cmd-snyk-remediate/SKILL.md` coordinator authored, registered in installer inventory across 12 assets, evaluation catalog expanded to 49 scenarios, local integration review and corrections approved 9/10; Phase 07 live operational qualification pending; heading retained for inbound anchor compatibility).
+**Status:** Phases 01–06 implementation and Phase 08 documentation/closeout complete (`cmd-snyk-remediate/SKILL.md` coordinator authored, registered in installer inventory across 12 assets, evaluation catalog expanded to 49 scenarios, local integration review approved 9/10, documentation and closeout complete); Phase 07 qualification index delivered at `reports/qualification-index.md` (live operational qualification blocked on operator prerequisites PREREQ-01..03, PREREQ-05, PREREQ-06, PREREQ-08; PREREQ-07 unvalidated); heading retained for inbound anchor compatibility.
 
 The [bounded-cycle plan](../plans/261012-1944-general-snyk-remediation-cycles/plan.md) (local planning reference; ignored artifacts must be preserved for handoff)
 targets only `ext/snyk-expert/`; the canonical porting boundary above remains
@@ -226,7 +227,7 @@ each attempt appends observations for every original record. Post-only findings
 retain separate provenance. Scan reuse requires complete state/scope/policy and
 freshness comparability; terminal review observes the actual unchanged final
 state. Installer checks and prose fixtures do not establish live workflow proof.
-Installer inventory registration (Phase 05) and local integration review and corrections (Phase 06) are complete; live host/model/authenticated-scanner qualification (Phase 07) remains pending.
+Installer inventory registration (Phase 05), local integration review and corrections (Phase 06), and documentation and closeout (Phase 08) are complete; live host/model/authenticated-scanner qualification (Phase 07) remains blocked on operator prerequisites.
 
 The [reconciled design contracts](../plans/261012-1944-general-snyk-remediation-cycles/design-contracts.md)
 keep supported other-manager execution normal and capture observed procedures
@@ -244,7 +245,7 @@ Proposed acceptance criteria and 36 acceptance cases (SNYK-001–036, spanning d
 [acceptance matrix](../plans/261012-1944-general-snyk-remediation-cycles/acceptance-matrix.md),
 and required live scanner, target, authentication, and environment conditions are inventoried
 in the [qualification prerequisites report](../plans/261012-1944-general-snyk-remediation-cycles/reports/qualification-prerequisites.md).
-Phases 01–06 are complete as of 2026-10-12T23:41:05+07:00 (contracts and prerequisites in Phase 01, procedure and lossless ledger references in Phase 02, specialist and task-skill cutover in Phase 03, and main-owned 8-stage coordinator `cmd-snyk-remediate/SKILL.md` with Step 8 post-review correction loop and observed procedure learning in Phase 04, inventory registration and 49 evaluation scenarios in Phase 05, and local integration review and corrections in Phase 06). Live operational qualification (Phase 07) remains pending.
+Phases 01–06 and Phase 08 are complete (contracts and prerequisites in Phase 01, procedure and lossless ledger references in Phase 02, specialist and task-skill cutover in Phase 03, and main-owned 8-stage coordinator `cmd-snyk-remediate/SKILL.md` with Step 8 post-review correction loop and observed procedure learning in Phase 04, inventory registration and 49 evaluation scenarios in Phase 05, local integration review and corrections in Phase 06, and documentation and closeout in Phase 08). Live operational qualification (Phase 07) remains blocked pending operator provision of real targets and scanner credentials.
 
 ## 3. TypeScript control plane
 
