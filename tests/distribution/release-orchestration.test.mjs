@@ -67,55 +67,6 @@ function createExactSevenAssets(outputDir, version = '2.2.0', commit = 'c'.repea
   });
 }
 
-// Real REST response shapes; only the external HTTP boundary is replaced.
-function githubApprovalFixture(receipt) {
-  const root = 'https://api.github.com/repos/EigenCrate/evcrate';
-  const reviewer = { id: 40543421, login: 'release-maintainer', type: 'User' };
-  const actor = { id: 61918651, login: 'run-author', type: 'User' };
-  const environment = { id: 23939029728, name: 'production' };
-  const runPath = `/actions/runs/${receipt.workflow_run_id}`;
-  const responses = {
-    [runPath]: {
-      id: receipt.workflow_run_id, run_attempt: receipt.workflow_run_attempt,
-      head_sha: receipt.source_commit, head_branch: 'main', path: '.github/workflows/release.yml',
-      repository: { full_name: 'EigenCrate/evcrate' },
-      head_repository: { full_name: 'EigenCrate/evcrate' },
-      actor, triggering_actor: actor
-    },
-    '/environments/production': {
-      ...environment, can_admins_bypass: false,
-      deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
-      protection_rules: [
-        { id: 14, type: 'required_reviewers', prevent_self_review: true, reviewers: [{ type: 'User', reviewer }] },
-        { id: 15, type: 'branch_policy' }
-      ]
-    },
-    '/environments/production/deployment-branch-policies?per_page=100': {
-      total_count: 1,
-      branch_policies: [{ id: 62566638, node_id: 'MDE2OkdhdGViBrb2xpY3k2MjU2NjYzOA==', name: 'main' }]
-    },
-    [`${runPath}/approvals`]: [{ user: reviewer, state: 'approved', environments: [environment], comment: 'Candidate reviewed' }],
-    '/collaborators/release-maintainer/permission': {
-      permission: 'write', role_name: 'maintain', user: reviewer
-    }
-  };
-  const calls = [];
-  return {
-    responses, calls, runPath,
-    async fetchFn(url, options) {
-      assert.ok(url.startsWith(`${root}/`), 'issuer must remain the canonical GitHub repository');
-      assert.equal(options.method, 'GET');
-      assert.equal(options.redirect, 'error');
-      assert.equal(options.headers.Authorization, 'Bearer test-token');
-      assert.ok(options.signal instanceof AbortSignal);
-      const endpoint = url.slice(root.length);
-      calls.push(endpoint);
-      assert.ok(Object.hasOwn(responses, endpoint), `Unexpected GitHub request: ${endpoint}`);
-      const response = responses[endpoint];
-      return response instanceof Response ? response : Response.json(response);
-    }
-  };
-}
 
 test('readCanonicalReleaseConfig strictly validates canonical configuration and returns a deep copy', () => {
   const config = runReleaseCandidate.readCanonicalReleaseConfig({ projectRoot });
@@ -719,7 +670,6 @@ test('publish-release validates receipt, verifies assets, copies to dist/release
     } finally {
       fs.writeFileSync(winZipPath, originalBytes);
     }
-    const github = githubApprovalFixture(verifiedReceipt);
 
     // 5. Successful publish run with mock semanticRelease
     let modeSeenInPublish = null;
@@ -742,7 +692,6 @@ test('publish-release validates receipt, verifies assets, copies to dist/release
       distReleaseDir,
       runnerTemp: tmpDir,
       env: { EVCRATE_RELEASE_ASSET_MODE: 'verify', GITHUB_TOKEN: 'test-token' },
-      fetchFn: github.fetchFn,
       branch: 'main',
       semanticReleaseFn: mockPublishSemanticRelease,
       config: { branches: ['main'], plugins: [] }
@@ -759,7 +708,6 @@ test('publish-release validates receipt, verifies assets, copies to dist/release
         distReleaseDir,
         runnerTemp: tmpDir,
         env: { EVCRATE_RELEASE_ASSET_MODE: 'verify', GITHUB_TOKEN: 'test-token' },
-        fetchFn: github.fetchFn,
         branch: 'main',
         semanticReleaseFn: async () => false,
         config: { branches: ['main'], plugins: [] }
@@ -774,7 +722,6 @@ test('publish-release validates receipt, verifies assets, copies to dist/release
         distReleaseDir,
         runnerTemp: tmpDir,
         env: { EVCRATE_RELEASE_ASSET_MODE: 'verify', GITHUB_TOKEN: 'test-token' },
-        fetchFn: github.fetchFn,
         branch: 'main',
         semanticReleaseFn: async () => ({
           nextRelease: {
@@ -803,7 +750,7 @@ test('CLI entries support -h and --help gracefully', () => {
   assert.ok(publishHelp.includes('Usage: node scripts/release/publish-release.cjs'));
 });
 
-test('WRQ-042: .github/workflows/windows-smoke.yml enforces read-only PR triggers, Windows 2025 PS7/Node22, and pinned actions', () => {
+test('WRQ-042: .github/workflows/windows-smoke.yml enforces read-only PR triggers, Windows 2025 PS7/Node24, and pinned actions', () => {
   const workflowPath = path.join(projectRoot, '.github', 'workflows', 'windows-smoke.yml');
   assert.ok(fs.existsSync(workflowPath), 'windows-smoke.yml must exist');
   const content = fs.readFileSync(workflowPath, 'utf8');
@@ -824,9 +771,9 @@ test('WRQ-042: .github/workflows/windows-smoke.yml enforces read-only PR trigger
   assert.match(content, /concurrency:\s*\n\s*group:\s*windows-smoke-/u);
   assert.match(content, /cancel-in-progress:\s*true/u);
 
-  // Job definition: windows-2025, Node 22.19.0, explicit pwsh.exe
+  // Job definition: windows-2025, Node 24.21.0, explicit pwsh.exe
   assert.match(content, /runs-on:\s*windows-2025/u);
-  assert.match(content, /node-version:\s*'22\.19\.0'/u);
+  assert.match(content, /node-version:\s*'24\.21\.0'/u);
   assert.match(content, /architecture:\s*x64/u);
   assert.match(content, /--powershell\s+pwsh\.exe/u);
 
@@ -840,6 +787,11 @@ test('WRQ-042: .github/workflows/windows-smoke.yml enforces read-only PR trigger
   assert.doesNotMatch(content, /secrets\./u, 'Must not reference secrets');
   assert.doesNotMatch(content, /upload-artifact/u, 'Must not upload artifacts');
   assert.doesNotMatch(content, /semantic-release/u, 'Must not publish releases');
+
+  const releaseWorkflowPath = path.join(projectRoot, '.github', 'workflows', 'release.yml');
+  const releaseContent = fs.readFileSync(releaseWorkflowPath, 'utf8');
+  assert.doesNotMatch(releaseContent, /windows-qualification/u, 'release.yml must not run Windows qualification matrix');
+  assert.match(releaseContent, /needs:\s*\[release-candidate\]/u, 'publish must depend directly on release-candidate');
 });
 
 test('WRQ-043: windows-smoke workflow builds fixture identity, verifies exact-seven, and runs smoke harness', () => {
@@ -942,40 +894,33 @@ test('releaseContract.isValidReleaseCommitOrSource enforces strict release commi
 });
 
 
-test('Phase 10: createLocalReleaseMirror seeds main and next refs and fails closed if main is missing', () => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-mirror-test-dual-'));
+test('createLocalReleaseMirror seeds main and configured refs and fails closed if main is missing', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-mirror-test-main-'));
   const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim().toLowerCase();
 
   try {
-    // 1. Dual branch seeding when triggering from next
     const mirror = runReleaseCandidate.createLocalReleaseMirror({
       cwd: projectRoot,
       tempDir: tmpDir,
-      branch: 'next',
+      branch: 'main',
       sourceCommit: head,
-      configuredBranches: ['main', { name: 'next', channel: 'next', prerelease: 'rc' }]
+      configuredBranches: ['main']
     });
 
     assert.ok(fs.existsSync(mirror.mirrorPath));
-    const mirrorNext = execFileSync('git', ['rev-parse', 'refs/heads/next'], {
-      cwd: mirror.mirrorPath,
-      encoding: 'utf8'
-    }).trim().toLowerCase();
-    assert.equal(mirrorNext, head);
-
     const mirrorMain = execFileSync('git', ['rev-parse', 'refs/heads/main'], {
       cwd: mirror.mirrorPath,
       encoding: 'utf8'
     }).trim().toLowerCase();
-    assert.ok(/^[0-9a-f]{40}$/.test(mirrorMain));
+    assert.equal(mirrorMain, head);
 
     const symbolicHead = execFileSync('git', ['--git-dir', mirror.mirrorPath, 'symbolic-ref', 'HEAD'], {
       encoding: 'utf8'
     }).trim();
-    assert.equal(symbolicHead, 'refs/heads/next');
+    assert.equal(symbolicHead, 'refs/heads/main');
     mirror.cleanup();
 
-    // 2. Fail closed when main is missing in repository
+    // Fail closed when main is missing in repository
     const emptyRepoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-empty-repo-'));
     try {
       execFileSync('git', ['-c', 'init.defaultBranch=feature', 'init', emptyRepoDir]);
@@ -1004,8 +949,8 @@ test('Phase 10: createLocalReleaseMirror seeds main and next refs and fails clos
   }
 });
 
-test('stable publication requires a candidate-bound independent GitHub review before invoking the publisher', async (t) => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-pub-approval-test-'));
+test('publish-release enforces stable main topology and rejects prerelease candidates or non-main branches', async (t) => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-pub-topology-test-'));
   t.after(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
   const version = '3.0.0';
   const commit = '7'.repeat(40);
@@ -1028,207 +973,69 @@ test('stable publication requires a candidate-bound independent GitHub review be
       publishCalls += 1;
       return { nextRelease: { version, gitTag: `v${version}`, gitHead: commit } };
     },
-    config: { branches: ['main', { name: 'next', channel: 'next', prerelease: 'rc' }], plugins: [] }
+    config: { branches: ['main'], plugins: [] }
   };
-  const environmentPath = '/environments/production';
-  const branchPath = `${environmentPath}/deployment-branch-policies?per_page=100`;
-  const permissionPath = '/collaborators/release-maintainer/permission';
-  const cases = [
-    ['missing environment', (r) => { r[environmentPath] = new Response('{}', { status: 404 }); }, /HTTP 404/],
-    ['unprotected environment', (r) => { r[environmentPath].protection_rules = []; }, /protection rules/],
-    ['admin bypass', (r) => { r[environmentPath].can_admins_bypass = true; }, /disable admin bypass/],
-    ['unspecified admin bypass', (r) => { delete r[environmentPath].can_admins_bypass; }, /disable admin bypass/],
-    ['self-review allowed', (r) => { r[environmentPath].protection_rules[0].prevent_self_review = false; }, /prevent_self_review/],
-    ['no configured reviewers', (r) => { r[environmentPath].protection_rules[0].reviewers = []; }, /User reviewers/],
-    ['team rule', (r) => { r[environmentPath].protection_rules[0].reviewers[0].type = 'Team'; }, /User reviewers/],
-    ['unsupported protection', (r) => { r[environmentPath].protection_rules.push({ type: 'custom' }); }, /unsupported protection/],
-    ['unrestricted branches', (r) => { r[environmentPath].deployment_branch_policy = null; }, /restrict selected branches/],
-    ['wildcard branch', (r) => { r[branchPath].branch_policies[0].name = '*'; }, /only the main branch/],
-    ['missing branch policy id', (r) => { delete r[branchPath].branch_policies[0].id; }, /only the main branch/],
-    ['invalid branch policy node_id', (r) => { r[branchPath].branch_policies[0].node_id = ''; }, /only the main branch/],
-    ['main tag instead of branch', (r) => { r[branchPath].branch_policies[0].type = 'tag'; }, /only the main branch/],
-    ['additional branch', (r) => { r[branchPath].total_count = 2; r[branchPath].branch_policies.push({ id: 62566639, name: 'next' }); }, /only the main branch/],
-    ['wrong run', (r, p) => { r[p].id += 1; }, /does not match candidate/],
-    ['wrong commit', (r, p) => { r[p].head_sha = '8'.repeat(40); }, /does not match candidate/],
-    ['wrong attempt', (r, p) => { r[p].run_attempt = 2; }, /does not match candidate/],
-    ['wrong branch', (r, p) => { r[p].head_branch = 'next'; }, /does not match candidate/],
-    ['wrong workflow', (r, p) => { r[p].path = '.github/workflows/other.yml'; }, /does not match candidate/],
-    ['wrong repository', (r, p) => { r[p].repository.full_name = 'attacker/evcrate'; }, /does not match candidate/],
-    ['fork source', (r, p) => { r[p].head_repository.full_name = 'attacker/evcrate'; }, /does not match candidate/],
-    ['missing actor', (r, p) => { delete r[p].triggering_actor; }, /actor identities/],
-    ['wrong environment id', (r, p) => { r[`${p}/approvals`][0].environments = [{ id: 999, name: 'production' }]; }, /mismatched environment/],
-    ['wrong environment name', (r, p) => { r[`${p}/approvals`][0].environments = [{ id: 23939029728, name: 'prerelease' }]; }, /mismatched environment/],
-    ['unrelated environment', (r, p) => { r[`${p}/approvals`][0].environments = [{ id: 999, name: 'prerelease' }]; }, /review is absent/],
-    ['no review', (r, p) => { r[`${p}/approvals`] = []; }, /review is absent/],
-    ['rejected review', (r, p) => { r[`${p}/approvals`][0].state = 'rejected'; }, /rejected/],
-    ['pending review', (r, p) => { r[`${p}/approvals`][0].state = 'pending'; }, /pending/],
-    ['rejection alongside approval', (r, p) => { r[`${p}/approvals`].push({ ...r[`${p}/approvals`][0], state: 'rejected' }); }, /rejected/],
-    ['unconfigured reviewer', (r, p) => { r[`${p}/approvals`][0].user = { id: 55, login: 'outsider', type: 'User' }; }, /configured independent User/],
-    ['bot reviewer', (r, p) => { r[`${p}/approvals`][0].user = { id: 40543421, login: 'release-maintainer', type: 'Bot' }; }, /configured independent User/],
-    ['run actor reviewer', (r, p) => { r[p].actor = { ...r[`${p}/approvals`][0].user }; }, /not the run actor/],
-    ['triggering actor reviewer', (r, p) => { r[p].triggering_actor = { ...r[`${p}/approvals`][0].user }; }, /not the run actor/],
-    ['write-only reviewer', (r) => { r[permissionPath].role_name = 'write'; }, /maintain or admin/],
-    ['missing collaborator', (r) => { r[permissionPath] = new Response('{}', { status: 404 }); }, /HTTP 404/],
-    ['wrong collaborator identity', (r) => { r[permissionPath].user = { id: 55, login: 'release-maintainer', type: 'User' }; }, /maintain or admin/],
-    ['bot collaborator', (r) => { r[permissionPath].user = { id: 40543421, login: 'release-maintainer', type: 'Bot' }; }, /maintain or admin/],
-    ['incomplete history', (r, p) => { r[`${p}/approvals`] = Response.json(r[`${p}/approvals`], { headers: { link: '<https://api.github.com/next>; rel="next"' } }); }, /complete, unpaginated/],
-    ['redirect response', (r, p) => { r[p] = new Response(null, { status: 302, headers: { location: 'https://attacker.invalid' } }); }, /HTTP 302/],
-    ['oversized body', (r, p) => { r[p] = new Response('x'.repeat(1024 * 1024 + 1)); }, /size limit/],
-    ['oversized declared body', (r, p) => { r[p] = new Response('{}', { headers: { 'content-length': String(1024 * 1024 + 1) } }); }, /size limit/],
-    ['invalid JSON', (r, p) => { r[p] = new Response('not JSON'); }, /JSON/]
-  ];
-  for (const [name, mutate, error] of cases) {
-    await t.test(name, async () => {
-      const github = githubApprovalFixture(candidateReceipt);
-      mutate(github.responses, github.runPath);
-      await assert.rejects(() => publishRelease.runPublishRelease({ ...options, fetchFn: github.fetchFn }), error);
-      assert.equal(publishCalls, 0);
-      assert.equal(fs.existsSync(distReleaseDir), false, 'authorization must precede workspace publication');
-    });
-  }
-
-  await t.test('forged local approval cannot authorize a stable candidate', async () => {
-    const approvalPath = path.join(tmpDir, 'approval.json');
-    fs.writeFileSync(approvalPath, JSON.stringify({
-      status: 'approved', approved_by: 'release-maintainer', approved_at: '2026-10-09T18:00:00Z',
-      ...candidateReceipt
-    }));
-    const github = githubApprovalFixture(candidateReceipt);
-    github.responses[`${github.runPath}/approvals`] = [];
-    await assert.rejects(() => publishRelease.runPublishRelease({
-      ...options, approvalPath, requireStableApproval: false, fetchFn: github.fetchFn,
-      env: { ...options.env, EVCRATE_STABLE_APPROVAL_PATH: approvalPath, EVCRATE_REQUIRE_APPROVAL: 'false' }
-    }), /review is absent/);
-    await assert.rejects(() => publishRelease.runPublishRelease({ ...options, approvalPath, env: {} }), /requires a GitHub token/);
-    assert.throws(() => publishRelease.parsePublisherOptions(
-      ['node', 'publish-release.cjs', '--approval', approvalPath], options.env
-    ), /Unknown publisher option/);
-    assert.equal(publishCalls, 0);
-  });
-
-  await t.test('reruns cannot reuse attempt-one approval', async () => {
-    const rerun = { ...candidateReceipt, workflow_run_attempt: 2 };
-    fs.writeFileSync(receiptPath, JSON.stringify(rerun));
-    const github = githubApprovalFixture(rerun);
-    await assert.rejects(() => publishRelease.runPublishRelease({ ...options, fetchFn: github.fetchFn }), /start a new workflow run/);
-    assert.equal(publishCalls, 0);
-    fs.writeFileSync(receiptPath, JSON.stringify(candidateReceipt));
-  });
-
-  await t.test('candidate repository cannot redirect the issuer', async () => {
-    fs.writeFileSync(receiptPath, JSON.stringify({ ...candidateReceipt, repository: 'attacker/evcrate' }));
-    const github = githubApprovalFixture(candidateReceipt);
-    await assert.rejects(() => publishRelease.runPublishRelease({ ...options, fetchFn: github.fetchFn }), /canonical repository/);
-    assert.equal(github.calls.length, 0);
-    fs.writeFileSync(receiptPath, JSON.stringify(candidateReceipt));
-  });
-
-  await t.test('authorized exact candidate proceeds and records the actual reviewer and API', async () => {
-    const github = githubApprovalFixture(candidateReceipt);
-    const result = await publishRelease.runPublishRelease({
-      ...options, fetchFn: github.fetchFn,
-      env: { ...options.env, GITHUB_REPOSITORY: 'attacker/evcrate', GITHUB_API_URL: 'https://attacker.invalid' }
-    });
-    assert.equal(publishCalls, 1);
-    assert.equal(result.success, true);
-    assert.equal(result.approval.approved_by, 'release-maintainer');
-    assert.deepEqual(result.approval.reviewer, { id: 40543421, login: 'release-maintainer', type: 'User' });
-    assert.equal(result.approval.source_api, 'https://api.github.com/repos/EigenCrate/evcrate/actions/runs/101/approvals');
-    assert.equal(Object.hasOwn(result.approval, 'approved_at'), false);
-    assert.equal(result.approval.source_commit, commit);
-    assert.equal(result.approval.workflow_run_attempt, 1);
-    assert.deepEqual(result.receipt, candidateReceipt);
-  });
-
-  await t.test('admin reviewer, explicit branch type, and GH_TOKEN are supported', async () => {
-    const github = githubApprovalFixture(candidateReceipt);
-    github.responses[branchPath].branch_policies[0].type = 'branch';
-    github.responses[permissionPath].role_name = 'admin';
-    github.responses[permissionPath].permission = 'admin';
-    const result = await publishRelease.runPublishRelease({ ...options, env: { GH_TOKEN: 'test-token' }, fetchFn: github.fetchFn });
-    assert.equal(result.success, true);
-    assert.equal(publishCalls, 2);
-  });
 
   await assert.rejects(() => publishRelease.runPublishRelease({ ...options, branch: 'next' }), /Topology violation/);
+  assert.equal(publishCalls, 0);
+
   const rcVersion = '3.0.0-rc.1';
   const rcAssetsDir = path.join(tmpDir, 'rc-assets');
   const rcSummary = createExactSevenAssets(rcAssetsDir, rcVersion, commit);
   const rcCandidate = { ...candidateReceipt, version: rcVersion, tag: `v${rcVersion}`, files: rcSummary.files };
   fs.writeFileSync(receiptPath, JSON.stringify(rcCandidate));
   await assert.rejects(() => publishRelease.runPublishRelease({ ...options, assetsDir: rcAssetsDir }), /Topology violation/);
-  const prerelease = await publishRelease.runPublishRelease({
-    ...options, branch: 'next', assetsDir: rcAssetsDir, env: {},
-    fetchFn: async () => assert.fail('prerelease must not require a production review'),
-    semanticReleaseFn: async () => ({ nextRelease: { version: rcVersion, gitTag: `v${rcVersion}`, gitHead: commit } })
-  });
-  assert.equal(prerelease.success, true);
-  assert.equal(prerelease.approval, null);
+  assert.equal(publishCalls, 0);
+
+  fs.writeFileSync(receiptPath, JSON.stringify(candidateReceipt));
+  const stable = await publishRelease.runPublishRelease(options);
+  assert.equal(stable.success, true);
+  assert.equal(stable.publishedRelease.version, '3.0.0');
+  assert.equal(publishCalls, 1);
 });
 
-test('Phase 10: real semantic-release dry-run predicts 3.0.0-rc.1 on next and 3.0.0 on merged main', async () => {
+test('real semantic-release dry-run predicts 3.0.0 on main hermetically even under GitHub Actions CI env', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-sr-dryrun-'));
   const srModule = require('semantic-release');
   const semanticRelease = typeof srModule === 'function' ? srModule : srModule.default;
   const { pathToFileURL } = require('node:url');
 
   try {
+    const canonicalConfig = runReleaseCandidate.readCanonicalReleaseConfig({ projectRoot });
+    assert.deepEqual(canonicalConfig.branches, ['main']);
+
     const repoDir = path.join(tmpDir, 'repo');
     fs.mkdirSync(repoDir);
-    execFileSync('git', ['init', repoDir]);
+    execFileSync('git', ['-c', 'init.defaultBranch=main', 'init', repoDir]);
     execFileSync('git', ['-C', repoDir, 'config', 'user.name', 'Tester']);
     execFileSync('git', ['-C', repoDir, 'config', 'user.email', 'tester@example.com']);
-    execFileSync('git', ['-C', repoDir, 'checkout', '-b', 'main']);
 
-    // Seed v2.9.1 baseline commit and tag
-    fs.writeFileSync(path.join(repoDir, 'package.json'), JSON.stringify({ name: 'test-pkg', version: '2.9.1' }, null, 2));
+    // Seed v2.11.0 baseline commit and tag
+    fs.writeFileSync(path.join(repoDir, 'package.json'), JSON.stringify({ name: 'test-pkg', version: '2.11.0' }, null, 2));
     execFileSync('git', ['-C', repoDir, 'add', '.']);
-    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'chore: release 2.9.1']);
-    execFileSync('git', ['-C', repoDir, 'tag', 'v2.9.1']);
+    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'chore(release): 2.11.0 [skip ci]']);
+    execFileSync('git', ['-C', repoDir, 'tag', 'v2.11.0']);
 
-    // Create next branch with breaking change commit
-    execFileSync('git', ['-C', repoDir, 'checkout', '-b', 'next']);
+    // Add breaking change commit on main
     fs.writeFileSync(path.join(repoDir, 'feature.txt'), 'unified naming');
     execFileSync('git', ['-C', repoDir, 'add', '.']);
-    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'feat(naming)!: unified command and agent naming across all harnesses\n\nBREAKING CHANGE: all command and agent identities unified']);
+    execFileSync('git', ['-C', repoDir, 'commit', '-m', 'feat(adapters)!: unify command and agent naming across all harnesses\n\nBREAKING CHANGE: all command and agent identities unified']);
 
     const bareRemote = path.join(tmpDir, 'remote.git');
     execFileSync('git', ['-c', 'init.defaultBranch=main', 'init', '--bare', bareRemote]);
     const remoteUrl = pathToFileURL(bareRemote).href;
-    execFileSync('git', ['-C', repoDir, 'push', remoteUrl, 'main:refs/heads/main', 'next:refs/heads/next', '--tags']);
+    execFileSync('git', ['-C', repoDir, 'push', remoteUrl, 'main:refs/heads/main', '--tags']);
 
-    const branchesConfig = [
-      'main',
-      { name: 'next', channel: 'next', prerelease: 'rc' }
-    ];
-
-    // 1. Dry run on next branch: must predict 3.0.0-rc.1
-    const nextResult = await semanticRelease({
-      branches: branchesConfig,
-      repositoryUrl: remoteUrl,
-      dryRun: true,
-      ci: false,
-      plugins: [
-        '@semantic-release/commit-analyzer'
-      ]
-    }, {
-      cwd: repoDir,
-      env: { ...process.env, CI: 'false' },
-      stdout: new (require('node:stream').Writable)({ write(c, e, cb) { cb(); } }),
-      stderr: new (require('node:stream').Writable)({ write(c, e, cb) { cb(); } })
-    });
-
-    assert.ok(nextResult, 'semantic-release must calculate a release on next');
-    assert.equal(nextResult.nextRelease.version, '3.0.0-rc.1');
-    assert.equal(nextResult.nextRelease.channel, 'next');
-
-    // 2. Merge next into main: dry run on main must predict 3.0.0
-    execFileSync('git', ['-C', repoDir, 'checkout', 'main']);
-    execFileSync('git', ['-C', repoDir, 'merge', '--no-ff', '-m', 'merge next into main', 'next']);
-    execFileSync('git', ['-C', repoDir, 'push', remoteUrl, 'main:refs/heads/main']);
+    const hermeticEnv = {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      USER: process.env.USER,
+      LANG: process.env.LANG || 'C.UTF-8',
+      CI: 'false'
+    };
 
     const mainResult = await semanticRelease({
-      branches: branchesConfig,
+      branches: canonicalConfig.branches,
       repositoryUrl: remoteUrl,
       dryRun: true,
       ci: false,
@@ -1237,7 +1044,7 @@ test('Phase 10: real semantic-release dry-run predicts 3.0.0-rc.1 on next and 3.
       ]
     }, {
       cwd: repoDir,
-      env: { ...process.env, CI: 'false' },
+      env: hermeticEnv,
       stdout: new (require('node:stream').Writable)({ write(c, e, cb) { cb(); } }),
       stderr: new (require('node:stream').Writable)({ write(c, e, cb) { cb(); } })
     });

@@ -1,7 +1,7 @@
 # Code Standards and Codebase Structure
 
-**Baseline:** `evcrate@2.11.0` (private Node/TypeScript package, Node `>=22.19.0`).
-**Target Topology:** `3.0.0-rc.1` (prerelease on `next`) / `3.0.0` (stable on `main`).
+**Baseline:** `evcrate@3.0.0` (private Node/TypeScript package, Node `>=22.19.0`).
+**Target Topology:** `3.0.0` (stable on `main`).
 **Status:** EVCrate core implementation standards for the completed advisor subsystem retirement cutover and 7-target unified naming; live vendor/native-host qualification remains separate.
 **Updated:** 2026-10-12
 **Applies to:** TypeScript control plane, canonical harness resources, generated projections, and publication tooling.
@@ -38,19 +38,14 @@ The following patterns are strictly prohibited across the codebase:
 - **No hand edits to generated files**: Never edit generated target projections, build manifests, or registries directly. Modify canonical sources and regenerate through established scripts.
 - **No cross-scope recovery search**: Recovery never crosses the requested publication scope. HOME recovery does not mutate project files; project recovery does not inspect or mutate HOME publication state or locks. HOME-derived storage for project-scoped durable state grants no cross-scope authority.
 - **No legacy command or agent naming in maintained sources**: Canonical commands use `evc-cmd-*` (nested with `-x-`, length <= 64); VS Code Local alone projects `cmd-*` within plugin `evc`. Custom agents project `evc-*`, and Copilot skills project `evc-<skill>`. Never emit legacy resource names (`cmd_`, colons, underscores); VS Code's `/evc:cmd-*` qualifier is host syntax, not a resource name.
-- **Single AGENTS.md authoring authority**: Canonical instructions are authored strictly at `.evcrate/source/.claude/AGENTS.md`. Never author in root `AGENTS.md` (generated Codex output) or create repository-owned files named `CLAUDE.md`.
-- **Branch topology and release qualification**: Canonical release branches are `main` (stable) and `next` (prerelease `rc`). Stable publication always requires live, candidate-bound GitHub authorization; caller-authored approval files and environment flags cannot grant authorization.
+- **Single AGENTS.md authoring authority**: Canonical target instructions are authored strictly at `.evcrate/source/.claude/AGENTS.md`. Never hand-edit `.evcrate/source/AGENTS.md` (generated Codex output) or create repository-owned files named `CLAUDE.md`.
+- **Branch topology and release qualification**: Canonical release branch is `main` (stable). Candidate receipt and exact-seven asset verification are mandatory before publication; prerelease candidates are retired.
 
-### Stable-release authorization
+### Release candidate and publication verification
 
-- Configure `production` before stable publication: required human User reviewers with repository maintain/admin roles, prevent self-review, disable administrator bypass, and allow only the selected `main` branch (no tag policies or wildcards).
-- The publisher checks the live environment and branch-policy APIs, then verifies the candidate's canonical repository, source commit, release workflow path, run ID, and attempt against GitHub.
-- The workflow run's production review history must contain an approved review by a configured maintainer/admin distinct from both the actor and triggering actor. Record the actual reviewer and source API, not the initiating actor or a fabricated review timestamp.
-- Stable publication requires `GITHUB_TOKEN` or `GH_TOKEN` with access to run/review history, environment protections, branch policies, and collaborator permissions. API errors or unsupported protection shapes fail closed.
-- Review history cannot bind approvals to rerun attempts; stable reruns require a new workflow run. Offline stable publication is not supported. Prerelease publication does not require production approval.
-- `--approval`, `--approval-evidence`, `--require-approval`, and local approval-path/requirement environment variables are removed. Candidate receipt and asset-hash verification remain mandatory.
-- Live setup verified 2026-10-10: `production` reviewers `loidinhm31` and `quochuy-vo`, self-review prevented, admin bypass disabled, selected deployment branch `main`. The publisher rechecks these protections rather than trusting this documentation.
-- API contracts: [environment protections](https://docs.github.com/en/rest/deployments/environments) and [workflow review history](https://docs.github.com/en/rest/actions/workflow-runs#get-the-review-history-for-a-workflow-run).
+- `scripts/release/run-release-candidate.cjs` runs semantic-release against a disposable local bare mirror seeded at `sourceCommit` on `main`, verifies the exact-seven release assets, resolves the Windows predecessor, and stages `release-candidate/` (`candidate.json`, `assets/`, `predecessor/`, `qualification/`).
+- `.github/workflows/windows-smoke.yml` runs Windows PR qualification on `windows-2025` (`pwsh.exe` and Node `24.21.0`), while `.github/workflows/release.yml` proceeds directly from `release-candidate` to `publish` on `main`.
+- `scripts/release/publish-release.cjs` enforces `EVCRATE_RELEASE_ASSET_MODE=verify`, rejects prerelease versions and non-`main` branches, verifies `candidate.json` and all seven asset digests, prepares `dist/release`, and publishes the verified release on `main`.
 
 ## Repository structure and ownership
 

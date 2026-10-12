@@ -4,8 +4,8 @@
  *
  * Requirements: WRQ-024–028, WRQ-060.
  * Node-builtins only: carries zero repository or npm dependencies.
- * Carried with the candidate artifact to qualify Windows release candidates
- * across the supported PowerShell (5.1 / 7) and Node (22.19.0 / 24.21.0) matrix.
+ * Carried with the candidate artifact and PR smoke workflow to qualify Windows
+ * installer lifecycle under PowerShell 7 (pwsh.exe) and Node 24.21.0.
  *
  * Notice: This file deliberately does NOT use the `.test.mjs` suffix so the
  * Linux installer wildcard `tests/installers/*.test.mjs` does not execute it.
@@ -27,8 +27,8 @@ export const SCHEMA_POINTER = 'evcrate-current-pointer/v1';
 export const SCHEMA_CANDIDATE = 'evcrate-release-candidate/v1';
 
 export const ALLOWED_MODES = Object.freeze(['smoke', 'full']);
-export const ALLOWED_POWERSHELL = Object.freeze(['powershell.exe', 'pwsh.exe']);
-export const ALLOWED_NODE_VERSIONS = Object.freeze(['v22.19.0', 'v24.21.0']);
+export const ALLOWED_POWERSHELL = Object.freeze(['pwsh.exe']);
+export const ALLOWED_NODE_VERSIONS = Object.freeze(['v24.21.0']);
 
 export const EXPECTED_CANDIDATE_ASSET_COUNT = 7;
 export const EXPECTED_PREDECESSOR_ASSET_COUNT = 4;
@@ -224,7 +224,7 @@ export function parseCliArgs(argv) {
   if (!options.assets) throw new Error('Missing required argument: --assets <dir>');
   if (!options.version) throw new Error('Missing required argument: --version <version>');
   if (!options.sourceCommit) throw new Error('Missing required argument: --source-commit <40hex>');
-  if (!options.powershell) throw new Error('Missing required argument: --powershell <powershell.exe|pwsh.exe>');
+  if (!options.powershell) throw new Error('Missing required argument: --powershell <pwsh.exe>');
 
   if (options.mode === 'full') {
     if (!options.receipt) throw new Error('Full mode requires argument: --receipt <file>');
@@ -272,14 +272,10 @@ export async function assertPlatformAndHost(options) {
     throw new Error(`Could not parse PowerShell major version from output: "${stdout}"`);
   }
 
-  if (options.powershell === 'powershell.exe' && major !== 5) {
+  if (options.powershell !== 'pwsh.exe' || major < 7) {
     throw new Error(
-      `PowerShell major version mismatch for powershell.exe: expected 5 (Windows PowerShell 5.1), got ${major}`
+      `PowerShell major version mismatch for ${options.powershell}: expected >= 7 (PowerShell 7+), got ${major}`
     );
-  }
-
-  if (options.powershell === 'pwsh.exe' && major !== 7) {
-    throw new Error(`PowerShell major version mismatch for pwsh.exe: expected 7 (PowerShell 7), got ${major}`);
   }
 
   return { platform: 'win32', arch: 'x64', nodeVersion: currentNodeVersion, psMajor: major };
@@ -571,6 +567,10 @@ export function verifyCandidateReceipt(receiptPath, candidateFiles, predecessorF
 // ---------------------------------------------------------------------------
 // Safe Child Process Wrappers
 // ---------------------------------------------------------------------------
+
+export function normalizePowerShellOutput(stdout = '', stderr = '') {
+  return `${stdout}\n${stderr}`.replace(/\s+/gu, ' ');
+}
 
 export function runProcess(executable, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -1411,7 +1411,7 @@ export async function runNegativeScenarios(options, baseSandboxRoot) {
       throw new Error('Negative 7 failed: install accepted sibling-prefix journal stage');
     }
 
-    const combined = `${res.stdout}\n${res.stderr}`;
+    const combined = normalizePowerShellOutput(res.stdout, res.stderr);
     if (!combined.includes('Journal stage_path escape detected')) {
       throw new Error(`Negative 7 did not fail with stage_path escape: ${combined}`);
     }
@@ -1529,7 +1529,7 @@ export async function runNegativeScenarios(options, baseSandboxRoot) {
       }
 
       // Check survivor report in output
-      const combinedOutput = `${uninst1.stdout}\n${uninst1.stderr}`;
+      const combinedOutput = normalizePowerShellOutput(uninst1.stdout, uninst1.stderr);
       if (!combinedOutput.includes('Survivor:') && !combinedOutput.includes(path.basename(targetFileToLock))) {
         throw new Error(`Negative 9 failed: output did not report survivor file truthfully: ${combinedOutput}`);
       }
@@ -1624,7 +1624,7 @@ export async function runNegativeScenarios(options, baseSandboxRoot) {
           directory: /Predecessor receipt must be a regular non-reparse file/u,
           junction: /[Rr]eparse|[Jj]unction/u
         }[receiptState];
-        if (rejected.exitCode === 0 || !expected.test(`${rejected.stdout}\n${rejected.stderr}`)) {
+        if (rejected.exitCode === 0 || !expected.test(normalizePowerShellOutput(rejected.stdout, rejected.stderr))) {
           throw new Error(`Historical repair did not reject ${receiptState} receipt at admission: ${rejected.stderr}`);
         }
         if (fs.readFileSync(path.join(dataDir, 'current.json'), 'utf8') !== pointerBytes ||
@@ -1657,6 +1657,7 @@ export async function runNegativeScenarios(options, baseSandboxRoot) {
     const mutation = await runProcess(options.powershell, [
       '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', `
         $ErrorActionPreference = 'Stop'
+        Add-Type -AssemblyName System.IO.Compression
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         $zip = [System.IO.Compression.ZipFile]::Open($env:EVCRATE_TEST_ARCHIVE, [System.IO.Compression.ZipArchiveMode]::Update)
         try {
@@ -1684,7 +1685,7 @@ export async function runNegativeScenarios(options, baseSandboxRoot) {
       '-Archive', archive, '-Checksum', checksum, '-Metadata', metadataPath,
       '-DataDir', dataDir, '-StateDir', path.join(subSandbox, 'state'), '-BinDir', path.join(subSandbox, 'bin')
     ]);
-    if (rejected.exitCode === 0 || !`${rejected.stdout}\n${rejected.stderr}`.includes('Current package must expose only evcrate')) {
+    if (rejected.exitCode === 0 || !normalizePowerShellOutput(rejected.stdout, rejected.stderr).includes('Current package must expose only evcrate')) {
       throw new Error(`Current package.bin ${name} was not rejected at bin admission: ${rejected.stderr}`);
     }
     if (fs.existsSync(path.join(dataDir, 'current.json'))) throw new Error('Invalid package.bin changed current pointer');
@@ -1715,7 +1716,7 @@ Required Options:
   --assets <dir>                     Directory with exact 7 candidate release assets
   --version <version>                Expected candidate semantic version
   --source-commit <40hex>            Expected candidate 40-character SHA
-  --powershell <exe>                 PowerShell executable (powershell.exe or pwsh.exe)
+  --powershell <exe>                 PowerShell executable (pwsh.exe)
 
 Full Mode Required Options:
   --receipt <file>                   Path to candidate.json receipt

@@ -1,10 +1,9 @@
 # EVCrate
 
-EVCrate 2.11.0 is a private Node/TypeScript package (Node `>=22.19.0`) authoring
+EVCrate 3.0.0 is a private Node/TypeScript package (Node `>=22.19.0`) authoring
 one canonical agent-harness source tree and building verified projections for
 seven targets: `antigravity`, `claude`, `codex`, `copilot`, `omp`, `pi`, and `vscode`.
-The planned release topology targets `3.0.0-rc.1` / `3.0.0`. It publishes managed
-harness output with ownership, hashing, locking, and recovery rules.
+It publishes managed harness output with ownership, hashing, locking, and recovery rules.
 
 ## Download and installation
 
@@ -12,12 +11,12 @@ EVCrate provides registry-free unpack installers for Linux and Windows.
 
 ### Prerequisites
 
-- Node.js `>=22.19.0` on `$PATH` (both installers).
-- Linux x86_64, or Windows x64 with Windows PowerShell 5.1 or PowerShell 7+.
+- Node.js `>=22.19.0` on `$PATH` (both installers; CI qualifies on Node `24.21.0`).
+- Linux x86_64, or Windows x64 with PowerShell 7+ (`pwsh.exe`).
 
-Download matching assets for the exact release tag (e.g. `v3.0.0-rc.1` or `v3.0.0`) from [GitHub Releases](https://github.com/EigenCrate/evcrate/releases) and keep each platform's files together locally. EVCrate is private (`npmPublish: false`); installers unpack offline local assets without querying npm.
+Download matching assets for the exact release tag (e.g. `v3.0.0`) from [GitHub Releases](https://github.com/EigenCrate/evcrate/releases) and keep each platform's files together locally. EVCrate is private (`npmPublish: false`); installers unpack offline local assets without querying npm.
 
-### Exact local-asset installation (prerelease & stable)
+### Exact local-asset installation
 
 **Linux (x86_64):**
 ```bash
@@ -50,7 +49,7 @@ Default locations: root/data `%LOCALAPPDATA%\EVCrate`, launcher `%LOCALAPPDATA%\
 Lifecycle: `.\install.ps1 repair`, `.\install.ps1 rollback <snapshot>`, `.\install.ps1 uninstall`.
 Options accept PowerShell/GNU syntax: `-RootDir`/`--root-dir`, `-DataDir`/`--data-dir`, `-StateDir`/`--state-dir`, `-BinDir`/`--bin-dir`, `-Archive`/`--archive`, `-Checksum`/`--checksum`, `-Metadata`/`--metadata`. Asset overrides require Archive/Checksum/Metadata together.
 
-**Bounded Windows support.** Release qualification boundary is the hosted 4-row `windows-2025` x64 matrix for standalone installer lifecycle and clean-install `version --json`. General Windows runtime parity, desktop/UAC, SmartScreen, Authenticode, enterprise policy, ARM64, and execution-policy workarounds are not claimed. Production HOME publication and release authorization remain operator-gated; PR smoke is diagnostic only.
+**Bounded Windows support.** Qualification boundary is hosted `windows-2025` x64 (PowerShell 7 `pwsh.exe` and Node `24.21.0` in PR smoke `.github/workflows/windows-smoke.yml`, without release-time Windows candidate-byte qualification) for standalone installer smoke and clean-install `version --json`. General Windows runtime parity, desktop/UAC, SmartScreen, Authenticode, enterprise policy, ARM64, and execution-policy workarounds are not claimed. Production HOME publication remains operator-gated.
 
 ## Developer quick start
 
@@ -80,7 +79,7 @@ evcrate changes preview|apply
 
 ### Release test gate
 
-Before release, run `npm test`, `npm run release:check`, and `npm run distribute:check`. These repository gates do not replace live vendor qualification or release authorization.
+Before release, run `npm test`, `npm run release:check`, and `npm run distribute:check`. These repository gates do not replace live vendor qualification.
 
 ## Publication and recovery
 
@@ -105,8 +104,10 @@ Publication state is scope-isolated: HOME at `$HOME/.evcrate/publication/`, Proj
 
 1. Edit canonical sources:
    - Instructions: `.evcrate/source/.claude/AGENTS.md`
+   - Agents: `.evcrate/source/.claude/agents/`
    - Commands: `.evcrate/source/.claude/commands/`
    - Skills: `.evcrate/source/.claude/skills/`
+   - Workflows: `.evcrate/source/.claude/workflows/`
 2. Regenerate and verify all seven target trees:
    ```bash
    npm run distribute:build
@@ -129,17 +130,12 @@ Publication state is scope-isolated: HOME at `$HOME/.evcrate/publication/`, Proj
 
 Generated projections, manifests, and registry are never hand-edited. TypeScript and `package.json` scripts are authoritative.
 
-## Inline interview
-
-`/evc-cmd-advise` runs a multi-turn interview in the main session: one substantive question per turn, at most eight discovery questions, then a concise reframe for explicit confirmation or correction (at most two confirmation cycles). Cancellation, interruption, or nonconvergence produces no report. Arguments remain ordinary task data.
-After confirmation, the main session writes a sanitized report (<= 32 KiB) under `plans/reports/` or active plan's `reports/` with filename `advise-YYYYMMDD-HHMM-<uuid>.md`, reading it back before linking.
-
 ## Unified Naming, Canonical AGENTS.md, and Migration Contract
 
 Starting in version 3.0.0, EVCrate enforces universal `evc-*` resource naming and single `AGENTS.md` instruction authority across all supported targets:
 
 ### Naming invariants
-- **Canonical Commands**: Commands use `evc-cmd-*` (e.g. `/evc-cmd-code`, `/evc-cmd-plan`). VS Code Local projects container-local `cmd-*` skills under plugin `evc`; other targets retain `evc-cmd-*`.
+- **Canonical Commands**: All 69 canonical commands use `evc-cmd-*` (e.g. `/evc-cmd-code`, `/evc-cmd-plan`). VS Code Local projects container-local `cmd-*` skills under plugin `evc`; other targets retain `evc-cmd-*`.
 - **Nested Commands**: Subcommands use reserved separator `-x-` (e.g. `/evc-cmd-code-x-auto`, `/evc-cmd-fix-x-hard`), mapping reversibly to semantic IDs (`code/auto`, `fix/hard`).
 - **Universal Agents**: All 17 canonical custom agents use prefix `evc-*` (e.g. `evc-planner`, `evc-code-reviewer`, `evc-debugger`).
 - **Copilot Skills & Styles**: Copilot ordinary skills are renamed to `evc-<skill>` and styles to `evc-style-<style>`.
@@ -147,26 +143,12 @@ Starting in version 3.0.0, EVCrate enforces universal `evc-*` resource naming an
 - **VS Code Plugin**: `plugin.json` declares `"name": "evc"` (formerly `evcrate-local`). Copilot Chat displays `evc cmd-*`, with qualified invocation `/evc:cmd-*` (`/<plugin-name>:<skill-name>`).
 
 ### Canonical instruction authority and delivery
-Author only `.evcrate/source/.claude/AGENTS.md`; generated root AGENTS is Codex output. Claude publishes `.claude/rules/AGENTS.md` with no duplicate/shim. The [seven-target instruction matrix](docs/system-architecture.md#instruction-authority-and-native-delivery) specifies project/HOME paths and mixed-install loader profiles.
+Author canonical target instructions only in `.evcrate/source/.claude/AGENTS.md`; `.evcrate/source/AGENTS.md` is generated Codex output. Claude publishes `.claude/rules/AGENTS.md` with no duplicate/shim. The [seven-target instruction matrix](docs/system-architecture.md#instruction-authority-and-native-delivery) specifies project/HOME paths and mixed-install loader profiles.
 
 ### Pre-upgrade customization backup warning
 > **CRITICAL WARNING**: Deletion of obsolete artifacts during upgrade is strictly controlled by **recorded ownership**, not file modification timestamps. If you locally edited any managed legacy file, **those files will be deleted upon upgrading**. You **MUST** back up your local customizations before running `publish --apply` or upgrading via installers.
 
 Untracked user files are never deleted and are reported during publication. Any unmanaged collision at a migrated destination halts publication atomically (`PUBLICATION_FAILED`). See [Pre-Upgrade Backup & Leftover Guidance](./docs/upgrade-backup-and-leftover-guidance.md).
-
-### Migration reference table
-
-| Resource Kind | Former Shape (<= 2.x) | Unified Shape (3.x) |
-|---|---|---|
-| Root Command | `/code:auto`, `/cmd-code__auto`, `cmd_code_auto`, `evcrate-cmd-code-auto` | `/evc-cmd-code` |
-| Nested Command | `/code:auto`, `/cmd-code__auto`, `cmd_code_auto` | `/evc-cmd-code-x-auto` |
-| Deep Nested Command | `/cook:auto:fast`, `/cmd-cook__auto__fast` | `/evc-cmd-cook-x-auto-x-fast` |
-| Help Command | `/help`, `/cmd-help` | `/evc-cmd-help` |
-| Custom Agent | `planner`, `evcrate-planner`, `code-reviewer` | `evc-planner`, `evc-code-reviewer` |
-| Copilot Ordinary Skill | `<skill>` | `evc-<skill>` |
-| Copilot Style | `<style>` | `evc-style-<style>` |
-| VS Code Command Skill | `evcrate-local` plugin / `evc-cmd-*` skill | `evc` plugin / `cmd-*` skill; qualified `/evc:cmd-*` |
-| Instruction Authority | `CLAUDE.md`, `.claude/CLAUDE.md` | `AGENTS.md`, `.claude/rules/AGENTS.md` |
 
 ## VS Code Local native support
 

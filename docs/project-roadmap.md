@@ -1,7 +1,7 @@
 # Project Roadmap
 
-**Baseline:** `evcrate@2.11.0` (private Node/TypeScript package, Node `>=22.19.0`).
-**Target Topology:** `3.0.0-rc.1` (channel: `next`) / `3.0.0` (stable on `main`).
+**Baseline:** `evcrate@3.0.0` (private Node/TypeScript package, Node `>=22.19.0`).
+**Target Topology:** `3.0.0` (stable on `main`).
 **Status:** Unified `evc-*` naming and `AGENTS.md` instructions across all harnesses milestone:
 Phases 01–11 complete per the [project changelog](./project-changelog.md); VS Code plugin identity and container-aware command mapping cutover complete.
 **Updated:** 2026-10-12
@@ -124,10 +124,10 @@ plans/reports and changelog; those counts are not current verification.
 ## Unified naming, AGENTS.md authority, and release promotion milestone
 
 The unified naming and instruction authority refactoring is implemented across all seven targets:
-- **Canonical command & agent naming:** All 70 canonical commands follow `/evc-cmd-*` (nested with reserved separator `-x-`, length <= 64), 17 canonical agents follow `evc-*`, and Copilot skills/styles follow `evc-<skill>` and `evc-style-<style>`. Enforced by `src/adapters/resource-naming.ts` and `.evcrate/source/.claude/scripts/scan_commands.py`. VS Code projects commands as container-local `cmd-*` skills under plugin identity `evc`, with `/cmd-*` invocations and `skills/cmd-*/SKILL.md` references; other targets retain `evc-cmd-*`.
-- **Single instruction authority:** Authored strictly in `.evcrate/source/.claude/AGENTS.md`; root Codex `AGENTS.md` is generated. All targets consume canonical instructions without aliases or CLAUDE shims.
+- **Canonical command & agent naming:** All 69 canonical commands follow `/evc-cmd-*` (nested with reserved separator `-x-`, length <= 64), 17 canonical agents follow `evc-*`, and Copilot skills/styles follow `evc-<skill>` and `evc-style-<style>`. Enforced by `src/adapters/resource-naming.ts` and `.evcrate/source/.claude/scripts/scan_commands.py`. VS Code projects commands as container-local `cmd-*` skills under plugin identity `evc`, with `/cmd-*` invocations and `skills/cmd-*/SKILL.md` references; other targets retain `evc-cmd-*`.
+- **Single instruction authority:** Authored strictly in `.evcrate/source/.claude/AGENTS.md`; `.evcrate/source/AGENTS.md` is generated Codex output. All targets consume canonical instructions without aliases or CLAUDE shims.
 - **Publication upgrade & leftover reporting:** Ownership markers control pruning; untracked legacy leftovers are reported across 5 canonical kinds; unmanaged collisions refuse publication (`PUBLICATION_FAILED`).
-- **Release pipeline:** `.releaserc.json` and `.github/workflows/release.yml` support dual-branch promotion (`next` prerelease candidate -> `main` stable release) with candidate mirror seeding and maintainer approval evidence validation.
+- **Release pipeline:** `.releaserc.json` and `.github/workflows/release.yml` run stable `main` release orchestration (`3.0.0`) with candidate mirror seeding and candidate receipt/asset verification, with Windows qualification (`pwsh.exe` + Node `24.21.0`) running in PRs via `.github/workflows/windows-smoke.yml`.
 ## Open gaps and decisions
 
 - **Command enforcement:** Canonical `evc-cmd-*` naming and `-x-` nesting remain enforced by `src/adapters/resource-naming.ts` and `.evcrate/source/.claude/scripts/scan_commands.py`; VS Code maps commands to container-local `cmd-*` under plugin `evc`.

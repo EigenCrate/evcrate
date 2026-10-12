@@ -1,7 +1,7 @@
 # Project Overview and Product Development Requirements
 
-**Baseline:** `evcrate@2.11.0` (private Node/TypeScript package, Node `>=22.19.0`).
-**Target Topology:** `3.0.0-rc.1` (prerelease on `next`) / `3.0.0` (stable on `main`).
+**Baseline:** `evcrate@3.0.0` (private Node/TypeScript package, Node `>=22.19.0`).
+**Target Topology:** `3.0.0` (stable on `main`).
 **Status:** Requirements for the completed harness-only repository cutover; live vendor/native-host acceptance remains separate.
 **Updated:** 2026-10-12
 **Scope:** EVCrate package, seven persisted target projections, resource management, atomic publication, recovery, and release.
@@ -153,32 +153,24 @@ Failed recovery preserves evidence. Current package scripts use the TypeScript p
 VS Code Local projects `cmd-*` command skills within plugin `evc`; other targets retain `evc-cmd-*`.
 Nested commands retain the reserved `-x-` separator and reversible semantic identifiers.
 Resource names conform to spec64 (`^[a-z0-9]+(-[a-z0-9]+)*$`, <= 64 chars, no `_`, `:`, `--`); the colon in host-qualified `/evc:cmd-*` is not part of the resource name. Instructions author solely in `.evcrate/source/.claude/AGENTS.md`. Upgrades
-enforce ownership-based pruning with pre-upgrade customization backup warnings, unmanaged collision refusal,
-Releases validate through prerelease channel `next` (`3.0.0-rc.1` / `3.0.0-rc.N`)
-before candidate-bound stable promotion on `main` (`3.0.0`).
+enforce ownership-based pruning with pre-upgrade customization backup warnings and unmanaged collision refusal.
+Releases qualify on `main` (`3.0.0`) on Linux before publication, while Windows qualification (`pwsh.exe` + Node `24.21.0` on `windows-2025`) runs on pull requests.
 
 **Acceptance:** Core docs and all seven active target projections retain unified canonical identities,
 with container-local VS Code command names and zero compatibility aliases. Canonical naming authority is `src/adapters/resource-naming.ts`, enforced by
 `.evcrate/source/.claude/scripts/scan_commands.py`. Claude publishes native unconditional
 `.claude/rules/AGENTS.md` (no duplicate direct AGENTS or CLAUDE shim). Pre-upgrade backups are required;
-recorded ownership controls pruning. Prerelease builds on `next` publish via verified mirror topology;
-stable publication on `main` strictly requires live GitHub verification of production protections and an independent configured maintainer/admin's environment review bound to the candidate repository, release workflow, source commit, run ID and first attempt. Caller-authored approval files and offline authorization are rejected; stable reruns require a new workflow run.
+recorded ownership controls pruning. Candidate builds on `main` validate via disposable bare mirror topology before `publish-release.cjs` verifies `candidate.json` and exact-seven asset digests and publishes `3.0.0`.
 
-### Inline interview and native context
+### Native command context
 
-**Requirement:** `/evc-cmd-advise` uses `advise-inline/v1` in the main session only:
-one substantive question per turn, at most eight discovery questions, then explicit
-confirm/correct for a concise reframe, with at most two confirmation cycles.
-Cancellation, interruption, or nonconvergence produces no report or persisted answers.
-Raw task arguments are ordinary unchanged data.
+**Requirement:** OMP and Pi projections wrap command invocations in bounded, versioned
+native context headers (`evcrate_omp_command_context` v3 and `evcrate-pi-command-context` v2)
+while transporting raw task arguments unchanged. The advisor subsystem, `advisory-interview.md`,
+`plan-progress.md`, and `/evc-cmd-advise` are retired; all 69 canonical commands use pure
+baseline prompt structures.
 
-**Acceptance:** Only confirmed problems produce sanitized UTF-8 reports <=32 KiB
-at safe repository-relative `plans/reports/` or an explicitly active plan's reports
-directory. Use fresh UUID/local timestamp, no-clobber creation, path/ancestor
-inspection, and readback before linking; no credentials, page bodies, environment
-dumps, traces, or hidden reasoning. Eight headings and exact OMP v3/Pi v2 headers
-are specified in [architecture](./system-architecture.md#5-native-command-context-and-inline-interview).
-Missing safe host inspection/create capability stops report writing honestly.
+**Acceptance:** Exact OMP v3/Pi v2 headers are specified in [architecture](./system-architecture.md#5-native-command-context).
 Native context retains installed-root containment, raw transport, child/tool/nesting
 bounds, and privacy/scout guards. Real host turns/discovery are required evidence;
 generated files and portable tests alone do not qualify them.

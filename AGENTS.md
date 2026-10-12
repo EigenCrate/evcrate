@@ -13,7 +13,7 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - Documentation management: `./.omp/evcrate/workflows/documentation-management.md` or `./.claude/workflows/documentation-management.md` if present; fallback to checked-in `./.evcrate/source/.claude/workflows/documentation-management.md`
 - And other workflows: `./.evcrate/source/.claude/workflows/*` (or active harness `./.omp/evcrate/workflows/*`)
 
-Resolve required workflow resources from active harness path (`./.omp/evcrate/workflows/<name>`, published `~/.omp/agent/evcrate/workflows/<name>`, etc.) when present; otherwise fallback to checked-in canonical sources under `./.evcrate/source/.claude/workflows/<name>`. This lookup includes `plan-progress.md` and `advisory-interview.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read only workflows required by the current task.
+Resolve required workflow resources from active harness path (`./.omp/evcrate/workflows/<name>`, published `~/.omp/agent/evcrate/workflows/<name>`, etc.) when present; otherwise fallback to checked-in canonical sources under `./.evcrate/source/.claude/workflows/<name>`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read only workflows required by the current task.
 
 ## Subagent Completion Contract
 

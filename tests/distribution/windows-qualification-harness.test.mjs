@@ -28,7 +28,8 @@ import {
   verifyCandidateAssets,
   verifyPredecessorAssets,
   verifyCandidateReceipt,
-  safeReleaseProcess
+  safeReleaseProcess,
+  normalizePowerShellOutput
 } from '../installers/windows-release-qualification.mjs';
 
 import { buildWindowsTestReleaseSet } from '../installers/fixtures/windows-release-fixture.mjs';
@@ -70,7 +71,7 @@ test('Harness CLI: parseCliArgs accepts valid full mode arguments with receipt a
     '--predecessor', '/tmp/predecessor',
     '--version', '2.2.0',
     '--source-commit', VALID_COMMIT,
-    '--powershell', 'powershell.exe',
+    '--powershell', 'pwsh.exe',
     '--repository', 'test-owner/test-repo',
     '--workflow-run-id', '12345',
     '--workflow-run-attempt', '2'
@@ -83,7 +84,7 @@ test('Harness CLI: parseCliArgs accepts valid full mode arguments with receipt a
   assert.equal(parsed.predecessor, path.resolve('/tmp/predecessor'));
   assert.equal(parsed.version, '2.2.0');
   assert.equal(parsed.sourceCommit, VALID_COMMIT);
-  assert.equal(parsed.powershell, 'powershell.exe');
+  assert.equal(parsed.powershell, 'pwsh.exe');
   assert.equal(parsed.repository, 'test-owner/test-repo');
   assert.equal(parsed.workflowRunId, 12345);
   assert.equal(parsed.workflowRunAttempt, 2);
@@ -121,7 +122,7 @@ test('Harness CLI: parseCliArgs rejects invalid mode', () => {
       '--assets', '/tmp',
       '--version', '1.0.0',
       '--source-commit', VALID_COMMIT,
-      '--powershell', 'powershell.exe'
+      '--powershell', 'pwsh.exe'
     ]),
     /Invalid --mode "invalid-mode"/
   );
@@ -134,7 +135,7 @@ test('Harness CLI: parseCliArgs rejects invalid semver', () => {
       '--assets', '/tmp',
       '--version', 'not-a-semver',
       '--source-commit', VALID_COMMIT,
-      '--powershell', 'powershell.exe'
+      '--powershell', 'pwsh.exe'
     ]),
     /Invalid --version "not-a-semver"/
   );
@@ -147,7 +148,7 @@ test('Harness CLI: parseCliArgs rejects invalid source-commit (must be 40 hex)',
       '--assets', '/tmp',
       '--version', '1.0.0',
       '--source-commit', 'too-short',
-      '--powershell', 'powershell.exe'
+      '--powershell', 'pwsh.exe'
     ]),
     /Invalid --source-commit "too-short"/
   );
@@ -157,7 +158,7 @@ test('Harness CLI: parseCliArgs rejects invalid source-commit (must be 40 hex)',
       '--assets', '/tmp',
       '--version', '1.0.0',
       '--source-commit', 'g'.repeat(40),
-      '--powershell', 'powershell.exe'
+      '--powershell', 'pwsh.exe'
     ]),
     /Invalid --source-commit/
   );
@@ -174,6 +175,16 @@ test('Harness CLI: parseCliArgs rejects invalid powershell executable name', () 
     ]),
     /Invalid --powershell "cmd.exe"/
   );
+  assert.throws(
+    () => parseCliArgs([
+      '--mode', 'smoke',
+      '--assets', '/tmp',
+      '--version', '1.0.0',
+      '--source-commit', VALID_COMMIT,
+      '--powershell', 'powershell.exe'
+    ]),
+    /Invalid --powershell "powershell\.exe"/
+  );
 });
 
 test('Harness CLI: parseCliArgs full mode requires receipt and predecessor', () => {
@@ -183,7 +194,7 @@ test('Harness CLI: parseCliArgs full mode requires receipt and predecessor', () 
       '--assets', '/tmp',
       '--version', '1.0.0',
       '--source-commit', VALID_COMMIT,
-      '--powershell', 'powershell.exe'
+      '--powershell', 'pwsh.exe'
     ]),
     /Full mode requires argument: --receipt <file>/
   );
@@ -195,7 +206,7 @@ test('Harness CLI: parseCliArgs full mode requires receipt and predecessor', () 
       '--receipt', '/tmp/receipt.json',
       '--version', '1.0.0',
       '--source-commit', VALID_COMMIT,
-      '--powershell', 'powershell.exe'
+      '--powershell', 'pwsh.exe'
     ]),
     /Full mode requires argument: --predecessor <dir>/
   );
@@ -486,4 +497,17 @@ test('Harness Process: safeReleaseProcess gracefully handles null, already-exite
   const childLive = execFile(process.execPath, ['-e', 'process.stdin.resume(); process.stdin.on("data", () => process.exit(0));']);
   await assert.doesNotReject(() => safeReleaseProcess(childLive));
   assert.notEqual(childLive.exitCode, null);
+});
+
+test('Harness Utilities: normalizePowerShellOutput preserves admission error phrases across Windows PowerShell 5.1 80-col CRLF line wraps', () => {
+  const wrappedStderr = [
+    'D:\\a\\evcrate\\evcrate\\candidate-artifact\\assets\\install.ps1 : Installation error: Predecessor receipt must be a regular ',
+    'non-reparse file',
+    'At D:\\a\\evcrate\\evcrate\\candidate-artifact\\assets\\install.ps1:2224 char:40',
+    '+     Write-Error "Installation error: $($_.Exception.Message)"'
+  ].join('\r\n');
+
+  const normalized = normalizePowerShellOutput('', wrappedStderr);
+  assert.match(normalized, /Predecessor receipt must be a regular non-reparse file/u);
+  assert.equal(/Predecessor receipt snapshot mismatch/u.test(normalized), false);
 });

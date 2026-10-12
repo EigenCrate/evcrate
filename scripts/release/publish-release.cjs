@@ -8,7 +8,6 @@ const os = require('node:os');
 const assetVerification = require('./asset-verification.cjs');
 const releaseContract = require('./release-contract.cjs');
 const { readCanonicalReleaseConfig } = require('./run-release-candidate.cjs');
-const { verifyGitHubStableApproval } = require('./github-approval.cjs');
 
 /**
  * Parses and validates environment and CLI arguments for publisher execution.
@@ -345,24 +344,17 @@ async function runPublishRelease(options = {}) {
     ...options,
     assetsDir
   });
-  // 1b. Verify branch topology guards against canonical release configuration
-  const isPrerelease = isPrereleaseVersion(receipt.version);
+  // 1b. Verify branch topology guards against canonical release configuration (stable main only, no prereleases)
+  if (isPrereleaseVersion(receipt.version)) {
+    throw new Error(`Topology violation: cannot publish prerelease version "${receipt.version}"; release candidates are retired`);
+  }
   const canonicalConfig = options.config || readCanonicalReleaseConfig({ projectRoot: cwd });
   const branch = options.branch || env.BRANCH_NAME || env.GITHUB_REF_NAME;
   if (branch) {
     const trimmedBranch = String(branch).trim();
-    if (trimmedBranch === 'main' && isPrerelease) {
-      throw new Error(`Topology violation: cannot publish prerelease version "${receipt.version}" on stable branch "main"`);
+    if (trimmedBranch !== 'main') {
+      throw new Error(`Topology violation: cannot publish release on non-canonical branch "${trimmedBranch}"`);
     }
-    if (trimmedBranch === 'next' && !isPrerelease) {
-      throw new Error(`Topology violation: cannot publish stable version "${receipt.version}" on prerelease branch "next"`);
-    }
-  }
-
-  // Stable publication always requires an independent, candidate-bound live GitHub review.
-  let approvalRecord = null;
-  if (!isPrerelease) {
-    approvalRecord = await verifyGitHubStableApproval(receipt, { env, fetchFn: options.fetchFn });
   }
   // 2. Prepare publish workspace (copy assets only to dist/release, verify again)
   preparePublishWorkspace(assetsDir, distReleaseDir, receipt, { cwd, runnerTemp: options.runnerTemp });
@@ -410,8 +402,7 @@ async function runPublishRelease(options = {}) {
   return {
     success: true,
     publishedRelease: nextRelease,
-    receipt,
-    approval: approvalRecord
+    receipt
   };
 }
 
@@ -431,7 +422,7 @@ Options:
   --source-commit <commit>  Expected 40-hex commit SHA
   --run-id <id>             Expected workflow run ID
   --run-attempt <attempt>   Expected workflow run attempt
-  --branch <branch>        Release branch (stable approval is verified live with GitHub)
+  --branch <branch>        Release branch (must be "main")
   -h, --help                Show this help message
 `);
     return 0;
@@ -453,7 +444,6 @@ module.exports = {
   parsePublisherOptions,
   isPrereleaseVersion,
   verifyCandidateReceipt,
-  verifyGitHubStableApproval,
   preparePublishWorkspace,
   runPublishRelease,
   main

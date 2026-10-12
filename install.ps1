@@ -2221,6 +2221,7 @@ try {
     $exitCode = Main -ScriptArgs $args
     exit $exitCode
 } catch {
+    [Console]::Error.WriteLine("Installation error: $($_.Exception.Message)")
     Write-Error "Installation error: $($_.Exception.Message)"
     exit 1
 }
