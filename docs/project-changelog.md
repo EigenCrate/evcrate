@@ -2,8 +2,79 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-12
-**Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+**Updated:** 2026-10-13
+**Status:** Core package release history; General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-13 — feat(snyk): usage documentation, ledger templates, and evidence-bound closeout (Phase 08)
+
+- Completed Phase 08 documentation and closeout of General Snyk remediation cycles: documentation deliverables complete; operational qualification blocked; end-to-end implementation incomplete pending operator prerequisites (plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-08-documentation-and-closeout.md`).
+- Reconciled installer syntax and safety boundaries: updated all installation documentation across `ext/snyk-expert/README.md`, `ext/snyk-expert/docs/usage.md`, and `docs/snyk-expert-cli.md` to `--target agents --directory <project-root>`; reconciled safety documentation to reflect process-level locking (`.install.lock`), pre-execution drift checks, staged temporary files with best-effort rollback, and the trusted exclusive writer boundary without claiming adversarial race-proof concurrency.
+- Documented 4-skill bundle and main-owned coordinator: documented the explicit 12-asset bundle with `cmd-snyk-remediate`, role ownership (Main owns budget, gates, live scans, terminal review; specialist owns single-set execution and local verification), host-neutral invocation, and honest explicit-read inline fallback mode.
+- Documented 8-stage review/correction loop and attempt accounting: detailed the full 8-stage sequence (Steps 1–8), restart-safe attempt counting ($N \ge 1$, increment before first dependency-input/resolution-capable operation including failing native updates, zero refunds, evidence-only writes at zero $N$, clean runs consuming zero attempts), and Step 8 post-review correction returning to Step 1 fresh changed-state scan without duplicate label-only scans.
+- Documented private target-contained evidence safeguards: formalized directory containment, access permissions, git-ignored untracked isolation, non-input/non-coverage verification, and immediate fail-closed pause on unsafe storage without silent external fallback.
+- Provided illustrative abbreviated ledger templates: documented structural templates for immutable first-scan source inventory (distinguishing report assertions from authentic scan-zero presence), occurrence ledger, every-attempt observation ledger tracking every original finding after every started attempt, separate post-only findings ledger, license decisions, and durable run record summary, linking authoritative lossless schemas in reference contracts.
+- Documented procedure learning and inert candidate recipes: codified append-only procedure learning observations within run records and inert sanitized `UNTRUSTED` candidate notes without automated runtime skill mutation or promotion prerequisites.
+- Mandatory failed-attempt ledger finalization: encoded explicit Main-owned branch appending observations for every original record upon Step 4/5 failure (`Post-scan observation: failed/unavailable`; `Disposition: unverified` for attempted set and `remaining` for unattempted set), persisting failure logs/recovery requirements, retaining consumed attempts with `in_flight_state: 'started'`, and prohibiting next-set selection until resolution; verified via evaluation scenario 50 and focused test.
+- Preserved truthful operational closeout boundary: documented delivery and specification completeness while maintaining that end-to-end operational qualification remains blocked pending operator provision of Phase 07 live prerequisites.
+
+### 2026-10-13 — test(snyk): evaluate live operational qualification prerequisites and deliver qualification index (Phase 07)
+
+- Delivered Phase 07 qualification index at [reports/qualification-index.md](../plans/261012-1944-general-snyk-remediation-cycles/reports/qualification-index.md) (plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-07-live-operational-qualification.md`).
+- Categorized all 36 acceptance cases into Delivery, Specification, and Operational evidence classes. Verified delivery case SNYK-002 (package layout, inventory, and collision refusal) passed; verified 35 specification-covered cases.
+- Recorded operational gate disposition: confirmed that live operational qualification requires real runtime host/model execution traces, native graph/consumer verification on isolated targets, and live authenticated same-scope Snyk scans. With Snyk CLI absent on `$PATH` (`PREREQ-05`), `SNYK_TOKEN` unverified/unset (`PREREQ-06`), isolated consuming targets unbound (`PREREQ-01..03`), target-contained evidence storage unbound (`PREREQ-08`), and network/registry access unvalidated (`PREREQ-07`), live operational cases (SNYK-001 partial, SNYK-003 through SNYK-031, SNYK-032a, SNYK-033 through SNYK-036) are recorded as **blocked on operator prerequisites**, and the conditional network troubleshooting branch of SNYK-032b is recorded as **unqualified**.
+- Preserved zero mocks or synthetic waivers: no mock scanner or synthetic token check substituted; operational gate remains strictly fail-closed pending operator provision of live prerequisites.
+
+### 2026-10-12 — feat(snyk): local integration review and corrections (Phase 06)
+
+- Completed Phase 06 local integration review and corrections of General Snyk remediation cycles at 2026-10-12T23:41:05+07:00 (review 9/10 approved, 6/8 phases, 75% progress; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-06-integration-review-and-corrections.md`).
+- Reconciled Phase 05 review warnings W1, W2, W3: removed fragile length heuristics, enforced explicit `Stimulus:` checks across all 49 evaluation scenarios, and aligned SNYK-035 storage boundary specifications with contract trace vocabulary (`current_stage`, `stop_reason`, `next_action`, access-controlled ancestor/leaf containment, single-writer ownership).
+- Local integration verification: 46/46 package tests passing in `ext/snyk-expert`, 12/12 JS files syntax-verified via `node --check`, isolated direct install/dry-run sentinel preservation, 58/58 relative link resolution without repo escape, clean tarball packaging (24 assets) without test/report leakage, extracted package execution from unrelated cwd, and collision refusal preserving user modifications.
+- Operational boundary: local smoke and specifications verified; live authenticated Snyk scans and model/tool trace qualification remain Phase 07 gates.
+
+### 2026-10-12 — feat(snyk): register coordinator in installer inventory and qualify delivery scenarios (Phase 05)
+
+- Completed Phase 05 delivery and acceptance scenarios of General Snyk remediation cycles at 2026-10-12T22:54:45+07:00 (5/8 phases complete, 62.5% progress; review approved 8.5/10 with 3 minor warnings noted for Phase 06 reconciliation; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-05-delivery-and-acceptance-scenarios.md`).
+- Registered `skills/cmd-snyk-remediate/SKILL.md` in `ext/snyk-expert/lib/inventory.js`: `ASSET_INVENTORY` now contains 12 explicit assets (`agents/snyk-expert.md`, `skills/cmd-snyk-remediate/SKILL.md`, and 10 task skill and reference documents).
+- Updated package scope description in `ext/snyk-expert/package.json` to reflect bounded remediation coordinator and ecosystem remediation scope.
+- Expanded evaluation catalog `ext/snyk-expert/evals/evals.json` to 49 scenarios covering all acceptance matrix IDs SNYK-001 through SNYK-036 across Delivery, Specification, and Operational evidence classes, including multi-variant scenario specifications for SNYK-035 (storage boundaries: safe target-contained append vs. unsafe/tracked/unignored storage pause) and SNYK-036 (procedure learning observations and inert sanitized UNTRUSTED candidate notes without automated skill mutation).
+- Hardened packaging and installer tests in `ext/snyk-expert/tests/cli-and-packaging.test.mjs`: verified asset uniqueness, verified new coordinator inclusion, verified pre-existing collision refusal preserving unrelated user sentinels while allowing authorized force replacement, and verified tarball packing, extraction, and installation execution from an unrelated cwd.
+- Refactored `ext/snyk-expert/tests/workflow-qualification.test.mjs`: removed fragile phrase-pinning tests asserting arbitrary prose fragments; retained structural schema checks verifying schema adherence, acceptance ID coverage, SNYK-035/036 variants, and evidence-class categorization, explicitly labeled as non-runtime specification evidence.
+- Verification & boundary: 49 eval scenarios structured, package installer and qualification suites updated (45/45 tests passing); static and delivery checks do not prove live coordinator runtime behavior or agent execution; integrated verification and code review scheduled for Phase 06, and live operational qualification scheduled for Phase 07.
+
+### 2026-10-12 — feat(snyk): author main-owned command coordinator and 8-stage correction loop (Phase 04)
+
+- Completed Phase 04 main-owned command and correction loop of General Snyk remediation cycles at 2026-10-12T22:20:46+07:00 (4/8 phases, 50% progress; review approved 8/10 with 6 non-blocking warnings noted for Phase 05/06 reconciliation; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-04-command-and-correction-loop.md`).
+- Authored `ext/snyk-expert/.agents/skills/cmd-snyk-remediate/SKILL.md`: portable main-session procedure coordinating bounded Snyk Open Source remediation cycles without an executable runner or assumed slash-command/subagent registration; binds canonical installed `.agents/` bundle root separately from `target_root` and specifies honest explicit-read inline fallback when native specialist registration is unavailable.
+- Bound intake, positive integer budget $N \ge 1$ with resume continuity, and private target-contained evidence storage before any artifact output (including initial baseline scan), keeping mutating initialization/scanner/resolver commands strictly non-exempt.
+- Encoded the 8-stage runtime sequence (Steps 1–8): Main live scan/refresh (Step 1), 6-point ecosystem-neutral pre-edit procedure binding and read-only `dependency-upgrade-review` (Step 2), Main pre-edit gate where `reject`/`revise` consume 0 attempts (Step 3), persisted `attempts_started + 1` and single-set application (Step 4), native local verification handoff `local verification complete; Snyk verification pending` (Step 5), Main live final review scan and append-only every-finding/post-only ledger reconciliation (Step 6), review decision (Step 7), and post-review corrections before rescan (Step 8 returning to Step 1 fresh changed-state scan to close the corrective attempt and transition to Step 7 without duplicate label-only scans).
+- Encoded append-only observed procedure learning in the private run record, inert sanitized `UNTRUSTED` candidate notes, and separate human-approved source-authoring maintenance proposals with zero runtime installed-skill mutation.
+- Verification & boundary: 25/25 relative links resolved in `cmd-snyk-remediate/SKILL.md` and 53/53 existing package tests passing across 8 suites (prior to Phase 05 `ext/snyk-expert/lib/inventory.js` registration and scenario expansion; static/test checks do not prove live coordinator runtime behavior); local integration review remains pending Phase 06 and live operational qualification pending Phase 07.
+
+### 2026-10-12 — feat(snyk): specialist and skill cutover for bounded remediation cycles (Phase 03)
+
+- Completed Phase 03 specialist and skill cutover of General Snyk remediation cycles at 2026-10-12T22:02:47+07:00 (plan records review approved 8/10; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-03-specialist-and-skill-cutover.md`).
+- One-set execution per mutating invocation: bound single coherent set execution with retained $N$, incrementing `attempts_started` once before first mutation with zero refunds on failure or rollback.
+- Local verification handoff to Main: specialist and fix skills return `local verification complete; Snyk verification pending` with native graph, build, and test evidence upon successful checks, while failed local checks return partial or stopped evidence; Main retains exclusive ownership of live Snyk scans and terminal review.
+- Neutral pre-edit procedure evaluation table: replaced blanket unsupported-ecosystem stops across all entrypoints and references with a neutral 6-point pre-edit procedure evaluation table; managers with complete official support and execution authorization run under existing authority without hardcoded ecosystem allowlists.
+- Zero target writes in analyze and upgrade-review: analyze and upgrade-review instructions prohibit target edits, dependency mutations, and private evidence writes in those modes.
+- Bound private ignored evidence storage: the `snyk-cli` skill instructions require a main-bound private ignored target-contained destination and mandate pausing on unauthorized, unignored, tracked, or coverage-affecting storage without silent fallback.
+- Safe CLI troubleshooting: added proxy vs CA trust diagnostics (npm cafile, Node extra CA, standalone store distinct) strictly prohibiting TLS bypass.
+- Preserved concrete safeguards: retained all Node.js/TypeScript (lockfile, peer, engines, compiler) and Maven/Spring (BOMs, profiles, reactor) safeguards in specialized remediation references.
+- Package test verification: 53/53 package tests pass across 8 suites in `ext/snyk-expert/tests/`, including 14 workflow-contract tests in `ext/snyk-expert/tests/workflow-qualification.test.mjs`; live authenticated Snyk qualification and runtime remediation remain scheduled for Phase 07.
+- Boundary: Specialist and skill cutover complete; command coordinator loop (`cmd-snyk-remediate`, Phase 04), delivery scenarios (Phase 05), integration review (Phase 06), and live operational qualification (Phase 07) remain scheduled for subsequent phases.
+
+### 2026-10-12 — feat(snyk): establish general procedure and lossless ledger contracts (Phase 02)
+
+- Completed Phase 02 reference-contract authoring of General Snyk remediation cycles at 2026-10-12T21:39:21+07:00 (review approved 8.5/10 with non-blocking W7 vocabulary follow-ups noted; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-02-procedure-and-ledger-contracts.md`, QA validation report: `plans/reports/qa-261012-2129-snyk-phase02-contracts-and-suite-validation.md`).
+- Pre-edit procedure table contract: specified neutral 6-point evaluation covering manager/version/runtime, official support/parser evidence, authored/effective controls, native inspection, exact invocation authority, and test/graph/consumer coverage before any dependency-changing edit.
+- Immutable source inventory & scan-zero authentic presence: established immutable first-scan source and duplicate occurrence tables in `finding-and-owner-contract.md`; distinct authentic scan-zero presence tracking prevents reconstructing missing originals from counts.
+- Restart-safe counting: specified durable run record in `verification-and-results.md` with positive integer $N \ge 1$ bound at intake, count incremented exactly once before first mutation, zero refunds on failure or rollback, pause/resume state preservation, and unknown count stop gates.
+- Private target-contained evidence storage: defined private target-contained evidence storage bindings with leaf/ancestor containment, strict permissions, git-ignored untracked isolation, affirmative non-input/non-coverage evidence, single writer, and fail-closed pause on unsafe storage without silent fallback.
+- Every-attempt observation ledger: specified full observation rows for all original findings across every attempt (including unattempted, unchanged, and failed rows).
+- Post-only provenance: established separate post-only inventory and provenance tracking, keeping advisory absence distinct from individual path disappearance and separating license evaluation from vulnerability remediation.
+- Procedure learning observations: added procedure learning observation fields within run records capturing planned/executed commands, side effects, and environment limits with inert sanitized UNTRUSTED candidate notes without automatic source-skill mutation.
+- Live scan terminal review ownership: assigned live scanner execution and terminal review post-scan ownership directly to Main in the common references (`snyk test` and live reconciliation), keeping actor scope strictly bound to local inspection and native verification.
+- Boundary: Phase 02 establishes reference contract specifications; executable specialist/skill cutover, Main loop, and live authenticated qualification remain scheduled for subsequent phases.
 
 ### 2026-10-12 — test(vscode): integrated contract and isolated host qualification (Phase 09)
 **Status:** Package gates and isolated Windows VS Code 1.140.0 receipts N-01–N-03 pass; interactive GUI and authenticated inference remain blocked. [Integrated report](../plans/261011-2349-vscode-runtime-model-bindings/reports/integrated-qualification.md) · [Native receipts](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-qualification.md).
@@ -692,108 +763,23 @@
   tests, and 11/11 controller-closure tests; existing history operations remain
   unchanged. Phase 05 is next: browser history traversal and scanner.
 
-### 2026-09-18 — feat(advisor): complete checkpoint digest, metrics kernel, and generated CJS adapters (Phase 02)
+### 2026-09-18 — feat(advisor): historical checkpoint digest, metrics kernel, and controller closure (Phases 02–03)
 
-**Status:** Phase 02 DONE (2026-09-18; 100%); review approved 10/10.  
-**Plan:** [Phase 02 plan](../plans/260917-2308-advisor-visual-metrics/phase-02-checkpoint-digest-metrics-kernel-and-generated-cjs-adapters.md)  
-**Evidence:** [Phase 02 re-review](../plans/reports/code-review-260918-0244-phase02-re-review.md)
-
-- Completed the portable deterministic metrics kernel, exact history filters/formulas,
-  frozen results, duplicate exclusion, diagnostics, completeness, and limitation codes.
-- Preserved order-sensitive checkpoint digest bytes and proved Node/Web Crypto parity;
-  converted the CJS contract and policy validators to generated-runtime adapters while
-  retaining required exports and boundary error codes.
-- Registered the generated four-file runtime closure in the 33-file controller
-  inventory. Focused proof passed: protocol 31/31, metrics 5/5, parity 4/4,
-  advisor-controller 206/206, distribution check/build `status: "ok"`, and build.
-
-### 2026-09-18 — test(advisor): close controller closure and installer inventory parity (Phase 03)
-
-**Status:** Phase 03 DONE (2026-09-18; 100%); review approved 10/10.  
-**Plan:** [Phase 03 plan](../plans/260917-2308-advisor-visual-metrics/phase-03-controller-closure-and-inventory-migration.md)  
-**Evidence:** [Closure parity evidence](../plans/reports/evidence-260918-1140-phase-03-33-file-closure-parity.json); [code review](../plans/reports/code-review-260918-1136-phase-03-controller-closure-inventory-migration.md)
-
-- `install.sh` and `install.ps1` now carry the exact 33-file code-point-sorted
-  controller inventory, including the four generated runtime modules.
-- `tests/manifests/distribution-manifests.test.mjs` asserts exact count/hash parity
-  and rejects an extra `viewer.js` or a foreign `require('lodash')`.
-- Evidence records sequence-identical authority/generated/installer lists, 81
-  validation checks, and zero failures. Historical dated 29/29 evidence remains
-  unchanged; Phase 04 is complete and Phase 05 is next: browser history traversal
-  and scanner.
+- Completed the portable deterministic metrics kernel, exact history filters/formulas, and registered the generated four-file runtime closure in the 33-file controller inventory; focused test suites passed. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 
 ### 2026-09-15 — docs(release): complete Windows qualification and bounded support cutover (Phases 09–10)
 
-**Status:** Phases 09–10 DONE (10/10 Windows qualification phases; 100%; completed 2026-09-15).  
-**Plan:** [Windows qualification master plan](../plans/260914-0636-windows-release-qualification/plan.md)  
-**Evidence:** [Phase 09 integrated qualification](../plans/reports/tester-260915-1119-phase-09-integrated-qualification.md), [Phase 09 suite validation](../plans/reports/tester-260915-1119-phase-09-suite-validation.md), and [Phase 10 support cutover](../plans/260914-0636-windows-release-qualification/phase-10-post-proof-documentation-and-support-cutover.md)
+- Completed the hosted `windows-2025` x64 matrix for PowerShell 5.1/7 and Node `22.19.0`/`24.21.0` for standalone installer lifecycle (`install`, `repair`, `upgrade`, `rollback`, `uninstall`) and `version --json`.
+- Bounded support covers standalone installer and version reporting only. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
+### 2026-09-14–2026-09-15 — feat(release): historical Windows qualification harness and CI workflow (Phases 05–08)
 
-- Completed the hosted `windows-2025` x64 matrix for PowerShell 5.1/7 and Node
-  `22.19.0`/`24.21.0`, with standalone installer lifecycle (`install`,
-  repeat-install, `repair`, upgrade, `rollback`, `uninstall`) and `version --json`
-  qualification.
-- Bounded support now covers the standalone installer and version reporting only.
-  `publish`, `health`, advisor execution, live vendor qualification, and production
-  HOME publication remain Linux-only or operator-gated.
-- Reconciled README and architecture, standards, PDR, and roadmap documentation with
-  package version `2.1.0`, Windows defaults, user PATH behavior, and project
-  publication state.
+- Historical Windows qualification milestone: self-contained qualification harness (Phase 05), semantic-release candidate/publisher wrappers (Phase 06), split producer/matrix/publisher CI workflow (Phase 07), and unprivileged PR smoke workflow with qualified asset labels (Phase 08).
+- Retained evidence: release orchestration 12/12, `npm run test:release` 29/29, scoped harness checks 60/60. Detailed phase records preserved in [changelog archive](./project-changelog-archive.md).
 
-### 2026-09-15 — feat(ci): unprivileged Windows PR smoke and qualified asset labels (Phase 08)
+### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
 
-**Status:** Phase 08 DONE (2026-09-15; 100%).  
-**Plan:** [Phase 08 plan](../plans/260914-0636-windows-release-qualification/phase-08-unprivileged-windows-pr-smoke-and-labels.md)  
-**Evidence:** `tests/distribution/release-orchestration.test.mjs` (WRQ-042–044).
-
-- Added `.github/workflows/windows-smoke.yml`: `pull_request`/manual-only, read-only
-  `contents`, canceling concurrency, `windows-2025` x64, Node `22.19.0`, pinned
-  v4 actions, `npm ci`, checked-in version/SHA fixture build, exact-seven verify,
-  and explicit `pwsh.exe` smoke harness.
-- Fixture identity uses `--allow-fixture-identity` and is diagnostic only: no
-  secrets, write scope, upload, semantic-release, or privileged follow-up/handoff.
-- `.releaserc.json` now labels the Windows ZIP `Windows x64 Archive` and
-  `install.ps1` `Windows Installer Entrypoint (install.ps1)`; other labels,
-  paths/order, and prepare command remain unchanged.
-- WRQ-042 covers workflow isolation, WRQ-043 fixture/exact-seven/smoke wiring,
-  and WRQ-044 exact labels plus preserved asset configuration. Native matrix,
-  publication, and final byte proof remain Phase 09/operator gates.
-
-### 2026-09-15 — feat(ci): split release workflow into producer, matrix, and publisher (Phase 07)
-
-**Status:** Phase 07 DONE (2026-09-15; 100%); Cycle 2 review approved 10/10.  
-**Plan:** [Phase 07 plan](../plans/260914-0636-windows-release-qualification/phase-07-release-workflow-producer-matrix-publisher.md)  
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260915-0155-phase-07-cycle-2.md)
-
-- Replaced the monolithic release job with an unprivileged Ubuntu producer, a
-  four-row `windows-2025` x64 qualification matrix, and a success-only publisher.
-- Producer gates remain ordered; release handoff uses one immutable artifact ID,
-  receipt, and producer hashes. Matrix rows consume the artifact without checkout/npm.
-- Publisher is the sole writer, copies exactly seven assets, and runs semantic-release
-  in verify mode. All eight action uses are pinned to full v4 SHAs.
-- Static YAML/permissions/action-pin/expression checks passed; release orchestration
-  passed 12/12. Native Windows execution and live publication remain Phase 09/operator gates.
-
-### 2026-09-14 — feat(release): canonical semantic-release candidate, receipt, and publisher (Windows qualification Phase 06)
-
-**Status:** Phase 06 DONE (2026-09-14; 100%); Cycle 2 code review approved 10/10.
-**Plan:** [Phase 06 plan](../plans/260914-0636-windows-release-qualification/phase-06-semantic-release-candidate-receipt-and-publisher.md)
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2236-phase-06-cycle-2-release-orchestration.md)
-
-- Added the canonical candidate runner with strict `.releaserc.json` loading,
-  disposable bare-mirror semantic-release execution, GitHub-plugin removal only,
-  build-mode asset preparation, release-token stripping, clean checkout/source
-  identity checks, exact seven/four staging, canonical `candidate.json`, atomic
-  promotion, and exactly nine safe GitHub output scalars.
-- Added the verify-only publisher wrapper: receipt and hash preflight, exact
-  assets-only `dist/release` copy, forced `EVCRATE_RELEASE_ASSET_MODE=verify`,
-  canonical semantic-release invocation, and version/tag/source equality checks.
-- Bound `semantic-release`, `release:candidate`, `release:verify-assets`,
-  `test:release`, and `test:installer:windows` in `package.json`; no new
-  dependency or orchestration-only lockfile edit.
-- `release-orchestration.test.mjs` passes 12/12; `npm run test:release` passes
-  29/29; build and CLI help checks pass. Native Windows execution and live
-  npm/GitHub publication remain downstream gates.
-
+- Scope distribution baseline: scalar `--scope home|project`, normalized project descriptors and identity hashing, runtime closures, single-snapshot planning, generic transaction engine, schema-2 state migration/recovery, and contract proofs across all targets.
+- Retained evidence: `npm run build`, `npm run test:publication`, `npm run test:integration`, and all target manifests green. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 ## Historical entries
 
 Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md); this document remains the maintained phase mirror for the active milestone.

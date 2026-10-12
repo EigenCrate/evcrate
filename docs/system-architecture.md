@@ -188,13 +188,64 @@ invocation scope, separate from installation and proposed-API authorization.
 
 ### Snyk specialist composition: local porting boundary
 
-Canonical `.claude/agents/snyk-expert.md` orchestrates two canonical task packages: `skills/snyk-fix/` and independently reusable read-only `skills/dependency-upgrade-review/`. Existing resource import, registry and projection adapters own integration; no second generator or routing mechanism is introduced. The sealed standalone `ext/snyk-expert/` authoring snapshot is retained unchanged.
+Canonical `.claude/agents/snyk-expert.md` orchestrates two canonical task packages: `skills/snyk-fix/` and independently reusable read-only `skills/dependency-upgrade-review/`. Existing resource import, registry and projection adapters own integration; no second generator or routing mechanism is introduced. The earlier canonical porting baseline remains unchanged while the standalone extension `ext/snyk-expert/` evolves independently.
 
 The parent supplies a canonical absolute installed resource root distinct from the target root. The consuming context explicitly reads both entrypoints and all five references; serialized preload metadata is not reference-consumption evidence. Approval stays main-owned and bound to exact proposal/intent, scope and complete current baseline. Missing execution authority stops mutation; prompt instructions and tool lists are not an OS sandbox.
 
 All current local projections include both skill packages. Antigravity intentionally omits the general specialist agent. Codex, Pi, OMP and Copilot omit Claude agent preload/permission metadata. Pi drops the requested web tools; OMP maps `WebFetch` to `read`; Codex tool lists remain migration comments. Copilot namespaces packages and rebases relative Markdown sibling skill links, preserving handoffs from entrypoints and nested references.
 
 Generation, resolved local links and constructed explicit-read procedure behavior are distinct from native child discovery, permission enforcement and live remediation. No all-target parity, production publication or fixed-finding claim follows from local porting. See the [qualification matrix](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md); Phase 05 live qualification remains incomplete.
+
+<a id="proposed-standalone-snyk-remediation-cycles--planning-only"></a>
+### Standalone Snyk remediation cycles — delivered instructions, operationally unqualified
+
+**Status:** Phases 01–06 implementation and Phase 08 documentation/closeout complete (`cmd-snyk-remediate/SKILL.md` coordinator authored, registered in installer inventory across 12 assets, evaluation catalog expanded to 49 scenarios, local integration review approved 9/10, documentation and closeout complete); Phase 07 qualification index delivered at `reports/qualification-index.md` (live operational qualification blocked on operator prerequisites PREREQ-01..03, PREREQ-05, PREREQ-06, PREREQ-08; PREREQ-07 unvalidated); heading retained for inbound anchor compatibility.
+
+The [bounded-cycle plan](../plans/261012-1944-general-snyk-remediation-cycles/plan.md) (local planning reference; ignored artifacts must be preserved for handoff)
+targets only `ext/snyk-expert/`; the canonical porting boundary above remains
+unchanged. Authored command-style coordinator skill (Phase 04):
+`ext/snyk-expert/.agents/skills/cmd-snyk-remediate/SKILL.md` (registered in `ext/snyk-expert/lib/inventory.js` in Phase 05). No executable orchestration runner, canonical command,
+registry/projection change, or native host adapter.
+
+Main owns positive maximum N, durable attempt history, human decisions, ledger
+reconciliation and real authenticated same-scope Snyk final review. The existing
+specialist owns one authorized coherent dependency-owner set and returns local
+verification evidence with Snyk verification pending. Existing task skills remain
+procedures, not stage-specific workers. Applicable Node/Maven procedures retain
+their protections; other managers require a complete supported pre-edit procedure.
+
+Post-review corrections return through exact proposal assessment and authority
+gates before applying. Each corrective owner set consumes another attempt before
+its first operation capable of changing dependency inputs/resolution state, then requires native graph/consumer
+validation and a fresh scan. N never bounds scans or approval dialogs; failures,
+rollback and resumed invocations cannot reset or bypass the mutation count.
+Required validation failure stops ordinary continuation; recovery requires a
+separately bound supported request, never an automatic test repair.
+
+Original source records and duplicate ordered occurrences remain immutable;
+each attempt appends observations for every original record. Post-only findings
+retain separate provenance. Scan reuse requires complete state/scope/policy and
+freshness comparability; terminal review observes the actual unchanged final
+state. Installer checks and prose fixtures do not establish live workflow proof.
+Installer inventory registration (Phase 05), local integration review and corrections (Phase 06), and documentation and closeout (Phase 08) are complete; live host/model/authenticated-scanner qualification (Phase 07) remains blocked on operator prerequisites.
+
+The [reconciled design contracts](../plans/261012-1944-general-snyk-remediation-cycles/design-contracts.md)
+keep supported other-manager execution normal and capture observed procedures
+as private learning records. Sanitized candidate recipes remain untrusted
+documentation; skill promotion is a separately human-authorized source task,
+never automatic installed-skill mutation or prerequisite to finishing remediation.
+Default evidence is a private ignored target-contained directory with explicit
+main-owned evidence-only write authority, containment/access/coverage checks and
+no broad ignored-file exemption from baseline identity. Unsafe storage pauses
+artifact-producing execution; no automatic ignore-rule or Snyk-filter changes.
+Native registration unavailable → actual host/model explicit-read execution from
+the installed bundle is allowed, reported as inline rather than independent review.
+
+Proposed acceptance criteria and 36 acceptance cases (SNYK-001–036, spanning delivery, specification, and operational evidence classes) are defined in the
+[acceptance matrix](../plans/261012-1944-general-snyk-remediation-cycles/acceptance-matrix.md),
+and required live scanner, target, authentication, and environment conditions are inventoried
+in the [qualification prerequisites report](../plans/261012-1944-general-snyk-remediation-cycles/reports/qualification-prerequisites.md).
+Phases 01–06 and Phase 08 are complete (contracts and prerequisites in Phase 01, procedure and lossless ledger references in Phase 02, specialist and task-skill cutover in Phase 03, and main-owned 8-stage coordinator `cmd-snyk-remediate/SKILL.md` with Step 8 post-review correction loop and observed procedure learning in Phase 04, inventory registration and 49 evaluation scenarios in Phase 05, local integration review and corrections in Phase 06, and documentation and closeout in Phase 08). Live operational qualification (Phase 07) remains blocked pending operator provision of real targets and scanner credentials.
 
 ## 3. TypeScript control plane
 

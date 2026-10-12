@@ -1,6 +1,6 @@
 ---
 name: snyk-cli
-description: Verify Snyk CLI installation, manage operator-authorized setup and authentication, and execute scoped Snyk Open Source (SCA) and Snyk Code (SAST) scans producing immutable JSON, SARIF, or HTML evidence.
+description: Verify Snyk CLI installation, manage operator-authorized setup and authentication, configure safe troubleshooting, and execute scoped Snyk Open Source (SCA) and Snyk Code (SAST) scans producing immutable JSON, SARIF, or HTML evidence in bound private storage.
 ---
 
 # Snyk CLI setup and scanning
@@ -17,11 +17,14 @@ Read installed sibling [snyk-fix](../snyk-fix/SKILL.md) and [dependency-upgrade-
 
 ## Operations and execution boundary
 
-- `setup`: Verify CLI presence, inspect version and help, perform operator-authorized installation or updates, coordinate interactive browser OAuth or non-interactive token injection, and bind organization/endpoint configuration. Setup can alter machine configuration (global tools, system PATH, configuration files) only when separately and explicitly authorized by the operator.
-- `scan`: Execute bound Snyk Open Source (`snyk test`) or Snyk Code (`snyk code test`) scans against the designated target root. Scan operations may write approved artifacts (JSON, SARIF, HTML) into an authorized report directory, but must never mutate target dependencies, manifests, lockfiles, or source code.
+- `setup`: Verify CLI presence, inspect version and help, perform operator-authorized installation or updates, coordinate interactive browser OAuth or non-interactive token injection, manage safe troubleshooting (distinguishing proxy from CA trust without TLS bypass), and bind organization/endpoint configuration. Setup can alter machine configuration (global tools, system PATH, configuration files) only when separately and explicitly authorized by the operator.
+- `scan`: Execute bound Snyk Open Source (`snyk test`) or Snyk Code (`snyk code test`) scans against the designated target root. Scan operations write approved artifacts (JSON, SARIF, HTML) exclusively into main's bound private ignored destination, and must never mutate target dependencies, manifests, lockfiles, or source code.
 
 Execution boundaries and authority:
 - Host permissions, process isolation, network access, and single-writer ownership are supplied by the parent. Prompt text is not an operating system sandbox.
+- Safe fresh-output binding: Before fresh artifact output, require main's exact private ignored target-contained destination/output-path binding: resolved ancestor/leaf containment and no symlink/collision, single writer, report authority, access-controlled ancestors/destination, untracked/effectively ignored status, and proven no dependency/build/runtime/project-discovery/coverage effect. CLI follows bound output paths; standalone caller requires the same main binding.
+- Unsafe storage pause: Unsafe storage pauses artifact-producing execution and names operator prerequisite; no automatic ignore edits, untracking, permission repairs, silent outside-target fallback, or Snyk exclude/filter manipulation. Only bound raw output/observations, no copied manifests/lockfiles, executable recipes, or active HTML; retain immutable originals.
+- State and count gates: Scanner/native resolver effects must be separately bound and inspected around execution. Output placement does not exempt a command capable of changing dependency inputs/resolution from N/authority/baseline gates: count once per coherent attempt before its first potentially mutating operation, not once per command. Safe main evidence-only appends alone do not stale relevant approval/scan scope; unexpected effects stop for reassessment.
 - Scanning commands may trigger code execution through package manager or build tool dependency resolution (e.g., npm/yarn/pnpm lifecycle hooks or build plugins). Execute only within authorized environments.
 - Source transmission: Snyk Code may upload application source for analysis. Require explicit parent source-transmission authority distinct from SCA dependency-data transmission.
 - Reporting boundary: `snyk monitor` or `--report` publish snapshots and create ongoing project monitors in the Snyk web UI. These actions are never implied by a scan request and require separate operator authorization.
@@ -45,9 +48,10 @@ Execution boundaries and authority:
    - Bind explicit `--org=<ORG_ID>` and operator-approved regional/runtime configuration before authenticating; no guessed endpoint flags or persistent-default changes.
 3. **Configure and execute scan:**
    - Bind scan type: SCA (`snyk test`) for open source dependencies, SAST (`snyk code test`) for application source code.
+   - Select ecosystem procedure: select supported ecosystem path (Node.js/TypeScript, Maven, or other supported manager) requiring deployed parser/product/manager support and actual expected-project results. No universal `--dev` assumption or missing-output waiver.
    - Select development dependency inclusion explicitly: JavaScript dev dependencies are excluded by default; confirm deployed `--dev` support/results per manager. Do not invent production-only flags.
    - Choose supported exact manifests or authorized workspace discovery. Bind any detection depth/exclusions explicitly; returned expected-project accounting, not flag presence, establishes coverage.
-   - Route scan output to immutable files (`--json-file-output`, `--sarif-file-output`, or native `--html-file-output`). Keep distinct baseline and post-remediation artifact paths.
+   - Route scan output to immutable files (`--json-file-output`, `--sarif-file-output`, or native `--html-file-output`) within main's bound private ignored target-contained destination. Keep distinct baseline and post-remediation artifact paths. If storage binding is missing or unsafe, pause execution immediately.
 4. **Capture exit codes and project results:**
    - Capture exact exit code without suppression: distinguish `0` (clean / no findings) and `1` (vulnerabilities found, evidence captured) from `2` (execution error) and `3` (unsupported project).
    - Never chain commands with `&&` in ways that suppress results on exit 1, and never swallow failures with `|| true`.
@@ -62,8 +66,10 @@ Execution boundaries and authority:
 ## Hard stops and claims
 
 - Stop immediately if credentials, tokens, or debug logs would be exposed.
+- Stop if unsafe storage or unproven destination binding is detected; pause execution and report operator prerequisite without automatic ignore repair or silent fallback.
 - Stop if unpinned/silent CLI downloads are requested without operator authorization.
 - Stop if Snyk Code scan is requested without explicit source code transmission authority.
 - Stop if exit 2 or exit 3 occurs; do not treat execution failures as clean scans.
 - Stop if findings disappear due to policy/threshold drift rather than actual dependency remediation.
+- Stop if TLS bypass (e.g. `NODE_TLS_REJECT_UNAUTHORIZED=0`, `--insecure`) or unapproved proxy tampering is attempted.
 - These documents define a procedure, not deployed tool registration or live scan proof. Record actual qualification limits; do not claim operational support from authoring checks alone.
