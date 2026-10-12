@@ -20,9 +20,12 @@ source tree. The TypeScript CLI is the package control plane.
 | `src/` | TypeScript control plane | Primary package implementation. |
 | `scripts/` | Generation, package, release, benchmark (`benchmark-build-generation.mjs`), and TypeScript incremental build tooling (`build-typescript.mjs`, `typescript-build-cache.mjs`, `typescript-build-receipt.mjs`) | Follow each script's declared authority; generated outputs are not edited by hand. |
 | `tests/` | Contract and behavior suites | Focused regression and integration tests, not live vendor qualification. |
+| `ext/snyk-expert/` | Standalone common `.agents` extension package | Author standalone installer, common `.agents` bundle (`snyk-expert`, `snyk-fix`, `snyk-cli`, `dependency-upgrade-review`), tests, and planned `cmd-snyk-remediate`; maintained outside canonical target projections. |
 | `docs/`, `plans/` | Maintained documentation and work plans | See the documentation map below. |
 
 The persisted target IDs are `claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. Standalone Gemini is retired, not Antigravity's vendor HOME directory. Codex owns `.agents/skills`; Antigravity owns exact `.agents` hook/rule leaves. `vscode` uses a separate local-build adapter route; generated outputs and manifests are build artifacts.
+
+The standalone extension package `ext/snyk-expert/` is a self-contained common `.agents` package distributed with a dedicated installer and test suite, completely distinct from EVCrate's canonical 137-resource registry and seven-target projections.
 
 ## TypeScript module map and exact exported symbols
 
@@ -310,12 +313,7 @@ Canonical commands are authored as flat files (`commands/evc-cmd-<segment>(-x-<s
 
 ### Projection and catalog inventories
 
-Canonical resources total 140: 17 agents, 70 commands, 13 hooks, 34 skills, and
-6 workflows. Regenerate seven target projections, catalogs, schema-2 registry,
-and aggregate/per-target BuildManifest v3 through established tools. Canonical
-`.claude/AGENTS.md` remains the hash/authoring authority; generated root AGENTS
-and `.claude-projection` are delivery outputs. Source inventories determine
-catalog totals.
+Canonical resources registered in `.evcrate/registry.json` total 137 (17 agents, 69 commands, 13 hooks, 34 skills, and 4 workflows) following advisor subsystem retirement. Regenerate seven target projections, catalogs, schema-2 registry, and aggregate/per-target BuildManifest v3 through established tools. Canonical `.claude/AGENTS.md` remains the hash/authoring authority; generated root AGENTS and `.claude-projection` are delivery outputs. Source inventories determine catalog totals; `ext/snyk-expert/` is excluded from canonical resource totals.
 
 ### Phase 08 publication prune, collision refusal, and legacy leftover reporting
 

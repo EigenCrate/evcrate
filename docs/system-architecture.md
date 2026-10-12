@@ -196,6 +196,56 @@ All current local projections include both skill packages. Antigravity intention
 
 Generation, resolved local links and constructed explicit-read procedure behavior are distinct from native child discovery, permission enforcement and live remediation. No all-target parity, production publication or fixed-finding claim follows from local porting. See the [qualification matrix](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md); Phase 05 live qualification remains incomplete.
 
+### Proposed standalone Snyk remediation cycles — planning only
+
+The [bounded-cycle plan](../plans/261012-1944-general-snyk-remediation-cycles/plan.md) (local planning reference; ignored artifacts must be preserved for handoff)
+targets only `ext/snyk-expert/`; the canonical porting boundary above remains
+unchanged. Proposed command-style skill:
+`.agents/skills/cmd-snyk-remediate/SKILL.md`, copied by the extension's existing
+inventory/installer. No executable orchestration runner, canonical command,
+registry/projection change, or native host adapter.
+
+Main owns positive maximum N, durable attempt history, human decisions, ledger
+reconciliation and real authenticated same-scope Snyk final review. The existing
+specialist owns one authorized coherent dependency-owner set and returns local
+verification evidence with Snyk verification pending. Existing task skills remain
+procedures, not stage-specific workers. Applicable Node/Maven procedures retain
+their protections; other managers require a complete supported pre-edit procedure.
+
+Post-review corrections return through exact proposal assessment and authority
+gates before applying. Each corrective owner set consumes another attempt before
+its first operation capable of changing dependency inputs/resolution state, then requires native graph/consumer
+validation and a fresh scan. N never bounds scans or approval dialogs; failures,
+rollback and resumed invocations cannot reset or bypass the mutation count.
+Required validation failure stops ordinary continuation; recovery requires a
+separately bound supported request, never an automatic test repair.
+
+Original source records and duplicate ordered occurrences remain immutable;
+each attempt appends observations for every original record. Post-only findings
+retain separate provenance. Scan reuse requires complete state/scope/policy and
+freshness comparability; terminal review observes the actual unchanged final
+state. Installer checks and prose fixtures do not establish live workflow proof.
+Implementation and host/model/authenticated-scanner qualification remain pending.
+
+The [reconciled design contracts](../plans/261012-1944-general-snyk-remediation-cycles/design-contracts.md)
+keep supported other-manager execution normal and capture observed procedures
+as private learning records. Sanitized candidate recipes remain untrusted
+documentation; skill promotion is a separately human-authorized source task,
+never automatic installed-skill mutation or prerequisite to finishing remediation.
+Default evidence is a private ignored target-contained directory with explicit
+main-owned evidence-only write authority, containment/access/coverage checks and
+no broad ignored-file exemption from baseline identity. Unsafe storage pauses
+artifact-producing execution; no automatic ignore-rule or Snyk-filter changes.
+Native registration unavailable → actual host/model explicit-read execution from
+the installed bundle is allowed, reported as inline rather than independent review.
+
+Proposed acceptance criteria and 36 acceptance cases (SNYK-001–036, spanning delivery, specification, and operational evidence classes) are defined in the
+[acceptance matrix](../plans/261012-1944-general-snyk-remediation-cycles/acceptance-matrix.md),
+and required live scanner, target, authentication, and environment conditions are inventoried
+in the [qualification prerequisites report](../plans/261012-1944-general-snyk-remediation-cycles/reports/qualification-prerequisites.md).
+Phase 01 establishes these planning contracts and prerequisites; runtime implementation
+(Phases 02–06) and live operational qualification (Phase 07) remain pending.
+
 ## 3. TypeScript control plane
 
 The source is organized around narrow contracts:
