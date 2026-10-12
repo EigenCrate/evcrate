@@ -3,8 +3,8 @@ import type { ChildProcess } from 'node:child_process';
 
 export const SAFE_ENVIRONMENT_KEYS = Object.freeze([
   'PATH', 'HOME', 'USERPROFILE', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL', 'TERM',
-  'SystemRoot', 'WINDIR', 'ComSpec', 'PATHEXT', 'EVCRATE_HOME', 'EVCRATE_STATE_HOME',
-  'EVCRATE_STATE_DIR', 'XDG_STATE_HOME'
+  'SystemRoot', 'WINDIR', 'ComSpec', 'PATHEXT', 'ELECTRON_RUN_AS_NODE', 'EVCRATE_HOME',
+  'EVCRATE_STATE_HOME', 'EVCRATE_STATE_DIR', 'XDG_STATE_HOME'
 ] as const);
 
 export type ProcessTermination = 'completed' | 'timeout' | 'aborted' | 'output-limit' | 'spawn-error';

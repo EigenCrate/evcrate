@@ -6,6 +6,7 @@ import {
   type RuntimeDiagnosticsReport
 } from './diagnostics.js';
 import { readManifestActorsSafe } from './generation-loader.js';
+import { readHostRemoteAuthority } from './installation-roots.js';
 import type { CatalogSnapshot } from './model-catalog.js';
 
 export interface ShowDiagnosticsOptions {
@@ -39,7 +40,7 @@ export async function showModelBindingsDiagnostics(
   const catalog = isOptionsObj ? contextOrOpts.catalog : (catalogArg ?? null);
   const latestReport = isOptionsObj ? (contextOrOpts.latestReport ?? null) : (latestReportArg ?? null);
 
-  const remoteAuthority = vscode.env.remoteAuthority;
+  const remoteAuthority = readHostRemoteAuthority(vscode.env);
   const authority: 'local-file' | 'unsupported-remote' =
     typeof remoteAuthority === 'string' && remoteAuthority.trim() !== '' ? 'unsupported-remote' : 'local-file';
 

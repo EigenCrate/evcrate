@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CANONICAL_TIERS, type CanonicalModelTier } from './binding-contracts.js';
 import { ScopedBindingStore } from './binding-store.js';
 import { selectConfigurationScope, getAvailableActorIds } from './configuration-pickers.js';
+import { readHostRemoteAuthority } from './installation-roots.js';
 
 export async function handleClearModelBindings(
   context: vscode.ExtensionContext,
@@ -23,7 +24,7 @@ export async function handleClearModelBindings(
   );
   if (!targetChoice) return false;
 
-  const store = new ScopedBindingStore(context.globalState, context.workspaceState, vscode.env.remoteAuthority);
+  const store = new ScopedBindingStore(context.globalState, context.workspaceState, readHostRemoteAuthority(vscode.env));
   let cleared = false;
   if (targetChoice.action === 'all') {
     const confirm = await vscode.window.showQuickPick(

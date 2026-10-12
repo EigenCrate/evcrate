@@ -14,6 +14,7 @@ import {
   pickCatalogModel,
   getAvailableActorIds
 } from './configuration-pickers.js';
+import { readHostRemoteAuthority } from './installation-roots.js';
 
 export async function handleConfigureAgentModels(
   context: vscode.ExtensionContext,
@@ -46,7 +47,7 @@ export async function handleConfigureAgentModels(
     return false;
   }
 
-  const store = new ScopedBindingStore(context.globalState, context.workspaceState, vscode.env.remoteAuthority);
+  const store = new ScopedBindingStore(context.globalState, context.workspaceState, readHostRemoteAuthority(vscode.env));
   if (scopeChoice.scope === 'user') {
     const res = store.getUserBindings();
     if (!res.ok) throw res.error;
@@ -121,7 +122,7 @@ export async function handleConfigureActorModel(
     return false;
   }
 
-  const store = new ScopedBindingStore(context.globalState, context.workspaceState, vscode.env.remoteAuthority);
+  const store = new ScopedBindingStore(context.globalState, context.workspaceState, readHostRemoteAuthority(vscode.env));
   if (scopeChoice.scope === 'user') {
     const res = store.getUserBindings();
     if (!res.ok) throw res.error;

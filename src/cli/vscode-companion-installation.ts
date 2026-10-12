@@ -1,19 +1,16 @@
 import {
-  accessSync,
   chmodSync,
   closeSync,
   constants,
   copyFileSync,
-  existsSync,
   fstatSync,
   lstatSync,
   mkdtempSync,
   openSync,
   readFileSync,
-  rmSync,
-  statSync
+  rmSync
 } from 'node:fs';
-import { basename, delimiter, isAbsolute, join } from 'node:path';
+import { basename, isAbsolute, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import type { InvocationContext } from '../context/invocation-context.js';
@@ -21,6 +18,11 @@ import type { ResourceResult } from '../protocol/resource-control.js';
 import type { CliInvocation } from './arguments.js';
 import type { CliRuntime, ProcessRunner, VscodeCompanionConsole } from './types.js';
 import { createDefaultVscodeCompanionConsole } from './vscode-companion-prompt.js';
+import {
+  findEditorOnPath,
+  resolveVscodeEditorLaunchTarget,
+  verifyInstalledBuildIdentity
+} from './vscode-editor-launcher.js';
 import { defaultProcessRunner } from './process-runner.js';
 import { resolveVscodeSettingsPaths } from '../distribution/vscode-settings.js';
 import { assertNoSymlinkAncestors } from '../filesystem/paths.js';
@@ -78,57 +80,6 @@ function emitNotice(
   }
 }
 
-function findEditorOnPath(env: Readonly<Record<string, string | undefined>>, platform: NodeJS.Platform): string | null {
-  const pathVal = env.PATH ?? process.env.PATH;
-  if (!pathVal) return null;
-  const dirs = pathVal.split(delimiter);
-  const candidateNames = platform === 'win32'
-    ? ['code.cmd', 'code.exe', 'code.bat']
-    : ['code'];
-  for (const dir of dirs) {
-    if (!dir) continue;
-    for (const name of candidateNames) {
-      const candidate = join(dir, name);
-      try {
-        if (existsSync(candidate)) {
-          const stat = statSync(candidate);
-          if (stat.isFile()) {
-            if (platform !== 'win32') {
-              accessSync(candidate, constants.X_OK);
-            }
-            return candidate;
-          }
-        }
-      } catch {
-        // Ignore unreadable or non-executable files
-      }
-    }
-  }
-  return null;
-}
-
-function verifyInstalledBuildIdentity(
-  extensionsDir: string,
-  version: string,
-  expectedBuildIdentity: string
-): boolean {
-  if (!isAbsolute(extensionsDir)) return false;
-  try {
-    const targetDirName = `${VSCODE_EXTENSION_ID}-${version}`.toLowerCase();
-    const candidatePath = join(extensionsDir, targetDirName, 'package.json');
-    if (existsSync(candidatePath)) {
-      assertNoSymlinkAncestors(candidatePath);
-      const stats = lstatSync(candidatePath);
-      if (stats.isFile() && stats.size <= MAX_DESCRIPTOR_BYTES) {
-        const raw = JSON.parse(readFileSync(candidatePath, 'utf8')) as Record<string, unknown>;
-        return raw.buildIdentity === expectedBuildIdentity;
-      }
-    }
-  } catch {
-    // Unverified
-  }
-  return false;
-}
 
 export async function coordinateVscodeCompanionInstallation(
   invocation: CliInvocation,
@@ -333,17 +284,26 @@ export async function coordinateVscodeCompanionInstallation(
           { editor: null }
         );
       }
+      const launchTarget = resolveVscodeEditorLaunchTarget(editorPath, platform);
+      if (!launchTarget.ok) {
+        return finish('failed', launchTarget.reason, { editor: editorPath });
+      }
 
       const runner: ProcessRunner = runtime.processRunner ?? defaultProcessRunner;
-
-      // Probe editor capability
-      const probeResult = await runner.run({
-        executable: editorPath,
-        args: ['--version'],
-        timeoutMs: PROBE_TIMEOUT_MS,
+      const hasEnvOverrides = Object.keys(launchTarget.envOverrides).length > 0;
+      const baseRunOpts = {
+        executable: launchTarget.executable,
+        ...(hasEnvOverrides ? { env: { ...rawEnv, ...launchTarget.envOverrides } } : {}),
         maxStdoutBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
         maxStderrBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
         signal: runtime.abortSignal
+      };
+
+      // Probe editor capability
+      const probeResult = await runner.run({
+        ...baseRunOpts,
+        args: [...launchTarget.prefixArgs, '--version'],
+        timeoutMs: PROBE_TIMEOUT_MS
       });
       if (probeResult.termination !== 'completed' || probeResult.exitCode !== 0) {
         return finish(
@@ -354,22 +314,27 @@ export async function coordinateVscodeCompanionInstallation(
       }
 
       const profile = validatedOptions.vscodeProfile ?? null;
+      const isolationArgs = [
+        ...(runtime.userDataDirectory && isAbsolute(runtime.userDataDirectory)
+          ? ['--user-data-dir', runtime.userDataDirectory]
+          : []),
+        ...(runtime.userDataDirectory && runtime.extensionsDirectory && isAbsolute(runtime.extensionsDirectory)
+          ? ['--extensions-dir', runtime.extensionsDirectory]
+          : [])
+      ];
 
       // Check existing installation & build identity
       const listArgs = [
+        ...isolationArgs,
         ...(profile ? ['--profile', profile] : []),
         '--list-extensions',
         '--show-versions'
       ];
       const listResult = await runner.run({
-        executable: editorPath,
-        args: listArgs,
-        timeoutMs: LIST_TIMEOUT_MS,
-        maxStdoutBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
-        maxStderrBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
-        signal: runtime.abortSignal
+        ...baseRunOpts,
+        args: [...launchTarget.prefixArgs, ...listArgs],
+        timeoutMs: LIST_TIMEOUT_MS
       });
-
       if (listResult.termination !== 'completed' || listResult.exitCode !== 0) {
         return finish(
           'failed',
@@ -430,17 +395,15 @@ export async function coordinateVscodeCompanionInstallation(
 
       // Run installation via processRunner
       const installArgs = [
+        ...isolationArgs,
         ...(profile ? ['--profile', profile] : []),
         '--install-extension',
         stagedVsixPath
       ];
       const installResult = await runner.run({
-        executable: editorPath,
-        args: installArgs,
-        timeoutMs: COMPANION_INSTALL_TIMEOUT_MS,
-        maxStdoutBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
-        maxStderrBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
-        signal: runtime.abortSignal
+        ...baseRunOpts,
+        args: [...launchTarget.prefixArgs, ...installArgs],
+        timeoutMs: COMPANION_INSTALL_TIMEOUT_MS
       });
 
       if (installResult.termination !== 'completed' || installResult.exitCode !== 0) {
@@ -454,12 +417,9 @@ export async function coordinateVscodeCompanionInstallation(
 
       // Post-install verification: re-probe extensions list to confirm extension presence
       const postListResult = await runner.run({
-        executable: editorPath,
-        args: listArgs,
-        timeoutMs: LIST_TIMEOUT_MS,
-        maxStdoutBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
-        maxStderrBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
-        signal: runtime.abortSignal
+        ...baseRunOpts,
+        args: [...launchTarget.prefixArgs, ...listArgs],
+        timeoutMs: LIST_TIMEOUT_MS
       });
       if (postListResult.termination !== 'completed' || postListResult.exitCode !== 0) {
         return finish(

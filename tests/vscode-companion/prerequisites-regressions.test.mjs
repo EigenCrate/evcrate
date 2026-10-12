@@ -4,6 +4,7 @@ import {
   CompanionContractError,
   STORAGE_AND_SOURCE_BOUNDS,
   VSCODE_RUNTIME_DIAGNOSTICS_SCHEMA_V1,
+  fsPathToLocalRootUri,
   validateLocalRootUri,
   validateRuntimeDiagnosticsV1
 } from '../../.cache/evcrate/vscode-model-bindings-dist/contracts.js';
@@ -41,6 +42,33 @@ test('W-A: validateLocalRootUri produces idempotent rootIdentity across %, ?, #,
   assert.throws(() => validateLocalRootUri({ scheme: 'file', path: '/a/x\ny' }), { code: 'PATH_UNSAFE' });
   assert.throws(() => validateLocalRootUri({ scheme: 'file', path: '/a/x\0y' }), { code: 'PATH_UNSAFE' });
   assert.throws(() => validateLocalRootUri({ scheme: 'file', path: '/a/x\x7fy' }), { code: 'PATH_UNSAFE' });
+});
+
+test('W-A2: fsPathToLocalRootUri converts POSIX and Windows drive paths while rejecting UNC, device, and traversal paths', () => {
+  const fsCases = [
+    { input: 'C:\\Users\\User Name\\repo', expectedPath: '/c:/Users/User Name/repo', expectedIdentity: 'file:///c:/Users/User Name/repo' },
+    { input: 'D:\\work\\50%#1?2\\proj\\', expectedPath: '/d:/work/50%#1?2/proj', expectedIdentity: 'file:///d:/work/50%25%231%3F2/proj' },
+    { input: 'C:\\', expectedPath: '/c:', expectedIdentity: 'file:///c:' },
+    { input: 'C:', expectedPath: '/c:', expectedIdentity: 'file:///c:' },
+    { input: '/home/user/my dir/50%#1?2', expectedPath: '/home/user/my dir/50%#1?2', expectedIdentity: 'file:///home/user/my dir/50%25%231%3F2' }
+  ];
+  for (const c of fsCases) {
+    const first = fsPathToLocalRootUri(c.input);
+    assert.equal(first.path, c.expectedPath);
+    assert.equal(first.rootIdentity, c.expectedIdentity);
+    const roundTrip = validateLocalRootUri(first.rootIdentity);
+    assert.equal(roundTrip.path, first.path);
+    assert.equal(roundTrip.rootIdentity, first.rootIdentity);
+  }
+
+  assert.throws(() => fsPathToLocalRootUri('\\\\server\\share\\proj'), { code: 'UNSUPPORTED_REMOTE_AUTHORITY' });
+  assert.throws(() => fsPathToLocalRootUri('//server/share/proj'), { code: 'UNSUPPORTED_REMOTE_AUTHORITY' });
+  assert.throws(() => fsPathToLocalRootUri('\\\\?\\C:\\proj'), { code: 'UNSUPPORTED_REMOTE_AUTHORITY' });
+  assert.throws(() => fsPathToLocalRootUri('\\\\.\\C:\\proj'), { code: 'UNSUPPORTED_REMOTE_AUTHORITY' });
+  assert.throws(() => fsPathToLocalRootUri('C:\\Users\\..\\Admin'), { code: 'PATH_UNSAFE' });
+  assert.throws(() => fsPathToLocalRootUri('C:\\\\double\\sep'), { code: 'PATH_UNSAFE' });
+  assert.throws(() => fsPathToLocalRootUri('relative/path'), { code: 'PATH_UNSAFE' });
+  assert.throws(() => fsPathToLocalRootUri('C:relative'), { code: 'PATH_UNSAFE' });
 });
 
 test('W-B: binding-contracts leaf module provides core binding types without circular imports', () => {

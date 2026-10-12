@@ -6,8 +6,56 @@ import {
   resolveInstallationRoot,
   validateLocalRootUri,
   type CandidateInstallationRoot,
-  type InstallationSelectionInput
+  type InstallationSelectionInput,
+  type ValidatedLocalRootUri
 } from './runtime-contracts.js';
+
+const FS_CONTROL_CHARS = /[\u0000-\u001F\u007F-\u009F]/u;
+const FS_ENCODED_CONTROLS = /%(?:0[0-9a-f]|1[0-9a-f]|7f)/iu;
+
+export function fsPathToLocalRootUri(fsPath: string): ValidatedLocalRootUri {
+  if (typeof fsPath !== 'string' || fsPath.length === 0 || FS_CONTROL_CHARS.test(fsPath) || FS_ENCODED_CONTROLS.test(fsPath)) {
+    throw new CompanionContractError('PATH_UNSAFE', `Invalid local filesystem path "${String(fsPath)}"`);
+  }
+  if (fsPath.startsWith('\\\\') || fsPath.startsWith('//') || /^[/\\][?.][/\\]/u.test(fsPath)) {
+    throw new CompanionContractError('UNSUPPORTED_REMOTE_AUTHORITY', `UNC and device paths are unsupported: "${fsPath}"`);
+  }
+  let uriPath: string;
+  if (/^[A-Za-z]:(?:[\\/]|$)/u.test(fsPath)) {
+    if (/[\\/]{2,}/u.test(fsPath)) {
+      throw new CompanionContractError('PATH_UNSAFE', `Filesystem path "${fsPath}" contains empty separator segments`);
+    }
+    const posixified = fsPath.replace(/\\/gu, '/');
+    uriPath = posixified.endsWith(':') ? `/${posixified}/` : `/${posixified}`;
+  } else if (fsPath.startsWith('/')) {
+    if (fsPath.includes('\\') || fsPath.includes('//')) {
+      throw new CompanionContractError('PATH_UNSAFE', `Filesystem path "${fsPath}" must be normalized absolute path`);
+    }
+    uriPath = fsPath;
+  } else {
+    throw new CompanionContractError('PATH_UNSAFE', `Filesystem path "${fsPath}" must be an absolute local path`);
+  }
+  return validateLocalRootUri({ scheme: 'file', path: uriPath });
+}
+
+export function readHostRemoteAuthority(vscodeEnv?: {
+  readonly remoteName?: string;
+  readonly remoteAuthority?: string;
+}): string | undefined {
+  if (!vscodeEnv) return undefined;
+  if (typeof vscodeEnv.remoteName === 'string' && vscodeEnv.remoteName.trim() !== '') {
+    return vscodeEnv.remoteName;
+  }
+  try {
+    if (typeof vscodeEnv.remoteAuthority === 'string' && vscodeEnv.remoteAuthority.trim() !== '') {
+      return vscodeEnv.remoteAuthority;
+    }
+  } catch {
+    // In VS Code 1.140.0, vscode.env.remoteAuthority requires the 'resolvers' API proposal;
+    // vscode.env.remoteName is the public stable property.
+  }
+  return undefined;
+}
 
 export interface HostGuardStatus {
   readonly qualified: boolean;
@@ -61,7 +109,7 @@ export function inspectHostGuard(env?: {
 }
 
 export function inspectCandidateRoot(fsPath: string, approved = false, isProjectRoot = true): CandidateInstallationRoot {
-  const uri = validateLocalRootUri({ scheme: 'file', path: fsPath });
+  const uri = fsPathToLocalRootUri(fsPath);
   let pluginDir: string | null = null;
   if (isProjectRoot) {
     const nestedPlugin = join(fsPath, '.evcrate-vscode');
@@ -106,11 +154,11 @@ export function resolveCandidateRoots(input: {
 }): ActiveInstallationDescriptor {
   const isApproved = (uri: string) => (input.approvedRoots ? input.approvedRoots.has(uri) : true);
   const projectRoots = input.workspaceFolderPaths.map((p) => {
-    const candidateUri = validateLocalRootUri({ scheme: 'file', path: p }).rootIdentity;
+    const candidateUri = fsPathToLocalRootUri(p).rootIdentity;
     return inspectCandidateRoot(p, isApproved(candidateUri), true);
   });
   const homePath = input.customHomePath ?? join(homedir(), '.evcrate-vscode');
-  const homeCandidateUri = existsSync(homePath) ? validateLocalRootUri({ scheme: 'file', path: homePath }).rootIdentity : null;
+  const homeCandidateUri = existsSync(homePath) ? fsPathToLocalRootUri(homePath).rootIdentity : null;
   const homeRoot = homeCandidateUri ? inspectCandidateRoot(homePath, isApproved(homeCandidateUri), false) : null;
 
   const selectionInput: InstallationSelectionInput = {
@@ -125,7 +173,7 @@ export function resolveCandidateRoots(input: {
   let resolvedPluginFsPath: string | null = null;
   if (resolved.source === 'project') {
     for (const p of input.workspaceFolderPaths) {
-      if (validateLocalRootUri({ scheme: 'file', path: p }).rootIdentity === resolved.rootIdentity) {
+      if (fsPathToLocalRootUri(p).rootIdentity === resolved.rootIdentity) {
         resolvedFsPath = p;
         resolvedPluginFsPath = join(p, '.evcrate-vscode');
         break;

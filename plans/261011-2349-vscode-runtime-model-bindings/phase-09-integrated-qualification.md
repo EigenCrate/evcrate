@@ -5,7 +5,7 @@
 - Dependencies: Phases 03–08 complete and writers settled. No partial/static fallback candidate.
 
 ## Overview
-- Date: 2026-10-11; priority P1; implementation Pending (0%); implementation review Pending; design-summary review: [Advisor](./reports/advisor-review.md).
+- Date: 2026-10-11; priority P1; status: Automated/isolated-host qualification complete (2026-10-12); overall qualification pending blocked interactive gates. Review Cycle 1 approved 8.5/10; design-summary review: [Advisor](./reports/advisor-review.md).
 - Prove final packaged extension/CLI behavior, not earlier spike or source-only tests.
 
 ## Key Insights
@@ -45,15 +45,21 @@
 11. Complete all eleven verification rows with final-byte receipts, installed build identity and automatic-install proof for required local tuples. Missing local GUI/profile/model-access approval stays blocked; manual instructions are not automatic acceptance. Final review settles drift. Phase 10 artifact-affecting guide edits require new hashes/receipts and affected native requalification before final acceptance.
 
 ## Todo list
-- [ ] Focused contract/full-suite/package gates passed.
-- [ ] Atomic regeneration/serial-worker/archive identity proven.
-- [ ] Native direct/subagent/restriction/reference/hooks proof complete.
-- [ ] In-flight immutability, cached-selection race/reselection recovery and bounded storage retention proven.
-- [ ] Per-session live approval, exit-`5` consent/install and local project/HOME/multi-root/profile matrix complete.
-- [ ] Final review and candidate-bound receipts accepted.
+- [x] Reported scoped automated suites (contract, adapter, CLI, distribution, package-verifier, runtime-closure, and integrated-runtime) passed: 211/211 tests across five QA Node test invocations (0 failed/skipped), plus separate 6/6 manifest-reuse and 18/18 release-artifact runs and `npm run generate:all`, `npm run distribute:check`, and `npm run release:check` gates PASS. Full monolithic `npm test` and coverage remain open.
+- [x] Candidate-bound VSIX identity and package closure recorded: SHA-256 `c4638015d732945f85f3a6040a8864ac6b004d2fffdcf02f974e53fe7bed97a2`; build identity `caf354b6a8a2276f25e80fff3cef77be7529e061f122c3aab12150325f998dab`.
+- [x] N-01 isolated VS Code 1.140.0 CLI installation passed, including fresh install, idempotent re-run and same-version build-identity mismatch refusal.
+- [x] N-02 isolated VS Code 1.140.0 Extension-Host activation, pre-approval guard, five `evcrate.*` commands, 17 generated actor resources, binding precedence and diagnostics passed.
+- [x] N-03 isolated native hook-bridge subprocess passed all eight lifecycle events and malformed-invocation/policy cases.
+- [x] Verification-matrix AC 08–10 runtime/CLI subcases passed: configuration/refresh/republish preserved canonical and published hashes; refusal/install failure and project/HOME, multi-root, local-profile, and unsupported-authority runtime boundaries are recorded PASS.
+- [ ] Interactive Copilot Chat GUI picker inventory/no-duplicate-actor check remains **BLOCKED** pending an interactive session.
+- [ ] Authenticated live direct/child-subagent inference (`hostObservedModel`), tool/cost precedence and live selection metadata remain **BLOCKED** pending authenticated Copilot Chat access.
+- [ ] Running-turn immutability, cached-selection race, and explicit reselection/reload recovery remain **BLOCKED** pending an active Chat session.
+- [ ] Live `tools: []` / `agents: []` enforcement and cross-source hook firing during a Chat turn remain **BLOCKED** pending an active Chat session.
+- [ ] Linux x86_64 interactive GUI / CLI companion-install smoke remains **BLOCKED**; qualification host was Windows x64.
+- [x] Review Cycle 1 approved 8.5/10 (0 critical issues; four medium review warnings remain in the review report); automated/isolated-host evidence and remaining native blockers are recorded in the qualification reports.
 
 ## Success Criteria
-- Every row of verification matrix has real proof tied to final bytes; required unknown/fail rows prevent completion.
+- Automated and isolated-host qualification rows have real candidate-bound evidence; every unexercised interactive/native row is explicitly **BLOCKED** with its prerequisite in `native-qualification.md`, never represented as PASS. Recording a blocker preserves honesty for this checkpoint and does not satisfy final Phase 09 acceptance until those blocked rows are executed.
 - No changes to six other target model policies, canonical authoring, resource protocol/publication/recovery/release trust boundaries.
 - No scaffolds, fake native receipts, silent fallback, unbounded storage or unauthorized installation.
 
@@ -69,4 +75,4 @@
 - Phase 10 documents only supported verified behavior and guarded rollout; no release publication without separate authorization.
 
 ## Unresolved questions
-- None for completion. Missing native surfaces/model access remain explicit blockers, not deferred acceptance.
+- Interactive Copilot Chat GUI picker, live authenticated inference (`hostObservedModel`), live cached-selection race/reselection recovery, live-turn restriction/hook enforcement, Linux GUI/CLI smoke, full monolithic `npm test`, and the four medium code-review warnings in [code-reviewer-261012-2008-phase-09-integrated-qualification.md](../reports/code-reviewer-261012-2008-phase-09-integrated-qualification.md) remain open follow-ups/blockers before full Phase 09 acceptance.

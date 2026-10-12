@@ -6,16 +6,26 @@ import { join } from 'node:path';
 import {
   CACHED_SELECTION_RESELECTION_GUIDANCE, CLOSED_EDITOR_STORAGE_CLEANUP_GUIDANCE, buildRuntimeDiagnosticsSnapshot
 } from '../../.cache/evcrate/vscode-model-bindings-dist/diagnostics.js';
+import { fsPathToLocalRootUri } from '../../.cache/evcrate/vscode-model-bindings-dist/installation-roots.js';
 import { buildCatalogSnapshot } from '../../.cache/evcrate/vscode-model-bindings-dist/model-catalog.js';
 import { createScopedTemplateWatcher } from '../../.cache/evcrate/vscode-model-bindings-dist/template-watcher.js';
 import { UUID_1, createHarness, writePluginFixture } from './refresh-test-harness.mjs';
+
+async function waitForCondition(predicate, timeoutMs = 1500, intervalMs = 15) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return true;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return predicate();
+}
 
 test('refresh-lifecycle: coalesces event bursts, preserves forced catalog requery on supersession, and reuses A->B->A generations', async () => {
   const tmp = mkdtempSync(join(tmpdir(), 'evc-p06-coalesce-'));
   try {
     const h = createHarness(tmp, { debounceMs: 30 });
     writePluginFixture(h.projDir, { 'evc-planner': { intent: { mode: 'tier', tier: 'opus' } } });
-    const rootId = `file://${h.projDir}`;
+    const rootId = fsPathToLocalRootUri(h.projDir).rootIdentity;
     await h.store.saveRootBindings(rootId, {
       schema: 'evcrate-vscode-bindings-v1', revision: 1, tiers: { opus: { vendor: 'copilot', id: 'claude-opus-4' } }, actors: {}
     });
@@ -132,19 +142,35 @@ test('refresh-lifecycle: real watcher survives atomic directory swap; handles sc
 
     // Real watcher test across publication-style atomic swap (rename dest->backup; rename stage->dest)
     const watchedEvents = [];
-    const realWatcher = createScopedTemplateWatcher(pluginA, join(tmp, 'storage'), (p) => watchedEvents.push(p));
+    const storagePath = join(tmp, 'storage');
+    mkdirSync(storagePath, { recursive: true });
+    const realWatcher = createScopedTemplateWatcher(pluginA, storagePath, (p) => watchedEvents.push(p));
     const stageRoot = join(tmp, 'stage-root');
     writePluginFixture(stageRoot, { 'evc-planner': { content: '---\nname: evc-planner\n---\nSwapped v2', intent: { mode: 'inherit', tier: null } } });
     const backupPlugin = join(projA, '.evcrate-vscode.bak');
     renameSync(pluginA, backupPlugin);
     renameSync(join(stageRoot, '.evcrate-vscode'), pluginA);
+    assert.equal(await waitForCondition(() => watchedEvents.length >= 1), true, 'Watcher must detect atomic swap');
+
+    // Unrelated workspace file and derived storage writes must be ignored
+    watchedEvents.length = 0;
+    writeFileSync(join(projA, 'unrelated-readme.txt'), 'unrelated change', 'utf8');
+    writeFileSync(join(storagePath, 'derived-artifact.md'), 'derived storage write', 'utf8');
+    await new Promise((r) => setTimeout(r, 60));
+    assert.equal(watchedEvents.length, 0, 'Unrelated workspace and storage writes must not fire watcher');
+
+    // Subsequent edit inside replacement directory must fire watcher
     writeFileSync(join(pluginA, 'evcrate', 'agent-templates', 'evc-planner.md'), '---\nname: evc-planner\n---\nPost-swap edit', 'utf8');
-    await new Promise((r) => setTimeout(r, 40));
+    assert.equal(await waitForCondition(() => watchedEvents.length >= 1), true, 'Watcher must survive swap and detect subsequent template edit');
+
     realWatcher.dispose();
-    assert.ok(watchedEvents.length >= 1);
+    watchedEvents.length = 0;
+    writeFileSync(join(pluginA, 'evcrate', 'agent-templates', 'evc-planner.md'), '---\nname: evc-planner\n---\nAfter dispose', 'utf8');
+    await new Promise((r) => setTimeout(r, 60));
+    assert.equal(watchedEvents.length, 0, 'Disposed watcher must not emit events');
 
     const h = createHarness(tmp, {
-      projDir: projA, workspaceFolders: [projA, projB], selectedRootIdentity: `file://${projA}`, debounceMs: 10
+      projDir: projA, workspaceFolders: [projA, projB], selectedRootIdentity: fsPathToLocalRootUri(projA).rootIdentity, debounceMs: 10
     });
     await h.store.saveUserBindings({
       schema: 'evcrate-vscode-bindings-v1', revision: 1, tiers: {}, actors: { 'evc-legacy': { kind: 'inherit' } }
@@ -160,7 +186,7 @@ test('refresh-lifecycle: real watcher survives atomic directory swap; handles sc
     assert.equal(h.provider.currentResources.length, 0);
     assert.equal(h.controller.lastDiagnosticsReport.setupOrInvalidationReason, 'SCHEMA_UNSUPPORTED');
 
-    h.setSelectedRootIdentity(`file://${projB}`);
+    h.setSelectedRootIdentity(fsPathToLocalRootUri(projB).rootIdentity);
     await h.controller.requestRefresh({ reason: 'root-changed', immediate: true });
     assert.deepEqual(h.provider.currentResources.map((r) => r.actorId), ['evc-reviewer']);
 
@@ -189,7 +215,7 @@ test('diagnostics: buildRuntimeDiagnosticsSnapshot separates renderedSelector fr
   assert.equal(report.diagnostics.bindingRevision, 2_000_001);
   assert.equal(report.reselectionGuidance, CACHED_SELECTION_RESELECTION_GUIDANCE);
   assert.ok(report.storageCleanupGuidance.includes(CLOSED_EDITOR_STORAGE_CLEANUP_GUIDANCE));
-  assert.ok(report.storageCleanupGuidance.includes('/tmp/evc-store/resolved'));
+  assert.ok(report.storageCleanupGuidance.includes(join('/tmp/evc-store', 'resolved')));
   assert.equal(report.diagnostics.actors['evc-planner'].renderedSelector, null);
   assert.equal(report.diagnostics.actors['evc-planner'].hostObservedModel, null);
 });

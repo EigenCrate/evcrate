@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
   initSessionState,
   readSessionContext,
@@ -159,7 +159,7 @@ test('session-state: retention sweep and capacity limits', () => {
     initSessionState(ctx1, null, oldTime);
     initSessionState(ctx2, null, now);
 
-    const userDir = join(base, 'evcrate', 'vscode', 'v1', ctx1.handle.split('/')[ctx1.handle.split('/').length - 3]);
+    const userDir = dirname(dirname(ctx1.handle));
 
     const initialCounts = countUserSessions(userDir);
     assert.equal(initialCounts.total, 2);

@@ -95,6 +95,7 @@ declare module 'vscode' {
   }
 
   export namespace env {
+    export const remoteName: string | undefined;
     export const remoteAuthority: string | undefined;
   }
 

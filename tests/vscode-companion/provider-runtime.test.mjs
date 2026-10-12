@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import {
   inspectHostGuard,
   inspectCandidateRoot,
+  readHostRemoteAuthority,
   resolveCandidateRoots
 } from '../../.cache/evcrate/vscode-model-bindings-dist/installation-roots.js';
 import {
@@ -31,8 +32,18 @@ test('installation-roots: inspectHostGuard enforces remote authority, trust, and
 
   const qualified = inspectHostGuard({ remoteAuthority: null, workspaceTrusted: true, hasProposal: true });
   assert.equal(qualified.qualified, true);
-});
 
+  // VS Code 1.140.0 throws on vscode.env.remoteAuthority when 'resolvers' proposal is not enabled;
+  // readHostRemoteAuthority reads stable remoteName and catches proposal-gated remoteAuthority throws.
+  const throwingLocalEnv = {
+    remoteName: undefined,
+    get remoteAuthority() {
+      throw new Error("Extension 'eigencrate.evcrate-model-bindings' CANNOT use API proposal: resolvers.");
+    }
+  };
+  assert.equal(readHostRemoteAuthority(throwingLocalEnv), undefined);
+  assert.equal(readHostRemoteAuthority({ remoteName: 'ssh-remote' }), 'ssh-remote');
+});
 test('installation-roots: candidate root inspection and resolution without silent HOME fallback', () => {
   const tmp = mkdtempSync(join(tmpdir(), 'evc-roots-test-'));
   try {

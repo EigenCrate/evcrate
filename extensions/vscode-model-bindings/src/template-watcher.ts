@@ -90,9 +90,11 @@ export function createScopedTemplateWatcher(
     }
   };
 
+  const useRecursiveParentWatch = process.platform === 'win32';
+
   const syncChildWatchers = (): void => {
     closeChildWatchers();
-    if (disposed) return;
+    if (disposed || useRecursiveParentWatch) return;
     attachChildWatcher(resolvedPlugin, true);
     attachChildWatcher(evcrateDir, true);
     attachChildWatcher(templatesDir, false);
@@ -100,14 +102,26 @@ export function createScopedTemplateWatcher(
 
   if (existsSync(parentDir)) {
     try {
-      parentWatcher = watch(parentDir, { persistent: false }, (_eventType, filename) => {
-        if (disposed) return;
-        const name = typeof filename === 'string' ? filename : '';
-        if (name === '' || name === pluginBase || name.startsWith(pluginBase)) {
-          syncChildWatchers();
-          onRelevantChange(resolvedPlugin);
+      parentWatcher = watch(
+        parentDir,
+        { persistent: false, ...(useRecursiveParentWatch ? { recursive: true } : {}) },
+        (_eventType, filename) => {
+          if (disposed) return;
+          const name = typeof filename === 'string' ? filename : '';
+          if (useRecursiveParentWatch) {
+            if (name.length === 0) return;
+            const targetPath = join(parentDir, name);
+            if (isEnrolledTemplateInventoryPath(targetPath, resolvedPlugin, baseStorageFsPath)) {
+              onRelevantChange(targetPath);
+            }
+            return;
+          }
+          if (name === '' || name === pluginBase) {
+            syncChildWatchers();
+            onRelevantChange(resolvedPlugin);
+          }
         }
-      });
+      );
       parentWatcher.on('error', () => {
         if (!disposed) onRelevantChange(resolvedPlugin);
       });

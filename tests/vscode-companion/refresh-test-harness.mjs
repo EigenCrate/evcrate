@@ -3,9 +3,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CompanionAgentProvider } from '../../.cache/evcrate/vscode-model-bindings-dist/agent-provider.js';
 import { ScopedBindingStore } from '../../.cache/evcrate/vscode-model-bindings-dist/binding-store.js';
+import { fsPathToLocalRootUri } from '../../.cache/evcrate/vscode-model-bindings-dist/installation-roots.js';
 import { buildCatalogSnapshot } from '../../.cache/evcrate/vscode-model-bindings-dist/model-catalog.js';
 import { RefreshController } from '../../.cache/evcrate/vscode-model-bindings-dist/refresh-controller.js';
-
 export const UUID_1 = '11111111-2222-4333-8444-555555555555';
 export const UUID_2 = '66666666-7777-4888-9999-aaaaaaaaaaaa';
 
@@ -95,7 +95,7 @@ export function createHarness(tmp, opts = {}) {
     disposeProvider: () => { provider.dispose(); },
     getWorkspaceFolderPaths: () => workspaceFolders,
     getCustomHomePath: () => join(tmp, 'nonexistent-home'),
-    getApprovedRoots: () => new Set(workspaceFolders.map((p) => `file://${p}`)),
+    getApprovedRoots: () => new Set(workspaceFolders.map((p) => fsPathToLocalRootUri(p).rootIdentity)),
     getExplicitSelectedRootIdentity: () => selectedRootIdentity,
     getStoredBindings: (rootIdentity) => ({
       userRes: store.getUserBindings(),
@@ -106,10 +106,13 @@ export function createHarness(tmp, opts = {}) {
       if (customQueryCatalog) return customQueryCatalog(rev);
       return buildCatalogSnapshot(catalogModels, rev);
     },
-    createUri: (fsPath) => ({
-      scheme: 'file', authority: '', path: fsPath, query: '', fragment: '', fsPath,
-      toString: () => `file://${fsPath}`
-    }),
+    createUri: (fsPath) => {
+      const u = fsPathToLocalRootUri(fsPath);
+      return {
+        scheme: 'file', authority: '', path: u.path, query: '', fragment: '', fsPath,
+        toString: () => u.rootIdentity
+      };
+    },
     watchPluginRoot: () => ({ dispose: () => {} }),
     onErrorMessage: (msg) => { errors.push(msg); }
   });

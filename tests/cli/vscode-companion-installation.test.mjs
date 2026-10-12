@@ -677,3 +677,97 @@ test('coordinateVscodeCompanionInstallation: post-install older version match fa
     rmSync(tempDir, { recursive: true, force: true });
   }
 });
+
+test('coordinateVscodeCompanionInstallation: resolves Windows code.cmd versioned and unversioned layouts with ELECTRON_RUN_AS_NODE=1 and fails closed on missing layout', async () => {
+  const tempDir = mkdtempSync(join(tmpdir(), 'evcrate-cli-win-cmd-'));
+  try {
+    createMockPublication(tempDir);
+
+    // 1. Versioned layout with spaces in directory path
+    const versionedInstallRoot = join(tempDir, 'Program Files', 'Microsoft VS Code');
+    const versionedBinDir = join(versionedInstallRoot, 'bin');
+    const versionedCliDir = join(versionedInstallRoot, '07f806f999', 'resources', 'app', 'out');
+    mkdirSync(versionedBinDir, { recursive: true });
+    mkdirSync(versionedCliDir, { recursive: true });
+    const versionedExe = join(versionedInstallRoot, 'Code.exe');
+    const versionedCliJs = join(versionedCliDir, 'cli.js');
+    const versionedCmd = join(versionedBinDir, 'code.cmd');
+    writeFileSync(versionedExe, 'MZ-mock-exe');
+    writeFileSync(versionedCliJs, '// mock cli.js');
+    writeFileSync(
+      versionedCmd,
+      '@echo off\r\nsetlocal\r\nset ELECTRON_RUN_AS_NODE=1\r\n"%~dp0..\\Code.exe" "%~dp0..\\07f806f999\\resources\\app\\out\\cli.js" %*\r\nendlocal\r\n'
+    );
+
+    const invocation = parseArguments([
+      'publish', '--apply', '--target', 'vscode', '--scope', 'project',
+      '--project-root', tempDir, '--install-vscode-companion',
+      '--vscode-editor', versionedCmd, '--vscode-profile', 'prof-alpha'
+    ]);
+    const context = resolveInvocationContext({ ...invocation.options, projectRoot: tempDir });
+    const result = createFakeResourceResult();
+
+    let noticeOutput = '';
+    const calls = [];
+    let installed = false;
+    const exitCode = await coordinateVscodeCompanionInstallation(
+      invocation,
+      context,
+      result,
+      {
+        platform: 'win32',
+        vscodeCompanionConsole: { writeStderr: (t) => { noticeOutput += t; } },
+        processRunner: {
+          run: async (opts) => {
+            calls.push(opts);
+            if (opts.args.includes('--version')) {
+              return { exitCode: 0, signal: null, stdout: '1.140.0\n07f806f999227108933c2e30515b26eecc1fda74\nx64', stderr: '', stdoutBytes: new Uint8Array(), stderrBytes: new Uint8Array(), termination: 'completed', timedOut: false, aborted: false };
+            }
+            if (opts.args.includes('--list-extensions')) {
+              return { exitCode: 0, signal: null, stdout: installed ? 'eigencrate.evcrate-model-bindings@2.11.0\n' : '', stderr: '', stdoutBytes: new Uint8Array(), stderrBytes: new Uint8Array(), termination: 'completed', timedOut: false, aborted: false };
+            }
+            if (opts.args.includes('--install-extension')) {
+              installed = true;
+              return { exitCode: 0, signal: null, stdout: 'Installed\n', stderr: '', stdoutBytes: new Uint8Array(), stderrBytes: new Uint8Array(), termination: 'completed', timedOut: false, aborted: false };
+            }
+            return { exitCode: 0, signal: null, stdout: '', stderr: '', stdoutBytes: new Uint8Array(), stderrBytes: new Uint8Array(), termination: 'completed', timedOut: false, aborted: false };
+          }
+        }
+      },
+      'req-win-1'
+    );
+    assert.equal(exitCode, undefined);
+    assert.equal(calls.length, 4);
+    assert.equal(calls[0].executable, versionedExe);
+    assert.equal(calls[0].args[0], versionedCliJs);
+    assert.equal(calls[0].args[1], '--version');
+    assert.equal(calls[0].env?.ELECTRON_RUN_AS_NODE, '1');
+    assert.equal(JSON.parse(noticeOutput).status, 'installed');
+
+    // 2. Broken .cmd wrapper missing cli.js fails closed with exit 5
+    const brokenRoot = join(tempDir, 'BrokenCode');
+    mkdirSync(join(brokenRoot, 'bin'), { recursive: true });
+    const brokenCmd = join(brokenRoot, 'bin', 'code.cmd');
+    writeFileSync(brokenCmd, '@echo off\r\n"%~dp0..\\Missing.exe" %*\r\n');
+    const brokenInv = parseArguments([
+      'publish', '--apply', '--target', 'vscode', '--scope', 'project',
+      '--project-root', tempDir, '--install-vscode-companion',
+      '--vscode-editor', brokenCmd
+    ]);
+    let brokenNotice = '';
+    const brokenExit = await coordinateVscodeCompanionInstallation(
+      brokenInv,
+      context,
+      result,
+      {
+        platform: 'win32',
+        vscodeCompanionConsole: { writeStderr: (t) => { brokenNotice += t; } }
+      },
+      'req-win-2'
+    );
+    assert.equal(brokenExit, 5);
+    assert.equal(JSON.parse(brokenNotice).status, 'failed');
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});

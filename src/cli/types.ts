@@ -50,6 +50,7 @@ export interface CliRuntime {
   readonly vscodeCompanionConsole?: VscodeCompanionConsole;
   readonly vscodeEditorExecutable?: string;
   readonly extensionsDirectory?: string;
+  readonly userDataDirectory?: string;
   readonly platform?: NodeJS.Platform;
 }
 

@@ -5,29 +5,30 @@
 **Updated:** 2026-10-12
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-12 — test(vscode): integrated contract and isolated host qualification (Phase 09)
+**Status:** Package gates and isolated Windows VS Code 1.140.0 receipts N-01–N-03 pass; interactive GUI and authenticated inference remain blocked. [Integrated report](../plans/261011-2349-vscode-runtime-model-bindings/reports/integrated-qualification.md) · [Native receipts](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-qualification.md).
+- **Candidate:** VSIX SHA-256 `c4638015d732945f85f3a6040a8864ac6b004d2fffdcf02f974e53fe7bed97a2`; buildIdentity `caf354b6a8a2276f25e80fff3cef77be7529e061f122c3aab12150325f998dab`.
+- **N-01:** Disposable user-data/extensions install and reprobe pass; same-version identity mismatch requires exit-5 manual setup while committed stdout is preserved.
+- **N-02:** Isolated Extension Host exercised five commands, 17 actors and precedence; `hostObservedModel` stayed null.
+- **N-03:** All eight hook events pass; malformed calls fail closed; scout and privacy behavior observed.
+- **Runtime:** Windows `code.cmd` resolves to `Code.exe` + `cli.js`; companion fixes cover drive-path roots, remote-authority fallback, proposal-disabled registration, frozen exports and atomic watcher swaps.
+- **Automated gates:** Scoped QA suites passed 211/211 (`tester-261012-2000-phase-09-integrated-qualification.md`: companion+VSIX 54/54, adapters 98/98, CLI 48/48, integration 6/6, VS Code publication 5/5), plus separate manifest-reuse (6/6) and private release artifacts (18/18) runs. `test:vscode-companion` is wired into `npm test` (full monolithic `npm test` and four medium review follow-ups remain open).
+- **Boundary:** Interactive picker/Chat, authenticated inference, child model, live selection recovery and Linux GUI remain blocked; no broad Windows-support or rollout claim.
+
 ### 2026-10-12 — feat(cli): consented postpublish VS Code companion installation (Phase 08)
 
-- Implemented CLI argument parsing and pre-mutation validation in `src/cli/{arguments.ts,types.ts}` supporting `--install-vscode-companion`, `--no-install-vscode-companion`, `--vscode-executable`, and `--vscode-profile`, enforcing mutual exclusivity, target eligibility, and fail-closed validation.
-- Implemented consented postpublish coordinator in `src/cli/vscode-companion-installation.ts` (`coordinateVscodeCompanionInstallation`), verifying committed publication on stdout, gating execution strictly post-commit, rejecting unsupported remote contexts (`ssh-remote`, `dev-container`, `wsl`), and providing fail-safe default-no in non-interactive/CI environments.
-- Implemented staged regular-file execution via `processRunner`, copying committed VSIX through verified file descriptors into private staging (`0700`), computing SHA-256 integrity, verifying installed build identity against `.evcrate/targets/vscode/files/evcrate/companion/companion-descriptor.json`, executing `--install-extension` with argument arrays, and performing post-install re-probe verification (`--list-extensions --show-versions`).
-- Implemented safe error handling and exit code 5 override in `src/cli/dispatch.ts` and `src/cli/vscode-companion-installation.ts`, ensuring committed publication on stdout is never rolled back or obscured, emitting machine-readable `install-notice-v1` on stderr, displaying proposal enablement guidance (`--enable-proposed-api=eigencrate.evcrate-model-bindings`), and wrapping post-commit installation in an uncaught exception boundary.
-- Updated activation guide in `src/adapters/vscode/configuration-activation-guide.ts` and verified test suites across `tests/cli/vscode-companion-installation.test.mjs`, `tests/cli/arguments.test.mjs`, `tests/cli/dispatch.test.mjs`, and `tests/vscode-companion/contracts.test.mjs` (41/41 primary tests pass; Review Cycle 2 approved 7/10, 0 critical issues; live native install smoke deferred to Phase 09 per user gate amendment).
+- Added consented postpublish installation via `--install-vscode-companion` / `--no-install-vscode-companion`, with `--vscode-editor` and profile selection, pre-mutation validation, post-commit execution and fail-safe noninteractive behavior.
+- Verified committed VSIX identity and installation reprobe; preserves publication stdout on install failure, emits an `install-notice-v1` stderr notice and shows proposed-API enablement guidance. Live native install smoke moved to Phase 09.
 
 ### 2026-10-12 — feat(distribution): hashed VSIX, snapshot overlay, and build integration (Phase 07)
 
-- Implemented deterministic offline companion extension builder in `scripts/build-vscode-companion.mjs` compiling extension sources, validating manifest identity, creating normalized VSIX archive (`dc407810...`), and staging target overlay `files/evcrate/companion/` with descriptor and source receipt (`7f809ba8...`).
-- Implemented standalone companion verifier in `scripts/verify-vscode-companion.mjs` validating both development-checkout and packed-package modes with strict ZIP central directory traversal, CRC32, size caps, and file entry allowlisting.
-- Updated distribution snapshot and staging in `src/distribution/{overlay-staging.ts,local-build-staging.ts,target-worker.ts}` to bind declared target overlays (`files/`), staging through read-once bounded buffers with TOCTOU dev/ino verification and hash matching.
-- Extended release packaging and closure verifiers in `scripts/release/{pack-inventory.cjs,runtime-closure.cjs}` and `scripts/prepare-release-assets.cjs` ensuring VSIX closure, byte-parity, and strict seven-asset release boundaries.
-- Verified test suites in `tests/distribution/vscode-companion-vsix.test.mjs`, `single-projection-manifest-reuse.test.mjs`, `bounded-worker-staging.test.mjs`, `input-snapshot-safety.test.mjs` (82/82 tests pass; Review Cycle 3 approved 8.5/10; packed install smoke deferred to Phase 09 per user gate amendment).
+- Added deterministic offline VSIX build, target overlay, strict packed/development verifier, and release packaging bound to companion closure and byte parity.
+- Verified distribution and snapshot-staging suites (82/82); packed install smoke moved to Phase 09.
 
 ### 2026-10-12 — feat(vscode): refresh, immutable generations, and runtime diagnostics (Phase 06)
 
-- Implemented revisioned coalesced single-flight refresh in `extensions/vscode-model-bindings/src/extension.ts` with 200 ms debounce, immediate invalidation withdrawal before debounce/async work, and cancellation token support.
-- Implemented scoped atomic-swap template watcher observing `.evcrate-vscode/evcrate/agent-templates/` and `agent-intent.json` with fallback polling.
-- Implemented persistent authority storage accounting and locking (`O_CREAT | O_EXCL` lockfile, 64 generations / 4 MiB instance cap, 16 MiB authority cap, closed-editor cleanup guidance).
-- Implemented runtime diagnostics v1 (`evcrate.vscode.showDiagnostics`) with Markdown report and JSON clipboard copy displaying authority, generation metrics, and cached-selection warnings.
-- Verified test suites in `tests/vscode-companion/` (41/41 companion tests pass, 98/98 adapter tests pass).
+- Added coalesced revisioned refresh, scoped atomic-swap template watching with fallback polling, and persistent authority storage with lockfile protection.
+- Added `evcrate.vscode.showDiagnostics` Markdown/JSON report and verified companion tests (41/41) plus adapter tests (98/98).
 
 ### 2026-10-12 — feat(vscode): implement runtime tiers, actor overrides, and picker commands (Phase 05)
 

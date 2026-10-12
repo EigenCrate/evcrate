@@ -1,7 +1,7 @@
 # System Architecture
 
-**Status:** Core architecture for the completed advisor subsystem retirement and harness-only cutover; live vendor/native-host qualification remains separate.
-**Windows support:** Standalone installer lifecycle and clean-install `version --json` only. Prior candidate results do not qualify the current package.
+**Status:** Core architecture for the harness-only cutover; Phase 09 records integrated companion qualification and isolated Windows host checks, while interactive Copilot Chat qualification remains blocked.
+**Windows support:** Installer lifecycle and clean-install `version --json` remain the general package boundary. Phase 09 qualifies only the isolated companion scenarios recorded below, not broad Windows runtime parity.
 **Updated:** 2026-10-12
 
 **Authority:** TypeScript control plane and canonical harness resources.
@@ -377,10 +377,11 @@ enforced by `.evcrate/source/.claude/scripts/scan_commands.py`:
 ## 6. Verification and support boundary
 
 Repository build, regeneration, Linux installer lifecycle/verification, and automated
-test gates are exercised for this cutover; live vendor/GUI and native Windows host
-qualification remain separate. Historical counts and generated resources are not live
-vendor acceptance evidence. Qualification preserves generic JSON/resource/import/scope,
-path/privacy, publication CAS/locking/rollback/recovery, and seven-target native-context boundaries.
+test gates are exercised. Phase 09 also records candidate-bound companion package
+checks and isolated Windows VS Code 1.140.0 host receipts N-01–N-03; interactive GUI
+and authenticated Copilot inference remain blocked. Historical counts and generated
+resources are not live vendor acceptance evidence. Core wire, path/privacy, publication,
+recovery, and seven-target native-context boundaries remain unchanged.
 
 Release metadata writes `evcrate-private-release/v2` with exact release fields
 excluding the former `controller_closure_digest`. Archive/platform/installer
@@ -395,17 +396,21 @@ regular non-symlink/non-reparse `installer-receipt.json` matching `snapshot_id`,
 `version`, `archive_name`, `archive_sha256`, and `inventory_digest`. Fresh installation
 requires current v2 assets.
 
-Windows support remains standalone installer lifecycle and `version --json` on
-the matching hosted x64 matrix, not broad Windows runtime parity. GUI/native
-host availability, model access, and safe report-writing capability must be
-reported explicitly; unavailable rows remain unqualified.
+General Windows package support remains standalone installer lifecycle and
+`version --json` on the matching hosted x64 matrix, not broad runtime parity.
+Separately, Phase 09 exercised the isolated companion host cases described below.
+Unavailable GUI/native hosts and model access remain explicit evidence gaps.
 
-## Proposed VS Code runtime model bindings (Phases 01–08 implemented; live qualification deferred to Phase 09)
-<a id="proposed-vs-code-runtime-model-bindings--planning-only"></a>
-<a id="proposed-vs-code-runtime-model-bindings-phases-0106-implemented-cli-packaging-pending-live-qualification-deferred"></a>
-<a id="proposed-vs-code-runtime-model-bindings-phases-0108-implemented-live-qualification-deferred"></a>
+## VS Code runtime model bindings companion (Phases 01–08 implemented; Phase 09 isolated qualification partial)
+<a id="vs-code-runtime-model-bindings-phase-09-integrated-qualification"></a>
 
-A private companion extension (`eigencrate.evcrate-model-bindings`, version `2.11.0`) utilizing VS Code's proposed `chatPromptFiles` API (`registerCustomAgentProvider`) is intended to enable dynamic user-controlled runtime model bindings for VS Code Local while preserving immutable agent intent and canonical Claude tiers across the other six targets. Phase 03 cut over the static VS Code Local agent emission to immutable templates in `evcrate/agent-templates/` with truthful build intent manifests, removing static actor registrations and obsolete model maps. Phase 04 implemented companion activation, candidate root resolution, secure generation loading, template rendering, atomic generation storage, and single-owner provider registration. Phase 05 implemented runtime bindings, scoped store, catalog selector resolution, and QuickPick configuration commands. Phase 06 implemented event-driven single-flight refresh, immutable generation retention and shared-authority storage accounting, and runtime diagnostics with cached-selection reselection/reload and closed-editor storage cleanup guidance. Phase 07 implemented deterministic VSIX compilation, dual-mode verification, target overlay staging, pack inventory checks, and release closure validation. Phase 08 implemented consented postpublish companion installation, pre-mutation validation, private staging, and stderr notice protocol. Live editor qualification (Phase 09) remains deferred to real-case environment verification per the 2026-10-12 user gate amendment; this intermediate source cutover is not release-qualified and must not be published before Phase 09 qualification.
+A private `eigencrate.evcrate-model-bindings` 2.11.0 companion uses VS Code's proposed
+`chatPromptFiles` API (`registerCustomAgentProvider`) for user-controlled runtime
+model bindings, preserving immutable agent intent and canonical tier policy across
+the other six targets. Phases 01–08 provide contracts, templates, provider runtime,
+bindings, refresh/diagnostics, deterministic packaging, and consented installation;
+Phase 09 adds integrated package contracts and isolated Windows host evidence. This
+does not qualify interactive Copilot Chat behavior or authorize rollout.
 
 - **Scope and Bounds**: Support scope is local-only (`file://`): local single-folder projects, local HOME installations, local multi-root workspaces (requiring explicit window root selection), and partitioned local profiles. Remote authorities (`vscode-remote://`, `wsl://`, `ssh-remote`, `dev-container`) are unsupported and fail closed (`UNSUPPORTED_REMOTE_AUTHORITY`) without HOME fallback.
 - **Feasibility Status (Phase 01)**: Offline feasibility evaluation is complete (10/10 automated harness checks PASS on Linux; pinned host tuple: VS Code `1.140.0` commit `07f806f999227108933c2e30515b26eecc1fda74` and Copilot Chat `0.68.0`; [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md), [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md)).
@@ -448,7 +453,15 @@ A private companion extension (`eigencrate.evcrate-model-bindings`, version `2.1
   - **Default-No Consent & Bounded Process Execution (`vscode-companion-prompt.ts`, `process-runner.ts`)**: When companion install policy is `default-prompt` (interactive TTY), prompts user with extension details, staged path, target editor, profile, and proposed API launch requirement defaulting to `[y/N]`. If approved or explicitly requested (`--install-vscode-companion`), executes the target editor via `ProcessRunner` with argument array (`--install-extension <staged-vsix>`, optional `--profile <profile>`), strict timeout (`COMPANION_INSTALL_TIMEOUT_MS = 60s`), and stream bounds (`1 MiB`). Staged directory is cleaned up in `finally`.
   - **Machine Notice & Exit Code Protocol (`emitNotice`, `install-notice-v1`)**: Emits validated `evcrate-vscode-companion-install-v1` notice to stderr (JSON for machine/`--json`, formatted text for TTY). Preserves the committed `ResourceResult` on stdout. When companion installation is explicitly requested and fails or requires manual setup (e.g. unverified build identity, unsupported remote context), overrides exit code to `5` while keeping the committed publication intact; interactive decline or unrequested skip retains exit code `0`.
   - **Activation Guide Updates (`src/adapters/vscode/configuration-activation-guide.ts`)**: Updated activation guide documentation reflecting companion extension packaging and CLI installation support (`evcrate publish --apply --target vscode --install-vscode-companion`), proposed API launch flag (`code --enable-proposed-api=eigencrate.evcrate-model-bindings`), and runtime model binding configuration.
-- **Cutover & Qualification Boundary**: Static actor registrations have been removed; immutable templates, companion provider runtime, runtime model bindings/picker commands, event-driven refresh/diagnostics, deterministic VSIX/overlay staging, and consented postpublish CLI installation (Phases 01–08) are implemented. User approval permits finalization with known review findings. Per the explicit 2026-10-12 user gate amendment ([interface-freeze.md](../plans/261011-2349-vscode-runtime-model-bindings/reports/interface-freeze.md)), native smoke, full live identity inspection, profile-specific qualification, and live native editor execution checks (cross-source plugin hook attribution, live host selector matching, child subagent model inheritance, cached-selection race/reselection recovery, and live generation retention) remain open and deferred to Phase 09 real-case environment verification. Packaging and installation do not imply editor proposed-API enablement, unperformed acceptance checks, or release authorization; publication remains prohibited until Phase 09 qualification is complete.
+- **Cutover & qualification boundary:** Phases 01–09 implement the companion contract and candidate-bound isolated checks; support remains local-only (`file://`), with unsupported remote authorities rejected without local HOME/editor fallback. Packaging or installation does not imply proposal enablement, live model selection, full native acceptance, or release authorization.
+- **Phase 09 candidate:** [Integrated qualification](../plans/261011-2349-vscode-runtime-model-bindings/reports/integrated-qualification.md) and [native receipts](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-qualification.md) bind VS Code 1.140.0 (commit `07f806f999227108933c2e30515b26eecc1fda74`) to VSIX SHA-256 `c4638015d732945f85f3a6040a8864ac6b004d2fffdcf02f974e53fe7bed97a2` and `buildIdentity` `caf354b6a8a2276f25e80fff3cef77be7529e061f122c3aab12150325f998dab`.
+- **N-01 — isolated CLI install:** The candidate VSIX installed and re-probed in disposable user-data/extensions directories; a matching identity was idempotent, while same-version mismatched identity returned `manual-setup-required`/exit 5 and preserved committed stdout.
+- **N-02 — isolated Extension Host:** Proposal-enabled host execution contributed 17 actors and exercised all five `evcrate.*` commands plus binding precedence. Proposal-disabled provider registration is caught and reported unavailable; diagnostics' `hostObservedModel` remains null, so this is not live inference evidence.
+- **N-03 — hook bridge:** `local-hook-bridge.cjs` returned valid envelopes for all eight lifecycle events, rejected malformed invocations, denied scout-protected paths, and requested confirmation for `.env` reads.
+- **Host/runtime corrections:** `installation-roots.ts` now normalizes POSIX/Windows drive paths to local-root URIs while rejecting UNC/device/relative/traversal paths and reads public `remoteName` before a guarded `remoteAuthority` fallback. Provider proposal throws are caught; `activate(context)` returns frozen read-only `CompanionExtensionExports`.
+- **Windows watcher and CLI launch:** On `win32`, the template watcher uses filtered recursive parent watching to permit atomic `.evcrate-vscode` swaps. `resolveVscodeEditorLaunchTarget` safely resolves `bin\\code.cmd` layouts to `Code.exe` plus `cli.js`, using `ELECTRON_RUN_AS_NODE=1` and `shell: false`.
+- **Isolated test runner:** `CliRuntime.userDataDirectory` and `extensionsDirectory` support the exercised disposable profile pair. An absolute user-data path enables `--user-data-dir`; `--extensions-dir` is passed only when `userDataDirectory` is supplied and the extensions path is absolute. `package.json` includes `test:vscode-companion` in `npm test`.
+
 
 ## Related documents
 

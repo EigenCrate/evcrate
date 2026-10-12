@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { inspectHostGuard, type HostGuardStatus } from './installation-roots.js';
+import { inspectHostGuard, readHostRemoteAuthority, type HostGuardStatus } from './installation-roots.js';
 import { CompanionAgentProvider } from './agent-provider.js';
 
 export interface ProviderManager {
@@ -20,7 +20,7 @@ export function createProviderManager(): ProviderManager {
 
   function tryRegister(context: vscode.ExtensionContext): HostGuardStatus {
     const guard = inspectHostGuard({
-      remoteAuthority: vscode.env.remoteAuthority,
+      remoteAuthority: readHostRemoteAuthority(vscode.env),
       workspaceTrusted: vscode.workspace.isTrusted,
       hasProposal: typeof vscode.chat?.registerCustomAgentProvider === 'function'
     });
@@ -37,8 +37,18 @@ export function createProviderManager(): ProviderManager {
     }
     if (!activeProvider) {
       const emitter = new vscode.EventEmitter<void>();
-      activeProvider = new CompanionAgentProvider(emitter);
-      activeProviderDisposable = vscode.chat.registerCustomAgentProvider(activeProvider);
+      const candidateProvider = new CompanionAgentProvider(emitter);
+      try {
+        activeProviderDisposable = vscode.chat.registerCustomAgentProvider(candidateProvider);
+      } catch {
+        candidateProvider.dispose();
+        return inspectHostGuard({
+          remoteAuthority: readHostRemoteAuthority(vscode.env),
+          workspaceTrusted: vscode.workspace.isTrusted,
+          hasProposal: false
+        });
+      }
+      activeProvider = candidateProvider;
       context.subscriptions.push(activeProviderDisposable);
       context.subscriptions.push(activeProvider);
     }

@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
+import type { AgentResourceDescriptor } from './agent-provider.js';
 import { ScopedBindingStore } from './binding-store.js';
+import type { RuntimeDiagnosticsReport } from './diagnostics.js';
 import { queryChatModelCatalog } from './model-catalog.js';
 import { getApprovedRoots } from './installation-commands.js';
+import { readHostRemoteAuthority } from './installation-roots.js';
 import { registerAllCommands } from './command-registration.js';
 import { createProviderManager, type ProviderManager } from './provider-registration.js';
 import { RefreshController } from './refresh-controller.js';
@@ -38,7 +41,7 @@ function ensureController(context: vscode.ExtensionContext): RefreshController {
     getApprovedRoots: () => getApprovedRoots(context),
     getExplicitSelectedRootIdentity: () => context.globalState.get<string>('evcrate.selectedRootIdentity') ?? null,
     getStoredBindings: (rootIdentity) => {
-      const store = new ScopedBindingStore(context.globalState, context.workspaceState, vscode.env.remoteAuthority);
+      const store = new ScopedBindingStore(context.globalState, context.workspaceState, readHostRemoteAuthority(vscode.env));
       const userRes = store.getUserBindings();
       const rootRes = rootIdentity
         ? store.getRootBindings(rootIdentity)
@@ -58,7 +61,15 @@ export async function refreshActiveGeneration(context: vscode.ExtensionContext):
   return controller.requestRefresh({ reason: 'manual', immediate: true });
 }
 
-export function activate(context: vscode.ExtensionContext): void {
+export interface CompanionExtensionExports {
+  readonly getLatestDiagnosticsReport: () => RuntimeDiagnosticsReport | null;
+  readonly getCurrentGenerationId: () => number;
+  readonly getCurrentRootIdentity: () => string | null;
+  readonly getContributedResources: () => readonly AgentResourceDescriptor[];
+  readonly refresh: () => Promise<boolean>;
+}
+
+export function activate(context: vscode.ExtensionContext): CompanionExtensionExports {
   if (activeController) {
     activeController.dispose();
     activeController = null;
@@ -92,6 +103,14 @@ export function activate(context: vscode.ExtensionContext): void {
       ensureCatalogSubscribed: () => ensureCatalogSubscribed(context)
     })
   );
+
+  return Object.freeze({
+    getLatestDiagnosticsReport: () => controller.lastDiagnosticsReport,
+    getCurrentGenerationId: () => controller.currentGenerationId,
+    getCurrentRootIdentity: () => controller.currentRootIdentity,
+    getContributedResources: () => providerManager.getActiveProvider()?.currentResources ?? [],
+    refresh: () => controller.requestRefresh({ reason: 'manual', immediate: true })
+  });
 }
 
 export function deactivate(): void {
