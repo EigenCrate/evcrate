@@ -25,6 +25,7 @@ description: Triage and fix SonarQube findings; improve unit and integration tes
 | Refactor tests or verify coverage | [Testing and coverage](references/testing-and-coverage.md) |
 | Isolate workspace (explicit opt-in only) | [Worktree remediation](references/worktree-remediation.md) |
 | Full project scan via Jenkins push-to-scan | [Full scan](references/full-scan-workflow.md) |
+| Orchestrate bounded remediation cycles within global budget N | [Bounded remediation command](commands/cmd-sonar-remediate/SKILL.md) · [Remediation cycles policy](references/remediation-cycles.md) |
 
 ## Boundaries
 
@@ -33,3 +34,4 @@ description: Triage and fix SonarQube findings; improve unit and integration tes
 - Generic scans never authorize push or upload. Local scanner execution and uploads require explicit preflight upload authorization naming the target server, project key, and branch/PR. Explicit push-to-scan on an already-committed branch covers only that scan; separate fix branches or worktrees require separate authorization. Never implicitly commit, merge, or remove worktrees.
 - If only external CI can perform scanning, stop local analysis and hand off to the Jenkins route; never auto-push code. (Iterative remediation round budgets apply only to approved local analysis lifecycles, not external CI pipelines).
 - Queries, changed-file analysis, and hooks are not full scans. Coverage claims require clean-suite evidence, exact scope/metric, and requested threshold.
+- For bounded multi-round remediation cycles across project targets within global fix budget N, use [Bounded remediation command](commands/cmd-sonar-remediate/SKILL.md). Ordinary single-pass local fixes and external Jenkins push-to-scan retain their direct independent routes without requiring N or Sonar authentication.
