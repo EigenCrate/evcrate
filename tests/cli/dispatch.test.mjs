@@ -236,3 +236,59 @@ test('resource request files require the selected project identity', async () =>
   );
   assert.equal(JSON.parse(matched.values[0]).payload.version, '1.0.0');
 });
+
+test('dispatch rejects companion flags when target does not include vscode', async () => {
+  const captured = capture(false);
+  const selectedHome = mkdtempSync(join(tmpdir(), 'evcrate-cli-home-'));
+  try {
+    const exitCode = await main([
+      'publish', '--apply', '--target', 'claude', '--home', selectedHome,
+      '--install-vscode-companion', '--json'
+    ], runtime(captured));
+    assert.equal(exitCode, 3);
+    const result = JSON.parse(captured.values[0]);
+    assert.equal(result.status, 'error');
+    assert.equal(result.error.code, 'VALIDATION_INVALID');
+  } finally {
+    rmSync(selectedHome, { recursive: true, force: true });
+  }
+});
+
+test('dispatch preserves committed publication stdout and overrides exitCode to 5 on requested companion failure', async () => {
+  const captured = capture(false);
+  const selectedHome = mkdtempSync(join(tmpdir(), 'evcrate-cli-home-'));
+  let stderrNotice = '';
+  try {
+    const exitCode = await main([
+      'publish', '--apply', '--target', 'vscode', '--home', selectedHome,
+      '--install-vscode-companion', '--vscode-editor', '/mock/bin/code', '--json'
+    ], runtime(captured, {
+      vscodeCompanionConsole: {
+        writeStderr: (t) => { stderrNotice += t; }
+      },
+      processRunner: {
+        run: async (opts) => {
+          if (opts.args.includes('--install-extension')) {
+            return { exitCode: 1, signal: null, stdout: '', stderr: 'mock install error', stdoutBytes: new Uint8Array(), stderrBytes: new Uint8Array(), termination: 'completed', timedOut: false, aborted: false };
+          }
+          return { exitCode: 0, signal: null, stdout: '1.140.0\n', stderr: '', stdoutBytes: new Uint8Array(), stderrBytes: new Uint8Array(), termination: 'completed', timedOut: false, aborted: false };
+        }
+      }
+    }));
+    assert.equal(exitCode, 5);
+    // Stdout is the committed publication result, not an error envelope
+    assert.equal(captured.values.length, 1);
+    const result = JSON.parse(captured.values[0]);
+    assert.equal(result.protocol, 'evcrate-resource-control');
+    assert.equal(result.status, 'published');
+    assert.equal(result.operation, 'publish.apply');
+    // Stderr received the install notice
+    assert.ok(stderrNotice.includes('evcrate-vscode-companion-install-v1'));
+    const notice = JSON.parse(stderrNotice);
+    assert.equal(notice.status, 'failed');
+    assert.equal(notice.requested, true);
+    assert.equal(notice.exitCode, 5);
+  } finally {
+    rmSync(selectedHome, { recursive: true, force: true });
+  }
+});

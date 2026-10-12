@@ -2,6 +2,9 @@ import { ControlPlaneError } from '../errors/control-plane-error.js';
 import { normalizeTarget, PROTOCOL_VERSION } from '../protocol/validation.js';
 import type { PersistedTarget } from '../protocol/validation.js';
 import { validatePublicationScope, type PublicationScope } from '../protocol/publication-payloads.js';
+import { validateCompanionCliOptions } from '../adapters/vscode/companion-cli-contracts.js';
+import { ContractValidationError } from '../adapters/vscode/companion-package-contracts.js';
+import type { ControlPlaneErrorCode } from '../errors/control-plane-error.js';
 
 export const MAX_CLI_TIMEOUT_MS = 900_000;
 
@@ -25,6 +28,9 @@ export interface CliOptions {
   readonly scope: PublicationScope;
   readonly targets: readonly PersistedTarget[];
   readonly registerVscodeSettings?: boolean;
+  readonly installVscodeCompanion?: boolean;
+  readonly vscodeEditor?: string;
+  readonly vscodeProfile?: string;
   readonly id?: string;
   readonly kind?: string;
   readonly importSource?: string;
@@ -52,7 +58,8 @@ export interface CliInvocation {
 const VALUE_OPTIONS = new Set([
   '--source', '--home', '--state-home', '--project-id', '--project-root', '--scope', '--target',
   '--id', '--kind', '--import-source', '--destination', '--provenance', '--approve-capability',
-  '--preview-token', '--mutation', '--expected-revision', '--expiry', '--limit', '--cursor', '--request-file', '--protocol-version', '--timeout'
+  '--preview-token', '--mutation', '--expected-revision', '--expiry', '--limit', '--cursor', '--request-file', '--protocol-version', '--timeout',
+  '--vscode-editor', '--vscode-profile'
 ]);
 const SCALAR_OPTIONS = new Set([...VALUE_OPTIONS].filter((option) => option !== '--target' && option !== '--approve-capability'));
 
@@ -131,6 +138,7 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
   let dryRun = false;
   let apply = false;
   let registerVscodeSettings: boolean | undefined;
+  let installVscodeCompanion: boolean | undefined;
   const seen = new Set<string>();
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -160,6 +168,12 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
       if (seen.has('--register-vscode-settings') || seen.has('--no-register-vscode-settings')) fail('USAGE_INVALID');
       seen.add(token);
       registerVscodeSettings = token === '--register-vscode-settings';
+      continue;
+    }
+    if (token === '--install-vscode-companion' || token === '--no-install-vscode-companion') {
+      if (seen.has('--install-vscode-companion') || seen.has('--no-install-vscode-companion')) fail('USAGE_INVALID');
+      seen.add(token);
+      installVscodeCompanion = token === '--install-vscode-companion';
       continue;
     }
     const equals = token.indexOf('=');
@@ -196,6 +210,28 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
       || command.kind === 'request-file';
     if (!acceptsRegistration) fail('USAGE_INVALID');
   }
+  const hasCompanionFlag =
+    installVscodeCompanion !== undefined
+    || values.vscodeeditor !== undefined
+    || values.vscodeprofile !== undefined;
+  if (hasCompanionFlag) {
+    try {
+      validateCompanionCliOptions({
+        commandKind: command.kind,
+        commandAction: 'action' in command ? command.action : undefined,
+        targets,
+        installVscodeCompanion: installVscodeCompanion === true ? true : undefined,
+        noInstallVscodeCompanion: installVscodeCompanion === false ? true : undefined,
+        vscodeEditor: values.vscodeeditor,
+        vscodeProfile: values.vscodeprofile
+      });
+    } catch (error) {
+      if (error instanceof ContractValidationError) {
+        throw new ControlPlaneError(error.code as ControlPlaneErrorCode, error.message);
+      }
+      throw error;
+    }
+  }
   const timeoutMs = values.timeoutMs === undefined
     ? MAX_CLI_TIMEOUT_MS : boundedInteger(values.timeoutMs, MAX_CLI_TIMEOUT_MS);
   const options: CliOptions = Object.freeze({
@@ -207,6 +243,9 @@ export function parseArguments(argv: readonly string[]): CliInvocation {
     scope,
     targets: Object.freeze([...targets]),
     registerVscodeSettings,
+    installVscodeCompanion,
+    vscodeEditor: values.vscodeeditor,
+    vscodeProfile: values.vscodeprofile,
     id: values.id,
     kind: values.kind,
     importSource: values.importsource,

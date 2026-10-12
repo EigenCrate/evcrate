@@ -29,6 +29,7 @@ import { createResourceHandler, defaultResourceHandler } from '../imports/handle
 import type { ResourceHandler } from '../imports/handler.js';
 import type { CliRuntime } from './types.js';
 import { coordinateVscodeSettingsRegistration } from './vscode-settings-registration.js';
+import { coordinateVscodeCompanionInstallation } from './vscode-companion-installation.js';
 
 export interface DispatchOutcome {
   readonly result: CliResult;
@@ -388,6 +389,13 @@ export async function dispatchInvocation(
   if (invocation.options.registerVscodeSettings !== undefined && !context.selectedTargetIds.includes('vscode')) {
     throw new ControlPlaneError('USAGE_INVALID', '--register-vscode-settings requires vscode among selected targets');
   }
+  const hasCompanionOptions =
+    invocation.options.installVscodeCompanion !== undefined
+    || invocation.options.vscodeEditor !== undefined
+    || invocation.options.vscodeProfile !== undefined;
+  if (hasCompanionOptions && !context.selectedTargetIds.includes('vscode')) {
+    throw new ControlPlaneError('VALIDATION_INVALID', 'Companion flags require target "vscode"');
+  }
   const outcome = await (async (): Promise<DispatchOutcome> => {
     if (request !== undefined || invocation.command.kind === 'request-file') {
       if (request === undefined) throw new ControlPlaneError('PROTOCOL_INVALID');
@@ -429,13 +437,21 @@ export async function dispatchInvocation(
   })();
 
   if (outcome.result && outcome.result.protocol === 'evcrate-resource-control') {
-    const exitCodeOverride = await coordinateVscodeSettingsRegistration(
+    const settingsExitOverride = await coordinateVscodeSettingsRegistration(
       invocation,
       context,
       outcome.result as ResourceResult,
       runtime,
       requestId
     );
+    const companionExitOverride = await coordinateVscodeCompanionInstallation(
+      invocation,
+      context,
+      outcome.result as ResourceResult,
+      runtime,
+      requestId
+    );
+    const exitCodeOverride = companionExitOverride ?? settingsExitOverride;
     if (exitCodeOverride !== undefined && outcome.exitCode === 0) {
       return { result: outcome.result, exitCode: exitCodeOverride };
     }

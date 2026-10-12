@@ -44,15 +44,9 @@ Keep `install.sh`, the Linux tarball, its `.sha256` sidecar, and release metadat
 `./install.sh install` selects local assets; exact overrides are shown above.
 Then run `evcrate version --json`; add `$HOME/.local/bin` to PATH if needed.
 
-Defaults are launcher `~/.local/bin/evcrate`, data
-`~/.local/share/evcrate/` (or `$XDG_DATA_HOME/evcrate`), and state
-`~/.local/state/evcrate/` (or `$XDG_STATE_HOME/evcrate`).
-
+Defaults are launcher `~/.local/bin/evcrate`, data `~/.local/share/evcrate/` (or `$XDG_DATA_HOME/evcrate`), and state `~/.local/state/evcrate/` (or `$XDG_STATE_HOME/evcrate`).
 Lifecycle: `./install.sh repair`, `./install.sh rollback <snapshot>`, `./install.sh uninstall`.
-
-Installer `rollback`/`uninstall` touch only installer-owned launcher, unpack
-data, and state. Harness publication journals and output are managed separately
-by `evcrate publish` and `evcrate recover`.
+Installer `rollback`/`uninstall` touch only installer-owned launcher, unpack data, and state; publication journals and output are managed separately by `evcrate publish` and `evcrate recover`.
 
 ### Windows (x64)
 
@@ -61,14 +55,7 @@ Run `.\install.ps1 install` in PowerShell (or exact asset overrides above).
 The installer updates **User** PATH (`EnvironmentVariableTarget.User`).
 Open a new terminal/restart the session, then run `evcrate version --json`.
 
-Default locations:
-
-- Root/data: `%LOCALAPPDATA%\EVCrate`
-- Bin and launcher: `%LOCALAPPDATA%\EVCrate\bin` (`evcrate.cmd`)
-- State: `%LOCALAPPDATA%\EVCrate\state`
-- Versions: `%LOCALAPPDATA%\EVCrate\versions\<snapshot>`
-- Current pointer: `%LOCALAPPDATA%\EVCrate\current.json`
-
+Default locations: `%LOCALAPPDATA%\EVCrate` (data/root), `%LOCALAPPDATA%\EVCrate\bin` (`evcrate.cmd`), `%LOCALAPPDATA%\EVCrate\state`, `%LOCALAPPDATA%\EVCrate\versions\<snapshot>`, and `%LOCALAPPDATA%\EVCrate\current.json`.
 Lifecycle: `.\install.ps1 repair`, `.\install.ps1 rollback <snapshot>`, `.\install.ps1 uninstall`.
 
 Options accept PowerShell/GNU spelling: `-RootDir`/`--root-dir`,
@@ -264,13 +251,11 @@ describe their original candidates, not current package/interview qualification.
 Publish with `evcrate publish --apply --scope project --project-root /path/to/project --target vscode`
 or `--scope home --target vscode`. Preview with `--dry-run --json`.
 
-On interactive first use, the CLI asks `Register this plugin in VS Code settings? [y/N]`.
-Confirmation updates only `chat.pluginLocations` in project `.vscode/settings.json`
-or platform User settings, preserving comments, formatting, and unrelated settings.
-Pipes/CI/`--json` do not prompt/register unless `--register-vscode-settings` is supplied;
-`--no-register-vscode-settings` disables detection/registration. Dry-run never writes settings.
-Manual registration uses `"chat.pluginLocations": { "/path/to/project/.evcrate-vscode": true }`.
-
+On interactive first use, the CLI prompts to register `chat.pluginLocations` in settings and (after successful publication) optionally install the private companion extension (`eigencrate.evcrate-model-bindings`); both prompts default to No (`[y/N]`).
+Pipes/CI/`--json` do not prompt and require explicit flags:
+- Settings: `--register-vscode-settings` / `--no-register-vscode-settings` (manual: `"chat.pluginLocations": { "/path/to/.evcrate-vscode": true }`).
+- Companion: `--install-vscode-companion` / `--no-install-vscode-companion` (`--vscode-editor <path>`, `--vscode-profile <name>`).
+Dry-run never writes settings or installs extensions. Requested companion install failure returns exit 5 while keeping publication committed on stdout (status on stderr). Skills, commands, and hooks activate on plugin registration; companion agent contribution requires launching VS Code with `--enable-proposed-api=eigencrate.evcrate-model-bindings`.
 ### Coexistence and one-copy policy
 
 - **Single Active Copy**: Do not enable both HOME (`~/.evcrate-vscode`) and project-level (`.evcrate-vscode`) plugin registrations in the same workspace to prevent duplicate command and hook registrations.

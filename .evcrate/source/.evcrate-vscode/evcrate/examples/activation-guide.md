@@ -55,7 +55,7 @@ To activate EVCrate Local:
 
 Agent actors (`@evc-*`) are authored as immutable templates in `evcrate/agent-templates/` and require the private companion extension (`eigencrate.evcrate-model-bindings`) for runtime model resolution:
 
-- **Intermediate Build Status**: The companion VSIX packaging, companion commands, and CLI automated installation are not available in this intermediate build; they are planned for delivery in Phases 04–08.
+- **Companion Packaging & Installation**: The private companion extension (`eigencrate.evcrate-model-bindings`) is packaged and verified in the published VS Code output. You can install it using `evcrate publish --apply --target vscode --install-vscode-companion` (or interactively confirm the post-publish prompt).
 - **Proposed API Enablement**: When the companion is deployed, activation requires launching VS Code with the proposed `chatPromptFiles` API flag:
    ```bash
    code --enable-proposed-api=eigencrate.evcrate-model-bindings
