@@ -7,7 +7,7 @@
 
 ### 2026-10-12 — test(vscode): integrated contract and isolated host qualification (Phase 09)
 **Status:** Package gates and isolated Windows VS Code 1.140.0 receipts N-01–N-03 pass; interactive GUI and authenticated inference remain blocked. [Integrated report](../plans/261011-2349-vscode-runtime-model-bindings/reports/integrated-qualification.md) · [Native receipts](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-qualification.md).
-- **Candidate:** VSIX SHA-256 `c4638015d732945f85f3a6040a8864ac6b004d2fffdcf02f974e53fe7bed97a2`; buildIdentity `caf354b6a8a2276f25e80fff3cef77be7529e061f122c3aab12150325f998dab`.
+- **Candidate:** VSIX SHA-256 `833e982d1cb08139e4df4a4891a4622d5f001076ab55a66a77f80f70f449cc89`; buildIdentity `68a82c4549d3b68a8cab7b73b3252a46d195d87634e8a08023af64d1119bb965`.
 - **N-01:** Disposable user-data/extensions install and reprobe pass; same-version identity mismatch requires exit-5 manual setup while committed stdout is preserved.
 - **N-02:** Isolated Extension Host exercised five commands, 17 actors and precedence; `hostObservedModel` stayed null.
 - **N-03:** All eight hook events pass; malformed calls fail closed; scout and privacy behavior observed.

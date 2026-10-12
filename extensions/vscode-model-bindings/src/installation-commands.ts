@@ -28,10 +28,7 @@ export async function handleSelectInstallation(
   }
   const items = candidates.map((c) => ({
     label: typeof c.uri === 'string' ? c.uri : c.uri.path,
-    description:
-      typeof c.uri === 'string' && c.uri.includes('.evcrate-vscode')
-        ? 'Project installation'
-        : 'HOME installation'
+    description: c === homeCand ? 'HOME installation' : 'Project installation'
   }));
   const picked = await vscode.window.showQuickPick(items, {
     placeHolder: 'Select EVCrate installation root to approve and activate'

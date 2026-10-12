@@ -3,8 +3,8 @@ import type { ChildProcess } from 'node:child_process';
 
 export const SAFE_ENVIRONMENT_KEYS = Object.freeze([
   'PATH', 'HOME', 'USERPROFILE', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL', 'TERM',
-  'SystemRoot', 'WINDIR', 'ComSpec', 'PATHEXT', 'ELECTRON_RUN_AS_NODE', 'EVCRATE_HOME',
-  'EVCRATE_STATE_HOME', 'EVCRATE_STATE_DIR', 'XDG_STATE_HOME'
+  'SystemRoot', 'WINDIR', 'ComSpec', 'PATHEXT', 'EVCRATE_HOME', 'EVCRATE_STATE_HOME',
+  'EVCRATE_STATE_DIR', 'XDG_STATE_HOME'
 ] as const);
 
 export type ProcessTermination = 'completed' | 'timeout' | 'aborted' | 'output-limit' | 'spawn-error';
@@ -14,6 +14,7 @@ export interface RunBoundedProcessOptions {
   readonly args?: readonly string[];
   readonly cwd?: string;
   readonly env?: Readonly<Record<string, string | undefined>>;
+  readonly allowElectronRunAsNode?: boolean;
   readonly input?: string | Uint8Array;
   readonly timeoutMs?: number;
   readonly signal?: AbortSignal;
@@ -37,12 +38,17 @@ export interface ProcessResult {
 }
 
 function safeEnvironment(
-  source: Readonly<Record<string, string | undefined>> | undefined
+  source: Readonly<Record<string, string | undefined>> | undefined,
+  allowElectronRunAsNode = false
 ): Record<string, string> {
   const input = source ?? process.env;
-  const allowed = new Set<string>(SAFE_ENVIRONMENT_KEYS);
+  const allowRunAsNode = allowElectronRunAsNode && source && typeof source.ELECTRON_RUN_AS_NODE === 'string';
   return Object.fromEntries(Object.entries(input)
-    .filter(([key, value]) => allowed.has(key) && typeof value === 'string' && !value.includes('\0'))
+    .filter(([key, value]) =>
+      ((SAFE_ENVIRONMENT_KEYS as readonly string[]).includes(key) || (allowRunAsNode && key === 'ELECTRON_RUN_AS_NODE'))
+      && typeof value === 'string'
+      && !value.includes('\0')
+    )
     .map(([key, value]) => [key, value as string]));
 }
 
@@ -119,7 +125,7 @@ export async function runBoundedProcess(options: RunBoundedProcessOptions): Prom
     try {
       child = spawn(options.executable, [...(options.args ?? [])], {
         cwd: options.cwd,
-        env: safeEnvironment(options.env),
+        env: safeEnvironment(options.env, options.allowElectronRunAsNode === true),
         shell: false,
         detached: process.platform !== 'win32',
         windowsHide: true,

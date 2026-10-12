@@ -293,7 +293,7 @@ export async function coordinateVscodeCompanionInstallation(
       const hasEnvOverrides = Object.keys(launchTarget.envOverrides).length > 0;
       const baseRunOpts = {
         executable: launchTarget.executable,
-        ...(hasEnvOverrides ? { env: { ...rawEnv, ...launchTarget.envOverrides } } : {}),
+        ...(hasEnvOverrides ? { env: { ...rawEnv, ...launchTarget.envOverrides }, allowElectronRunAsNode: true } : {}),
         maxStdoutBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
         maxStderrBytes: COMPANION_INSTALL_MAX_STREAM_BYTES,
         signal: runtime.abortSignal

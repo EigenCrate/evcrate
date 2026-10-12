@@ -2,8 +2,8 @@
 
 **Date:** 2026-10-12  
 **Plan:** [plan.md](../plan.md) | [Phase 09](../phase-09-integrated-qualification.md) | [Integrated Qualification](./integrated-qualification.md)  
-**Host Workstation:** Windows 10/11 x64 (`win32 10.0.26200`), Node `v24.21.0`, VS Code `1.140.0` (`07f806f999227108933c2e30515b26eecc1fda74`, x64)  
-**Candidate VSIX:** `evcrate-model-bindings-2.11.0.vsix` (SHA-256 `c4638015d732945f85f3a6040a8864ac6b004d2fffdcf02f974e53fe7bed97a2`, `buildIdentity: caf354b6a8a2276f25e80fff3cef77be7529e061f122c3aab12150325f998dab`)
+**Host Workstation:** Windows 10/11 x64 (`win32 10.0.26200`), Node `v24.21.0`, VS Code `1.140.0` (`07f806f999227108933c2e30515b26eecc1fda74`) & `1.141.0` (`2a59476c9bfcb90b3ddc372c36762471b7dfad1c`)  
+**Candidate VSIX:** `evcrate-model-bindings-2.11.0.vsix` (SHA-256 `833e982d1cb08139e4df4a4891a4622d5f001076ab55a66a77f80f70f449cc89`, `buildIdentity: 68a82c4549d3b68a8cab7b73b3252a46d195d87634e8a08023af64d1119bb965`)
 
 ---
 

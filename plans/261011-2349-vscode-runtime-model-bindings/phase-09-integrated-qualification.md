@@ -46,7 +46,7 @@
 
 ## Todo list
 - [x] Reported scoped automated suites (contract, adapter, CLI, distribution, package-verifier, runtime-closure, and integrated-runtime) passed: 211/211 tests across five QA Node test invocations (0 failed/skipped), plus separate 6/6 manifest-reuse and 18/18 release-artifact runs and `npm run generate:all`, `npm run distribute:check`, and `npm run release:check` gates PASS. Full monolithic `npm test` and coverage remain open.
-- [x] Candidate-bound VSIX identity and package closure recorded: SHA-256 `c4638015d732945f85f3a6040a8864ac6b004d2fffdcf02f974e53fe7bed97a2`; build identity `caf354b6a8a2276f25e80fff3cef77be7529e061f122c3aab12150325f998dab`.
+- [x] Candidate-bound VSIX identity and package closure recorded: SHA-256 `833e982d1cb08139e4df4a4891a4622d5f001076ab55a66a77f80f70f449cc89`; build identity `68a82c4549d3b68a8cab7b73b3252a46d195d87634e8a08023af64d1119bb965`.
 - [x] N-01 isolated VS Code 1.140.0 CLI installation passed, including fresh install, idempotent re-run and same-version build-identity mismatch refusal.
 - [x] N-02 isolated VS Code 1.140.0 Extension-Host activation, pre-approval guard, five `evcrate.*` commands, 17 generated actor resources, binding precedence and diagnostics passed.
 - [x] N-03 isolated native hook-bridge subprocess passed all eight lifecycle events and malformed-invocation/policy cases.

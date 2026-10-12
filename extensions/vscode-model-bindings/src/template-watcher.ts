@@ -109,7 +109,10 @@ export function createScopedTemplateWatcher(
           if (disposed) return;
           const name = typeof filename === 'string' ? filename : '';
           if (useRecursiveParentWatch) {
-            if (name.length === 0) return;
+            if (name.length === 0) {
+              onRelevantChange(resolvedPlugin);
+              return;
+            }
             const targetPath = join(parentDir, name);
             if (isEnrolledTemplateInventoryPath(targetPath, resolvedPlugin, baseStorageFsPath)) {
               onRelevantChange(targetPath);

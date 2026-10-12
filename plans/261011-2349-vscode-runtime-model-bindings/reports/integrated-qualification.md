@@ -11,11 +11,10 @@
 | Artifact / Input | Path / Scope | Digest (SHA-256) / Identity |
 |---|---|---|
 | Base Git Commit | `HEAD` prior to Phase 09 commit | `a8d9258460fb1692796684589350e6c7fded76ad` |
-| Extension ID & Version | `eigencrate.evcrate-model-bindings@2.11.0` | Pinned to VS Code `1.140.0` (`07f806f999227108933c2e30515b26eecc1fda74`) |
-| Companion Build Identity | `.evcrate/targets/vscode/files/evcrate/companion/package.json` | `caf354b6a8a2276f25e80fff3cef77be7529e061f122c3aab12150325f998dab` |
-| Packaged VSIX (Overlay) | `.evcrate/targets/vscode/files/evcrate/companion/evcrate-model-bindings-2.11.0.vsix` (46,729 bytes) | `c4638015d732945f85f3a6040a8864ac6b004d2fffdcf02f974e53fe7bed97a2` |
-| Packaged VSIX (Projected) | `.evcrate/source/.evcrate-vscode/evcrate/companion/evcrate-model-bindings-2.11.0.vsix` | `c4638015d732945f85f3a6040a8864ac6b004d2fffdcf02f974e53fe7bed97a2` |
-| Companion Descriptor (`v1`) | `.evcrate/targets/vscode/files/evcrate/companion/package.json` | `f9516fde0521d6ad900a2176c29a2808baeb2110f1122413469e684c26e0ed9b` |
+| Extension ID & Version | `eigencrate.evcrate-model-bindings@2.11.0` | Engine `^1.140.0` (verified on VS Code `1.140.0` & `1.141.0`) |
+| Companion Build Identity | `.evcrate/targets/vscode/files/evcrate/companion/package.json` | `68a82c4549d3b68a8cab7b73b3252a46d195d87634e8a08023af64d1119bb965` |
+| Packaged VSIX (Overlay) | `.evcrate/targets/vscode/files/evcrate/companion/evcrate-model-bindings-2.11.0.vsix` (46,723 bytes) | `833e982d1cb08139e4df4a4891a4622d5f001076ab55a66a77f80f70f449cc89` |
+| Packaged VSIX (Projected) | `.evcrate/source/.evcrate-vscode/evcrate/companion/evcrate-model-bindings-2.11.0.vsix` | `833e982d1cb08139e4df4a4891a4622d5f001076ab55a66a77f80f70f449cc89` |
 | Companion Source Receipt (`v1`) | `.evcrate/targets/vscode/files/evcrate/companion/source-receipt.json` (34 inputs) | `83ab4a35e9620207a4f7f41aad0e2607cd3d87aeac9eda396bf57f6caa0f3795` |
 | Agent Intent Inventory (`v1`) | `.evcrate/source/.evcrate-vscode/evcrate/agent-intent.json` (17 `evc-*` actors) | `806949c4ac36df66bc813cb4372ea825919adf2e64e8cfc19cbf8ee85f2d4164` |
 | Agent Tool Audit (`v2`) | `.evcrate/source/.evcrate-vscode/evcrate/agent-tool-audit.json` | `809d019cea0774e2ce0036977cc6b75698d39be6ad3b59a057d636d0d5e2c0ef` |
