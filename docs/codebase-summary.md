@@ -1,6 +1,6 @@
 # Codebase Summary
 
-**Maintained:** 2026-10-12
+**Maintained:** 2026-10-13
 **Source:** Canonical resources and TypeScript control-plane contracts for the 3.0.0 release on `main`, including completed advisor subsystem retirement cutover and VS Code `evc`/`cmd-*` container mapping; live vendor/native-host qualification remains separate.
 **Package:** Private npm package `evcrate` 3.0.0; Node `>=22.19.0`.
 Single binary: `evcrate` (`dist/cli/evcrate.js`).
@@ -342,11 +342,11 @@ Phase 10 cuts over maintained documentation, migration guidance, and the stable 
 - **Candidate mirror seeding & topology guards:** `scripts/release/run-release-candidate.cjs` seeds bare candidate mirrors with `main` at `sourceCommit` and pushes all local tags. `scripts/release/publish-release.cjs` enforces `main`-only stable publication and rejects prerelease candidate versions.
 - **Normative documentation reconciliation:** Reconciled `README.md`, `code-standards.md`, `system-architecture.md`, `project-overview-pdr.md` (FR-12), `project-roadmap.md`, `pi-native-migration.md`, and `guide/SKILLS.md` covering universal `evc-cmd-*` / `evc-*` naming, single `AGENTS.md` authority, pre-upgrade customization backup warnings, and exact local-asset installer installation procedures.
 
-## Standalone SonarQube test quality extension (Phase 02)
+## Standalone SonarQube test quality extension (Phases 02–04)
 
-The standalone extension `ext/sonarqube-test-quality/` provides neutral SonarQube triage, test refactoring, coverage verification, and scanner lifecycles (Phase 02 establishes neutral discovery, scanner lifecycle, and test/coverage guidance references; subsequent ledger, installer, and live qualification phases remain pending):
+The standalone extension `ext/sonarqube-test-quality/` provides neutral SonarQube triage, test refactoring, coverage verification, scanner lifecycles, cycle ledger contracts, sanitized run guidance, and portable evidence actor specification (Phases 02–04 deliver repository-source discovery, scanner lifecycle, test/coverage, cycle-ledger, run-guidance references/templates, and portable evidence actor specification with offline test suite; command prompt, Phase 06 installer/package inventory wiring, behavioral evals, and qualification handoff remain pending in Phases 05–08):
 
-- **Source root**: `ext/sonarqube-test-quality/` contains the self-contained skill payload (`SKILL.md`, `references/`, `scripts/`, `bin/`, `evals/`, `tests/`).
+- **Source root**: `ext/sonarqube-test-quality/` contains the skill source tree (`SKILL.md`, `agents/`, `references/`, `templates/`, `scripts/`, `bin/`, `lib/`, `evals/`, `tests/`).
 - **Profile and applicability discovery (`references/project-discovery.md`)**:
   - Deterministic discovery order: repository manifests → approved scripts, scanner configuration, tracked CI → installed tool help and versions → matching official vendor docs.
   - Safe actual-input identity: records SHA, ref, manifests, and nonsecret config with credential redaction (`sonar.token`, `sonar.login`, etc.). Two-factor report freshness requires artifact timestamp newer than source/config mtimes AND input content digest provenance binding.
@@ -363,6 +363,25 @@ The standalone extension `ext/sonarqube-test-quality/` provides neutral SonarQub
   - Retains optional Java/Maven/JaCoCo helper recipes (`scripts/calculate-jacoco-coverage.ps1`).
 - **CLI quick reference (`references/sonar-cli-commands.md`) & skill entrypoint (`SKILL.md`)**:
   - Dynamic server status discovery rather than fixed defaults; links discovery, local analysis, and full-scan routes; requires recorded preflight upload authorization for scanner executions and uploads.
+- **Cycle budget, state persistence, and server evidence policy (`references/remediation-cycles.md`)**:
+  - Specifies policy for global entered-round fix budget `N` across all targets (excluding `C0` baseline and non-editorial Stage `F`), stage transitions, single corrective batch (`CK_CORRECTION → CK_REREVIEW`), no in-round test-failure retry, and two-round comparable no-progress escalation.
+  - Defines policy for the private resume checkpoint (`<private-evidence-dir>/resume-checkpoint.json`), atomic multi-target shared checkpoint, exact `submission → ceTaskId → analysisId → qualityGate` binding, local finding stage vs. bound server active status separation, disappearance causation rules (`code-fixed` vs. non-code/unknown dispositions), human-only hotspot reviews, and Stage `F` success criteria.
+- **Sanitized run guidance, redaction, and promotion policy (`references/run-guidance.md`)**:
+  - Specifies dual-artifact separation: store the private cycle ledger and raw evidence store (`<private-evidence-dir>/`) outside the checkout or in an already-approved Git-ignored location (never committed, pushed, or distributed), and emit a separate sanitized guidance report on every run outcome (with any sharing gated on explicit repository owner permission).
+  - Defines structural + key-name redaction placeholders (`<REDACTED_SECRET_TOKEN>`, `<REDACTED_ENV_VAR>`, `<REDACTED_SONAR_HOST>`, `<SYNTHETIC_CODE_FIXTURE>`, neutral `RUN-`/`GD-` slugs), provenance-to-confidence ceilings (`synthetic` capped at `hypothesized`; `observed`; `validated (offline)`; `validated (live-server)`), and owner-reviewed promotion gates prohibiting runtime self-modification or background telemetry.
+- **Cycle ledger & guidance templates (`templates/remediation-cycle-report.md`, `templates/run-guidance-report.md`) and handoff links (`references/remediation-and-handoff.md`, `references/report-formats.md`)**:
+  - Provide the private cycle ledger template (run header/profile, YAML resume state index, cross-cycle finding matrix, checks/coverage table with canonical two-factor freshness, per-cycle/per-target submission/task/analysis/consistency ledger, Stage `F` qualification table, blockers/escalations) and sanitized run guidance template with `[ILLUSTRATIVE PLACEHOLDER]` markers and data-only notices.
+  - Linked from `references/remediation-and-handoff.md` while preserving lightweight single-batch local remediation and keeping `references/report-formats.md` JSON-authoritative over converted Markdown inspection views.
+- **Portable Sonar Evidence actor specification (`agents/sonar-evidence.md`)**:
+  - Defines portable `<evidence-actor-role>` subagent Markdown prompt contract with zero host-specific frontmatter, native engine bindings, or `evc-*` registrations; prompt/policy resolution strictly from installed root (`skills/sonarqube-test-quality/agents/sonar-evidence.md`, packaging pending Phase 06).
+  - Bounded writes restricted to build/scanner dirs (`.scannerwork/`, `.sonar/`), test/coverage reports, and owner-only private evidence directory (`<evidence-destination>/`, mode 0700, never inlined into reports). Prohibits checkout/source code edits, test file mutations, server finding/hotspot status mutations, git operations, CI/build config changes, and toolchain installs.
+  - Role independence: strictly isolates `actor_id` from `implementer_id`, `reviewer_id`, `rereviewer_id`, and `auditor_id`; cannot self-certify Stage `F` final audit (`F_FINAL_AUDIT`); no hotspot review authority (human repository owner only); fails closed on role conflicts (`role-independence-violation`).
+  - Three mutually exclusive operating modes: `snapshot` (read-only query/indexing, no checkout/source writes or uploads, private evidence index writes only), `verify-upload` (preflight upload authorization required, ordered lifecycle execution, report freshness, task polling, quality gate retrieval), and `verify-final` (strictly non-editorial Stage `F` verification with zero code edits permitted).
+  - Execution mechanics: serial multi-target execution per checkout; pre/post working-copy drift checks; uninstrumented native semantic parity; crash-window handling and task resume without re-upload; exact `analysisId`-bound quality gate (rejects latest-project gate fallbacks); complete paging and ceiling detection; 14 labeled offline scenario traces (`E-TR-01` through `E-TR-14`).
+- **Evidence actor offline test suite (`tests/sonar-evidence-actor.test.mjs`)**:
+  - 20 unit tests across 2 suites verifying specification existence, zero host frontmatter, root resolution, bounded writes/security, TLS rules, role independence, operating mode boundaries, multi-target support, drift checks, lifecycle parity, task resume, gate binding, paging/consistency, closed enums, guidance redaction/schema, 14 offline scenario traces, and embedded JSON request/terminal result block validation against canonical schemas. (All 48 extension tests pass 100%).
+- **Reference alignment (`references/remediation-cycles.md`)**:
+  - State, budget, and evidence contracts aligned with evidence actor execution limits, entered-round budget `N`, stage lifecycle, resume checkpoint, and server-verified success contracts.
 ## Documentation navigation
 
 - [Agent guidance](../AGENTS.md) — shared agent workflows and subagent completion contract.

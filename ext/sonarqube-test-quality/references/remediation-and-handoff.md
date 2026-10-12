@@ -11,7 +11,7 @@
 
 - Prioritize blocker/critical findings (blocker/high in MQR), then major reliability or maintainability issues (medium in MQR), then remaining in-scope findings. Assess actual impact, not severity alone.
 - Confirm each finding against code in the execution checkout before editing. Fix root causes in production code; keep unrelated cleanup out.
-- For security hotspots, explain the relevant data flow and threat assumptions before marking the review resolved.
+- For security hotspots, explain the relevant data flow, operational context, and threat assumptions for human owner review. Subagents must never mark hotspots resolved or accepted on the server; server resolution is performed exclusively by the human project owner.
 - Use small, valid synthetic fixtures. Do not use customer or production data.
 - Keep test assertions meaningful. Prefer AssertJ extraction/chaining or JUnit `assertAll` for related assertions rather than brittle assertion noise.
 
@@ -34,6 +34,15 @@ Quality-gate / issue-query result:
 Blocked or unverified checks:
 Follow-up:
 ```
+
+## Iterative cycles and durable ledger
+
+For multi-round, budget-governed iterative remediation workflows across local scanner lifecycles or polyglot targets:
+- Consult [Remediation cycles](remediation-cycles.md) for global budget `N` accounting, stage transitions, entered-round counting, one-correction batches, and server-verified success contracts.
+- Use [Remediation cycle report template](../templates/remediation-cycle-report.md) for full run headers, state persistence/resume, finding matrices, and per-target submission tracking.
+- Emit sanitized candidate lessons using [Run guidance](run-guidance.md) and [Run guidance report template](../templates/run-guidance-report.md).
+
+**Ordinary local fix preservation:** Standard single-batch local fixes performed directly from saved report files continue to use the lightweight result record above. Ordinary local remediation does not impose a fix budget `N`, Sonar server authentication, independent child subagents, or server-side qualification.
 
 ## Handoff and cleanup boundaries
 

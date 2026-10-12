@@ -2,8 +2,24 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-12
+**Updated:** 2026-10-13
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-13 — feat(sonar): portable Sonar evidence actor and verification suite (Phase 04)
+
+- Added portable Sonar evidence actor specification (`ext/sonarqube-test-quality/agents/sonar-evidence.md`): specifies `<evidence-actor-role>` generic host subagent contract with zero host frontmatter, native engine bindings, or `evc-*` registrations; prompt/policy resolution strictly from installed root (`skills/sonarqube-test-quality/agents/sonar-evidence.md`, with packaging pending Phase 06); restricts writes to build/scanner dirs (`.scannerwork/`), test/coverage reports, and owner-only private evidence dir (`<evidence-destination>/`, mode 0700, never inlined into reports); strictly prohibits checkout/source/test edits, server finding/hotspot status transitions, git mutations, CI changes, and toolchain installs.
+- Specified mandatory role independence (`actor_id != implementer_id | reviewer_id | rereviewer_id | auditor_id`; fails closed on `role-independence-violation`); prohibits self-certifying Stage `F` final audit (`F_FINAL_AUDIT`) or reviewing Security Hotspots (human repository owner only).
+- Defined three mutually exclusive operating modes: `snapshot` (read-only query/indexing, no checkout/source writes or uploads, private evidence index writes only), `verify-upload` (preflight upload authorization required, ordered lifecycle execution, report freshness, task polling, quality gate retrieval), and `verify-final` (strictly non-editorial Stage `F` verification with zero code edits permitted).
+- Defined execution, task, and consistency mechanics: serial multi-target execution per checkout, pre/post working-copy drift checks, uninstrumented native semantic parity, crash-window handling and task resume without re-upload, exact `analysisId`-bound quality gate (rejects latest-project gate fallbacks), complete paging and ceiling detection, closed canonical enumerations, and 14 labeled offline scenario traces (`E-TR-01` through `E-TR-14`).
+- Aligned remediation cycles reference (`ext/sonarqube-test-quality/references/remediation-cycles.md`) with evidence actor execution limits, global budget `N`, stage lifecycle, resume checkpoint, and server-verified success contracts.
+- Added comprehensive specification test suite (`ext/sonarqube-test-quality/tests/sonar-evidence-actor.test.mjs`): 20 tests across 2 suites verifying specification existence, zero host frontmatter, root resolution, bounded writes/security, TLS rules, role independence, operating mode boundaries, multi-target support, drift checks, lifecycle parity, task resume, gate binding, paging/consistency, closed enums, guidance redaction/schema, 14 offline scenario traces, and embedded JSON request/terminal result block validation against canonical schemas. (All 48 extension tests pass 100%).
+
+### 2026-10-13 — feat(sonar): cycle ledger and sanitized run guidance (Phase 03)
+
+- Added repository-source cycle state, budget, and server-evidence policy (`ext/sonarqube-test-quality/references/remediation-cycles.md`): specifies policy for global entered-round budget `N` (excluding `C0` and non-editorial Stage `F`), stage transitions, single corrective batch (`CK_CORRECTION → CK_REREVIEW`), private `<private-evidence-dir>/resume-checkpoint.json` persistence, atomic multi-target checkpoints, `ceTaskId → analysisId → qualityGate` binding, local finding stage vs. bound server status separation, disappearance causation rules (`code-fixed` vs. non-code/unknown), owner-only hotspot reviews, and Stage `F` success criteria.
+- Added sanitized run guidance, redaction, and promotion policy (`ext/sonarqube-test-quality/references/run-guidance.md`): specifies storing the private cycle ledger and raw evidence (`<private-evidence-dir>/`) outside the checkout or in an already-approved Git-ignored location (never committed, pushed, or distributed), emitting separate sanitized guidance with explicit owner permission required before any sharing, applying structural + key-name redaction placeholders (`<REDACTED_SECRET_TOKEN>`, `<REDACTED_ENV_VAR>`, `<REDACTED_SONAR_HOST>`, `<SYNTHETIC_CODE_FIXTURE>`, neutral `RUN-`/`GD-` slugs), enforcing provenance-capped confidence levels (`synthetic` capped at `hypothesized`), and requiring owner promotion gates without self-modification or telemetry.
+- Added private cycle ledger template (`ext/sonarqube-test-quality/templates/remediation-cycle-report.md`) and sanitized run guidance template (`ext/sonarqube-test-quality/templates/run-guidance-report.md`) with `[ILLUSTRATIVE PLACEHOLDER]` markers and data-only notices; linked iterative cycle handoffs in `ext/sonarqube-test-quality/references/remediation-and-handoff.md` while preserving ordinary single-batch local remediation and `references/report-formats.md` JSON authority over converted Markdown views.
+- Review & boundaries: Phase 03 marked approved in plan/roadmap after Review Cycle 3 (`8.0/10`, 0 critical issues, 8 warnings, 7 suggestions; review reported 28/28 existing extension tests passing and 0 broken relative links/anchors in an ad-hoc check of the 6 shipped Phase 03 Markdown files). Packaging of new Phase 02–03 references and `templates/` in `lib/install.js` and `package.json#files` remains gated on Phase 06; portable evidence actor, command skill, runtime orchestration, behavioral evals, and qualification handoff remain pending in Phases 04–08.
 
 ### 2026-10-12 — feat(sonar): neutral discovery and scanner lifecycles (Phase 02)
 
@@ -751,26 +767,6 @@
   rows. This deterministic host-independent evidence makes no runtime support claim.
 - Handoff advanced to Phase 06 — semantic-release candidate, receipt, and
   publisher.
-
-### 2026-09-14 — feat(release): deterministic Windows fixture and predecessor resolver (Phase 04)
-
-**Status:** Phase 04 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
-**Plan:** [Phase 04 plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md)
-**Evidence:** [Cycle 2 tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md)
-and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md).
-
-- Factored shared fixture record ordering, controller/build-manifest digests, real
-  installer bytes, and fixed timestamp metadata; `buildWindowsTestReleaseSet`
-  now uses `buildReleaseArchives` and emits exactly four Windows assets.
-- Added bounded stable-release enumeration and exact-label/canonical-name
-  predecessor resolution. Bootstrap uses verified `1.0.0`/`v1.0.0` bytes with
-  lowercase `a`×40 identity only before qualification history; latest stable is
-  mandatory afterward, with no older/bootstrap fallback.
-- Added private staged streaming downloads with cross-origin token stripping,
-  bounded error/stream bytes, pre/post-promotion exact-four verification, strict
-  CLI flags, and cleanup of partial output on failure.
-- Focused Phase 04, release, and Linux installer suites pass 39/39 (100%).
-  This deterministic Linux evidence does not qualify native Windows runtime.
 
 ### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
 

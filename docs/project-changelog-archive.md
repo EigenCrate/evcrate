@@ -2,6 +2,26 @@
 
 Historical phase entries moved from [project-changelog.md](./project-changelog.md) to keep the maintained phase mirror below the repository's 800-line documentation limit. Paths and evidence are preserved; current Phase 09 milestone status remains in the main changelog.
 
+### 2026-09-14 — feat(release): deterministic Windows fixture and predecessor resolver (Phase 04)
+
+**Status:** Phase 04 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
+**Plan:** [Phase 04 plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md)
+**Evidence:** [Cycle 2 tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md)
+and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md).
+
+- Factored shared fixture record ordering, controller/build-manifest digests, real
+  installer bytes, and fixed timestamp metadata; `buildWindowsTestReleaseSet`
+  now uses `buildReleaseArchives` and emits exactly four Windows assets.
+- Added bounded stable-release enumeration and exact-label/canonical-name
+  predecessor resolution. Bootstrap uses verified `1.0.0`/`v1.0.0` bytes with
+  lowercase `a`×40 identity only before qualification history; latest stable is
+  mandatory afterward, with no older/bootstrap fallback.
+- Added private staged streaming downloads with cross-origin token stripping,
+  bounded error/stream bytes, pre/post-promotion exact-four verification, strict
+  CLI flags, and cleanup of partial output on failure.
+- Focused Phase 04, release, and Linux installer suites pass 39/39 (100%).
+  This deterministic Linux evidence does not qualify native Windows runtime.
+
 ### 2026-09-13 — docs(distribution): post-verification operator and architecture documentation (Phase 09)
 
 - Reconciled code and design contracts against Phase 08 evidence. [Phase 09 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-09-post-verification-operator-documentation.md).

@@ -4,7 +4,7 @@
 **Target Topology:** `3.0.0` (stable on `main`).
 **Status:** Core architecture for the completed advisor subsystem retirement and 7-target harness-only cutover; live vendor/native-host qualification remains separate.
 **Windows support:** Standalone installer lifecycle and clean-install `version --json` only. Prior candidate results do not qualify the current package.
-**Updated:** 2026-10-12
+**Updated:** 2026-10-13
 
 **Authority:** TypeScript control plane and canonical harness resources.
 
@@ -198,7 +198,7 @@ Generation, resolved local links and constructed explicit-read procedure behavio
 
 ### Standalone Sonar remediation cycles
 
-The standalone extension `ext/sonarqube-test-quality/` provides neutral domain policy, discovery and scanner lifecycle references, with proposed sibling `cmd-sonar-remediate` skill, portable evidence actor prompt, and private evidence/sanitized-guidance templates. No canonical resources, registry/projections, native actor registration or host settings are added.
+The standalone extension `ext/sonarqube-test-quality/` provides neutral domain policy, discovery, scanner lifecycle, cycle-ledger, and run-guidance references and templates in repository source, with a proposed sibling `cmd-sonar-remediate` skill and portable `sonar-evidence` actor prompt. No canonical resources, registry/projections, native actor registration or host settings are added.
 
 The consuming host must provide real independent subagents. The parent owns a
 global maximum N with persisted failures and bounded corrections; approved native
@@ -217,7 +217,7 @@ Implementation acceptance uses package/installed-host behavioral evidence and
 historical supplied-report guidance, not a mandatory new live Sonar run.
 Actual remediation-run server-success claims still require the full evidence
 contract above. Ordinary local-only and Jenkins routes remain separate.
-Phase 02 implements neutral discovery, scanner lifecycle, and test/coverage guidance references in `ext/sonarqube-test-quality/`; orchestration, dual-root installer, host discovery/delegation, and live scanner qualification remain pending. Planning artifacts remain local and Git-ignored.
+Phases 02–03 implement repository-source discovery, scanner lifecycle, test/coverage verification, cycle-ledger state/budget/evidence policy ([`remediation-cycles.md`](../ext/sonarqube-test-quality/references/remediation-cycles.md)), privacy/redaction and promotion policy ([`run-guidance.md`](../ext/sonarqube-test-quality/references/run-guidance.md)), and private ledger/sanitized guidance report templates ([`remediation-cycle-report.md`](../ext/sonarqube-test-quality/templates/remediation-cycle-report.md), [`run-guidance-report.md`](../ext/sonarqube-test-quality/templates/run-guidance-report.md)) in `ext/sonarqube-test-quality/`, linked from [`remediation-and-handoff.md`](../ext/sonarqube-test-quality/references/remediation-and-handoff.md) while keeping [`report-formats.md`](../ext/sonarqube-test-quality/references/report-formats.md) JSON-authoritative over converted Markdown views. Actor/command orchestration, dual-root installer and `package.json#files` packaging for the new Phase 02–03 references and `templates/` directory, offline behavioral evals, and host discovery/qualification handoff remain pending in Phases 04–08. Planning artifacts remain local and Git-ignored.
 ## 3. TypeScript control plane
 
 The source is organized around narrow contracts:
