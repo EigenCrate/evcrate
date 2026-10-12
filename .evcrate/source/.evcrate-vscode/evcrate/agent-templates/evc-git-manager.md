@@ -8,7 +8,6 @@ tools:
   - search/fileSearch
   - search/textSearch
 agents: []
-model: haiku
 ---
 
 

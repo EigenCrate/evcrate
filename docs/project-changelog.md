@@ -5,6 +5,16 @@
 **Updated:** 2026-10-12
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-12 — feat(vscode): immutable agent templates and truthful build intent (Phase 03)
+
+- Converted VS Code static agent projection to immutable templates at `.evcrate-vscode/evcrate/agent-templates/${name}.md` with disposition `immutable-template`; deleted all 17 static host-discovered agent files (`.evcrate-vscode/com.github.copilot/agents/*.agent.md`).
+- Stripped actionable `model` frontmatter key from emitted templates while preserving tools, arguments, description, `user-invocable`, and supporting references.
+- Emitted deterministic `evcrate/agent-intent.json` manifest (`evcrate-vscode-agent-intent-v1`) capturing canonical tier intent (`canonicalTier`), template path, SHA-256 digest, source path, and supporting reference base for all 17 canonical actors.
+- Upgraded tool audit artifact `evcrate/agent-tool-audit.json` to schema v2 (`evcrate-vscode-agent-tool-audit-v2`), recording immutable-template disposition and canonical tier intent with zero falsified effective model claims.
+- Deleted obsolete `src/adapters/vscode/models.ts` (`VSCODE_LOCAL_MODEL_MAP`, `resolveLocalModel`, `buildVscodeModelMap`) and generated `evcrate/model-map.json` without compatibility shims.
+- Updated `src/adapters/vscode/{names,inventory,configuration-activation-guide,adapter,metadata,index}.ts`, `src/adapters/projection-utils.ts`, target manifest `.evcrate/targets/vscode/manifest.json`, projection inventory `evcrate/projection-inventory.json`, and activation guide `evcrate/examples/activation-guide.md`.
+- Updated test suites in `tests/adapters/vscode-configuration.test.mjs` and `tests/adapters/vscode-resource-projection.test.mjs` (665 passed, 0 failed, 1 skipped; user approved).
+
 ### 2026-10-12 — feat(vscode): implement runtime model bindings contracts and ownership boundaries (Phase 02)
 
 - Implemented pure contract and validation modules under `src/adapters/vscode/{model-intent.ts,companion-package-contracts.ts,companion-cli-contracts.ts}` (`evcrate-vscode-agent-intent-v1`, `evcrate-vscode-agent-tool-audit-v2`, `evcrate-vscode-companion-descriptor-v1`, `evcrate-vscode-companion-source-receipt-v1`, `evcrate-vscode-companion-install-v1`, `verifyCompanionLayoutContract`, `validateCompanionCliOptions`) and standalone extension workspace `extensions/vscode-model-bindings/{package.json,tsconfig.json,vscode.proposed.chatPromptFiles.d.ts,src/runtime-contracts.ts,src/diagnostics-contracts.ts,src/contracts.ts}` (`evcrate-vscode-bindings-v1`, `evcrate-vscode-runtime-bindings-v1`, `validateLocalRootUri`, `resolveInstallationRoot`, `resolveEffectiveActorBinding`, `STORAGE_AND_SOURCE_BOUNDS`).

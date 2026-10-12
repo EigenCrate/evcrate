@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, lstatSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -12,6 +13,7 @@ import { parseFrontmatter } from '../../dist/adapters/vscode/metadata.js';
 import { parseCatalogYaml } from '../../dist/adapters/catalog-types.js';
 import { discoverAllVscodeNames, discoverVscodeAgents, discoverVscodeCommands } from '../../dist/adapters/vscode/names.js';
 import { buildVscodeInventory } from '../../dist/adapters/vscode/inventory.js';
+import { convertVscodeAgents } from '../../dist/adapters/vscode/agents.js';
 
 const repository = process.cwd();
 const registry = loadTargetManifestRegistry(join(repository, '.evcrate/targets/manifest.json'));
@@ -50,14 +52,15 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     const instructionsParsed = parseFrontmatter(instructionsContent);
     assert.equal(instructionsParsed.fields.applyTo, '**');
 
-    // 3. Verify key agents
+    // 3. Verify key agents (immutable templates, no host-discovered static agents, no model key)
+    assert.equal(existsSync(join(stageRoot, 'com.github.copilot/agents')), false, 'com.github.copilot/agents must not exist');
 
-    // Git-manager: tools mapped, no task -> agents: [], model: haiku
-    const gitPath = join(stageRoot, 'com.github.copilot/agents/evc-git-manager.agent.md');
-    assert.ok(existsSync(gitPath), 'evc-git-manager.agent.md must exist');
+    // Git-manager: tools mapped, no task -> agents: [], model stripped, tier haiku in intent
+    const gitPath = join(stageRoot, 'evcrate/agent-templates/evc-git-manager.md');
+    assert.ok(existsSync(gitPath), 'evc-git-manager.md must exist in agent-templates');
     const gitParsed = parseFrontmatter(readFileSync(gitPath, 'utf8'));
     assert.equal(gitParsed.fields.name, 'evc-git-manager');
-    assert.equal(gitParsed.fields.model, 'haiku');
+    assert.equal(gitParsed.fields.model, undefined, 'template must strip actionable model key');
     assert.deepEqual(
       [...(gitParsed.fields.tools || [])].sort(),
       ['read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch'].sort()
@@ -65,25 +68,26 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.deepEqual(gitParsed.fields.agents, []);
 
     // TodoWrite is mapped to frontmatter 'todo' while prose remains manage_todo_list
-    const pmParsed = parseFrontmatter(readFileSync(join(stageRoot, 'com.github.copilot/agents/evc-project-manager.agent.md'), 'utf8'));
+    const pmParsed = parseFrontmatter(readFileSync(join(stageRoot, 'evcrate/agent-templates/evc-project-manager.md'), 'utf8'));
     assert.ok(pmParsed.fields.tools.includes('todo'));
+    assert.equal(pmParsed.fields.model, undefined, 'template must strip actionable model key');
     const cmdCodeContent = readFileSync(join(stageRoot, 'skills/cmd-code/SKILL.md'), 'utf8');
     assert.ok(cmdCodeContent.includes('manage_todo_list'));
     assert.ok(!cmdCodeContent.includes('TodoWrite'));
 
-    // Code-reviewer: tools mapped, model: opus
-    const reviewerPath = join(stageRoot, 'com.github.copilot/agents/evc-code-reviewer.agent.md');
-    assert.ok(existsSync(reviewerPath), 'evc-code-reviewer.agent.md must exist');
+    // Code-reviewer: tools mapped, model stripped
+    const reviewerPath = join(stageRoot, 'evcrate/agent-templates/evc-code-reviewer.md');
+    assert.ok(existsSync(reviewerPath), 'evc-code-reviewer.md must exist in agent-templates');
     const reviewerParsed = parseFrontmatter(readFileSync(reviewerPath, 'utf8'));
     assert.equal(reviewerParsed.fields.name, 'evc-code-reviewer');
-    assert.equal(reviewerParsed.fields.model, 'sonnet');
+    assert.equal(reviewerParsed.fields.model, undefined, 'template must strip actionable model key');
 
-    // Scout: search/read tools mapped, no edit capability, no task -> agents: [], model: haiku
-    const scoutPath = join(stageRoot, 'com.github.copilot/agents/evc-scout.agent.md');
-    assert.ok(existsSync(scoutPath), 'evc-scout.agent.md must exist');
+    // Scout: search/read tools mapped, no edit capability, no task -> agents: [], model stripped
+    const scoutPath = join(stageRoot, 'evcrate/agent-templates/evc-scout.md');
+    assert.ok(existsSync(scoutPath), 'evc-scout.md must exist in agent-templates');
     const scoutParsed = parseFrontmatter(readFileSync(scoutPath, 'utf8'));
     assert.equal(scoutParsed.fields.name, 'evc-scout');
-    assert.equal(scoutParsed.fields.model, 'haiku');
+    assert.equal(scoutParsed.fields.model, undefined, 'template must strip actionable model key');
     assert.deepEqual(
       [...(scoutParsed.fields.tools || [])].sort(),
       ['getTerminalOutput', 'killTerminal', 'read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch', 'todo', 'web/fetch'].sort()
@@ -95,18 +99,20 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.ok(!scoutParsed.fields.tools.includes('agent/runSubagent'), 'Scout must not have agent/runSubagent');
 
     // Planner: tools omitted in source -> tools and agents omitted in frontmatter (intentional host capability inheritance, delegation permitted)
-    const plannerPath = join(stageRoot, 'com.github.copilot/agents/evc-planner.agent.md');
-    assert.ok(existsSync(plannerPath), 'evc-planner.agent.md must exist');
+    const plannerPath = join(stageRoot, 'evcrate/agent-templates/evc-planner.md');
+    assert.ok(existsSync(plannerPath), 'evc-planner.md must exist in agent-templates');
     const plannerAgentParsed = parseFrontmatter(readFileSync(plannerPath, 'utf8'));
     assert.equal(plannerAgentParsed.fields.name, 'evc-planner');
+    assert.equal(plannerAgentParsed.fields.model, undefined, 'template must strip actionable model key');
     assert.equal(plannerAgentParsed.fields.tools, undefined, 'Planner must omit tools in frontmatter');
     assert.equal(plannerAgentParsed.fields.agents, undefined, 'Planner must not restrict agents: []');
 
     // Docs-manager: tools omitted in source -> tools and agents omitted in frontmatter (intentional host capability inheritance)
-    const docsManagerPath = join(stageRoot, 'com.github.copilot/agents/evc-docs-manager.agent.md');
-    assert.ok(existsSync(docsManagerPath), 'evc-docs-manager.agent.md must exist');
+    const docsManagerPath = join(stageRoot, 'evcrate/agent-templates/evc-docs-manager.md');
+    assert.ok(existsSync(docsManagerPath), 'evc-docs-manager.md must exist in agent-templates');
     const docsManagerParsed = parseFrontmatter(readFileSync(docsManagerPath, 'utf8'));
     assert.equal(docsManagerParsed.fields.name, 'evc-docs-manager');
+    assert.equal(docsManagerParsed.fields.model, undefined, 'template must strip actionable model key');
     assert.equal(docsManagerParsed.fields.tools, undefined, 'Docs manager must omit tools in frontmatter');
     assert.equal(docsManagerParsed.fields.agents, undefined, 'Docs manager must omit agents in frontmatter');
     // 4. Verify commands (70)
@@ -262,12 +268,32 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(settingsDisposition.keys.includeCoAuthoredBy.disposition, 'unsupported');
     assert.equal(settingsDisposition.keys['settings.local.json'].disposition, 'inactive');
 
-    const modelMapPath = join(stageRoot, 'evcrate/model-map.json');
-    assert.ok(existsSync(modelMapPath));
-    const modelMap = JSON.parse(readFileSync(modelMapPath, 'utf8'));
-    assert.equal(modelMap.mappings.opus.nativeModel, 'claude-3-opus');
-    assert.equal(modelMap.mappings.sonnet.nativeModel, 'claude-3.5-sonnet');
-    assert.equal(modelMap.mappings.haiku.nativeModel, 'claude-3.5-haiku');
+    // Negative check: model-map.json must not exist
+    assert.equal(existsSync(join(stageRoot, 'evcrate/model-map.json')), false, 'model-map.json must not exist');
+
+    // Positive check: agent-intent.json (schema v1)
+    const intentPath = join(stageRoot, 'evcrate/agent-intent.json');
+    assert.ok(existsSync(intentPath), 'agent-intent.json must exist');
+    const intentManifest = JSON.parse(readFileSync(intentPath, 'utf8'));
+    assert.equal(intentManifest.schema, 'evcrate-vscode-agent-intent-v1');
+    assert.equal(intentManifest.pluginName, 'evc');
+    assert.equal(intentManifest.actors['evc-planner'].intent.mode, 'tier');
+    assert.equal(intentManifest.actors['evc-planner'].intent.tier, 'opus');
+    assert.equal(intentManifest.actors['evc-git-manager'].intent.tier, 'haiku');
+    assert.equal(intentManifest.actors['evc-docs-manager'].intent.tier, 'haiku');
+    assert.equal(intentManifest.actors['evc-ui-ux-designer'].intent.mode, 'inherit');
+    assert.equal(intentManifest.actors['evc-planner'].templatePath, 'evcrate/agent-templates/evc-planner.md');
+
+    // Positive check: agent-tool-audit.json (schema v2)
+    const toolAuditPath = join(stageRoot, 'evcrate/agent-tool-audit.json');
+    assert.ok(existsSync(toolAuditPath), 'agent-tool-audit.json must exist');
+    const toolAudit = JSON.parse(readFileSync(toolAuditPath, 'utf8'));
+    assert.equal(toolAudit.schema, 'evcrate-vscode-agent-tool-audit-v2');
+    assert.equal(toolAudit.agents['evc-planner'].modelIntent.tier, 'opus');
+    assert.equal(toolAudit.agents['evc-planner'].modelIntent.disposition, 'tier-required');
+    assert.equal(toolAudit.agents['evc-planner'].target, 'evcrate/agent-templates/evc-planner.md');
+    assert.equal(toolAudit.agents['evc-ui-ux-designer'].modelIntent.tier, null);
+    assert.equal(toolAudit.agents['evc-ui-ux-designer'].modelIntent.disposition, 'inherit');
 
     // 11. Verify canonical command delivery.
     const cmdAskPath = join(stageRoot, 'skills/cmd-ask/SKILL.md');
@@ -280,13 +306,13 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.ok(instructionsContent.includes('`./.evcrate-vscode/evcrate/workflows/documentation-management.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/documentation-management.md` (the published install)'));
     assert.equal(instructionsContent.includes('./docs/development-rules.md'), false);
 
-    const plannerAgentContent = readFileSync(join(stageRoot, 'com.github.copilot/agents/evc-planner.agent.md'), 'utf8');
+    const plannerAgentContent = readFileSync(join(stageRoot, 'evcrate/agent-templates/evc-planner.md'), 'utf8');
     assert.equal(parseFrontmatter(plannerAgentContent).fields.name, 'evc-planner');
     assert.equal(plannerAgentContent.includes('./docs/development-rules.md'), false);
     assert.ok(plannerAgentContent.includes('.evcrate-vscode/evcrate/workflows/development-rules.md'));
     assert.ok(plannerAgentContent.includes('if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install)'));
 
-    const uiUxDesignerContent = readFileSync(join(stageRoot, 'com.github.copilot/agents/evc-ui-ux-designer.agent.md'), 'utf8');
+    const uiUxDesignerContent = readFileSync(join(stageRoot, 'evcrate/agent-templates/evc-ui-ux-designer.md'), 'utf8');
     assert.equal(uiUxDesignerContent.includes('./docs/development-rules.md'), false);
     assert.ok(uiUxDesignerContent.includes('.evcrate-vscode/evcrate/workflows/development-rules.md'));
 
@@ -369,7 +395,8 @@ test('vscode-names: rejects noncanonical command paths, invalid names, and dupli
 test('vscode-names: agent metadata must match its canonical basename', () => {
   const valid = ['agents/evc-planner.md', '---\nname: evc-planner\ndescription: Planning\n---\n'];
   const agent = discoverVscodeAgents(namingContext([valid]))['evc-planner'];
-  assert.equal(agent.target, 'com.github.copilot/agents/evc-planner.agent.md');
+  assert.equal(agent.target, 'evcrate/agent-templates/evc-planner.md');
+  assert.equal(agent.disposition, 'immutable-template');
   assert.equal(agent.sourceSemanticId, 'evc-planner');
   for (const entry of [
     ['agents/planner.md', '---\nname: planner\n---\n'],
@@ -397,5 +424,87 @@ test('vscode-names: shared skill directories reject command and style collisions
     ['agents/evc-planner.md', '---\nname: evc-planner\n---\n']
   ]));
   assert.deepEqual(names.skillDirectoryNames, ['cmd-plan-x-cro', 'planning', 'style-concise']);
+});
+
+test('vscode-agents: convertVscodeAgents rejects invalid canonical models and preserves custom metadata', () => {
+  const stage = createStagedRoot(repository, '.vscode-agents-test-stage-');
+  const tempSrcStage = createStagedRoot(repository, '.vscode-agents-src-stage-');
+  try {
+    const targetManifest = registry.targets.get('vscode');
+    const agentsDir = join(tempSrcStage.path, 'agents');
+    mkdirSync(agentsDir, { recursive: true });
+
+    const agentMap = {
+      'evc-test-agent': {
+        source: 'evc-test-agent.md',
+        sourceSemanticId: 'evc-test-agent',
+        target: 'evcrate/agent-templates/evc-test-agent.md',
+        localName: 'evc-test-agent',
+        targetName: 'evc-test-agent',
+        disposition: 'immutable-template'
+      }
+    };
+
+    const makeContext = (content) => {
+      writeFileSync(join(agentsDir, 'evc-test-agent.md'), content);
+      return createProjectionBuildContext(targetManifest, tempSrcStage.path, stage);
+    };
+
+    // 1. Invalid concrete model rejects
+    assert.throws(() => {
+      convertVscodeAgents(makeContext('---\nname: evc-test-agent\ndescription: Test\nmodel: claude-3-opus\n---\nBody\n'), agentMap, {}, []);
+    }, { code: 'VALIDATION_INVALID' });
+
+    // 2. Wrong case alias rejects
+    assert.throws(() => {
+      convertVscodeAgents(makeContext('---\nname: evc-test-agent\ndescription: Test\nmodel: Opus\n---\nBody\n'), agentMap, {}, []);
+    }, { code: 'VALIDATION_INVALID' });
+
+    // 3. Non-string model rejects
+    assert.throws(() => {
+      convertVscodeAgents(makeContext('---\nname: evc-test-agent\ndescription: Test\nmodel: 12345\n---\nBody\n'), agentMap, {}, []);
+    }, { code: 'VALIDATION_INVALID' });
+
+    // 4. Valid agent with skills, non-bypass permissionMode, disable-model-invocation: false, and tools: none converts cleanly
+    const validContent = `---
+name: evc-test-agent
+description: Test Leaf
+model: sonnet
+disable-model-invocation: false
+skills:
+  - snyk-scan
+permissionMode: dont-ask
+tools: none
+---
+
+# Test Body
+`;
+    const audits = convertVscodeAgents(makeContext(validContent), agentMap, {}, []);
+    assert.equal(audits['evc-test-agent'].modelIntent.tier, 'sonnet');
+    assert.equal(audits['evc-test-agent'].modelIntent.disposition, 'tier-required');
+    assert.deepEqual(audits['evc-test-agent'].tools.mapped, []);
+    assert.equal(audits['evc-test-agent'].tools.explicitNone, true);
+    assert.equal(audits['evc-test-agent'].delegation.allowed, false);
+
+    const emitted = readFileSync(join(stage.path, '.evcrate-vscode/evcrate/agent-templates/evc-test-agent.md'), 'utf8');
+    const parsed = parseFrontmatter(emitted);
+    assert.equal(parsed.fields.model, undefined, 'model must be stripped from template');
+    assert.deepEqual(parsed.fields.skills, ['snyk-scan']);
+    assert.equal(parsed.fields.permissionMode, 'dont-ask');
+    assert.equal(parsed.fields['disable-model-invocation'], false, 'disable-model-invocation: false must be preserved');
+    assert.deepEqual(parsed.fields.tools, []);
+    assert.deepEqual(parsed.fields.agents, []);
+
+    // Exact hash coherence: emitted bytes sha256 must match audit and intent records
+    const expectedHash = createHash('sha256').update(emitted, 'utf8').digest('hex');
+    assert.equal(audits['evc-test-agent'].templateSha256, expectedHash);
+
+    const intentRaw = readFileSync(join(stage.path, '.evcrate-vscode/evcrate/agent-intent.json'), 'utf8');
+    const intentData = JSON.parse(intentRaw);
+    assert.equal(intentData.actors['evc-test-agent'].templateSha256, expectedHash);
+  } finally {
+    stage.cleanup();
+    tempSrcStage.cleanup();
+  }
 });
 

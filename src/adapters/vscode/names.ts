@@ -217,10 +217,10 @@ export function discoverVscodeAgents(context: ProjectionBuildContext): Record<st
     result[name] = Object.freeze({
       source: rel,
       sourceSemanticId: name,
-      target: `com.github.copilot/agents/${name}.agent.md`,
+      target: `evcrate/agent-templates/${name}.md`,
       localName: name,
       targetName: name,
-      disposition: 'native'
+      disposition: 'immutable-template'
     });
   }
   assertUniqueNames(Object.keys(result));

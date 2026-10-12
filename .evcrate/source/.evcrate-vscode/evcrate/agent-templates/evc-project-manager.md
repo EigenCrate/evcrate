@@ -16,7 +16,6 @@ tools:
   - todo
   - web/fetch
 agents: []
-model: haiku
 ---
 
 

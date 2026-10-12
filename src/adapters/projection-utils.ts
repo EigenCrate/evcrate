@@ -160,7 +160,9 @@ function collectFiles(
     const rootRelative = relative(context.stage.path, path).split('\\').join('/');
     if (rootRelative.endsWith('/migration-behavior-matrix.json')
       || rootRelative.endsWith('/evcrate/migration-inventory.json')
-      || rootRelative.endsWith('/evcrate/projection-inventory.json')) continue;
+      || rootRelative.endsWith('/evcrate/projection-inventory.json')
+      || rootRelative.endsWith('/evcrate/agent-intent.json')
+      || rootRelative.endsWith('/evcrate/agent-tool-audit.json')) continue;
     const text = bytes.includes(0) ? '' : new TextDecoder('utf-8').decode(bytes);
     if (/\.claude(?:[\\/]|$)/u.test(text.replace(/(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)[^\s<>"']+/gu, ''))) {
       diagnostics.push({ path: relativePath, kind: 'file', code: 'unsafe' });

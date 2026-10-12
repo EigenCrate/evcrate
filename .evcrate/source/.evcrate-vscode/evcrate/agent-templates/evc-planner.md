@@ -2,7 +2,6 @@
 name: evc-planner
 description: "Use this agent when you need to research, analyze, and create comprehensive implementation plans for new features, system architectures, or complex technical solutions. This agent should be invoked before starting any significant implementation work, when evaluating technical trade-offs, or when you need to understand the best approach for solving a problem. Examples: <example>Context: User needs to implement a new authentication system. user: 'I need to add OAuth2 authentication to our app' assistant: 'I'll use the evc-planner agent to research OAuth2 implementations and create a detailed plan' <commentary>Since this is a complex feature requiring research and planning, use the Task tool to launch the evc-planner agent.</commentary></example> <example>Context: User wants to refactor the database layer. user: 'We need to migrate from SQLite to PostgreSQL' assistant: 'Let me invoke the evc-planner agent to analyze the migration requirements and create a comprehensive plan' <commentary>Database migration requires careful planning, so use the evc-planner agent to research and plan the approach.</commentary></example> <example>Context: User reports performance issues. user: 'The app is running slowly on older devices' assistant: 'I'll use the evc-planner agent to investigate performance optimization strategies and create an implementation plan' <commentary>Performance optimization needs research and planning, so delegate to the evc-planner agent.</commentary></example>"
 user-invocable: true
-model: opus
 ---
 
 

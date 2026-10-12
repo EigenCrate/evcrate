@@ -11,7 +11,6 @@ tools:
   - search/textSearch
   - web/fetch
 agents: []
-model: haiku
 ---
 
 
