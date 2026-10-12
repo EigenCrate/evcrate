@@ -2,8 +2,21 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-11
-**Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+**Updated:** 2026-10-12
+**Status:** Core package release history; General Snyk remediation cycles Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-12 — feat(snyk): establish general procedure and lossless ledger contracts (Phase 02)
+
+- Completed Phase 02 reference-contract authoring of General Snyk remediation cycles at 2026-10-12T21:39:21+07:00 (review approved 8.5/10 with non-blocking W7 vocabulary follow-ups noted; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-02-procedure-and-ledger-contracts.md`, QA validation report: `plans/reports/qa-261012-2129-snyk-phase02-contracts-and-suite-validation.md`).
+- Pre-edit procedure table contract: specified neutral 6-point evaluation covering manager/version/runtime, official support/parser evidence, authored/effective controls, native inspection, exact invocation authority, and test/graph/consumer coverage before any dependency-changing edit.
+- Immutable source inventory & scan-zero authentic presence: established immutable first-scan source and duplicate occurrence tables in `finding-and-owner-contract.md`; distinct authentic scan-zero presence tracking prevents reconstructing missing originals from counts.
+- Restart-safe counting: specified durable run record in `verification-and-results.md` with positive integer $N \ge 1$ bound at intake, count incremented exactly once before first mutation, zero refunds on failure or rollback, pause/resume state preservation, and unknown count stop gates.
+- Private target-contained evidence storage: defined private target-contained evidence storage bindings with leaf/ancestor containment, strict permissions, git-ignored untracked isolation, affirmative non-input/non-coverage evidence, single writer, and fail-closed pause on unsafe storage without silent fallback.
+- Every-attempt observation ledger: specified full observation rows for all original findings across every attempt (including unattempted, unchanged, and failed rows).
+- Post-only provenance: established separate post-only inventory and provenance tracking, keeping advisory absence distinct from individual path disappearance and separating license evaluation from vulnerability remediation.
+- Procedure learning observations: added procedure learning observation fields within run records capturing planned/executed commands, side effects, and environment limits with inert sanitized UNTRUSTED candidate notes without automatic source-skill mutation.
+- Live scan terminal review ownership: assigned live scanner execution and terminal review post-scan ownership directly to Main in the common references (`snyk test` and live reconciliation), keeping actor scope strictly bound to local inspection and native verification.
+- Boundary: Phase 02 establishes reference contract specifications; executable specialist/skill cutover, Main loop, and live authenticated qualification remain scheduled for subsequent phases.
 
 ### 2026-10-11 — feat(vscode): shorten plugin identity and use container-local command names
 
