@@ -17,7 +17,7 @@ import {
 } from './manifest-view-derivation.js';
 import { collectBaselineOwners, copyStagedTree } from './local-staging-fs.js';
 import { localProjectionPath } from './output-paths.js';
-
+import { mergeTargetOverlayArtifacts } from './overlay-staging.js';
 export {
   buildTargetPolicies,
   deriveManifestView,
@@ -102,6 +102,7 @@ export function buildAndStageTarget(
     const adapter = manifest.id === 'vscode' ? vscodeAdapter : getProjectionAdapter(manifest.id);
     const buildContext = createProjectionBuildContext(manifest, shared.canonicalHarnessRoot, targetStage);
     adapter.build(buildContext);
+    mergeTargetOverlayArtifacts(manifest, buildContext);
     const validation = adapter.validate(buildContext);
     if (!validation.valid) throw new ControlPlaneError('VALIDATION_INVALID');
     for (const root of manifest.outputRoots) copyStagedTree(join(targetStage.path, root), join(stagePath, root));

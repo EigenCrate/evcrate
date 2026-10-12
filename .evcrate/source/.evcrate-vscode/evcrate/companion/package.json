@@ -1,0 +1,18 @@
+{
+  "schema": "evcrate-vscode-companion-descriptor-v1",
+  "extensionId": "eigencrate.evcrate-model-bindings",
+  "version": "2.11.0",
+  "buildIdentity": "7f809ba88435fc25010c9a1267fa4a0c685083dc3128a335af09716213928b75",
+  "vsixRelativePath": "evcrate/companion/evcrate-model-bindings-2.11.0.vsix",
+  "vsixSha256": "dc4078100e366b857ea39be17ce02981674199f99cb65a8abddb96b77765ac35",
+  "supportedHost": {
+    "vscodeVersion": "1.140.0",
+    "vscodeCommit": "07f806f999227108933c2e30515b26eecc1fda74",
+    "copilotChatVersion": "0.68.0",
+    "apiProposal": "chatPromptFiles",
+    "extensionKind": [
+      "workspace"
+    ]
+  },
+  "intentSchema": "evcrate-vscode-agent-intent-v1"
+}

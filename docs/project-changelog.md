@@ -5,6 +5,22 @@
 **Updated:** 2026-10-12
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-12 — feat(distribution): hashed VSIX, snapshot overlay, and build integration (Phase 07)
+
+- Implemented deterministic offline companion extension builder in `scripts/build-vscode-companion.mjs` compiling extension sources, validating manifest identity, creating normalized VSIX archive (`dc407810...`), and staging target overlay `files/evcrate/companion/` with descriptor and source receipt (`7f809ba8...`).
+- Implemented standalone companion verifier in `scripts/verify-vscode-companion.mjs` validating both development-checkout and packed-package modes with strict ZIP central directory traversal, CRC32, size caps, and file entry allowlisting.
+- Updated distribution snapshot and staging in `src/distribution/{overlay-staging.ts,local-build-staging.ts,target-worker.ts}` to bind declared target overlays (`files/`), staging through read-once bounded buffers with TOCTOU dev/ino verification and hash matching.
+- Extended release packaging and closure verifiers in `scripts/release/{pack-inventory.cjs,runtime-closure.cjs}` and `scripts/prepare-release-assets.cjs` ensuring VSIX closure, byte-parity, and strict seven-asset release boundaries.
+- Verified test suites in `tests/distribution/vscode-companion-vsix.test.mjs`, `single-projection-manifest-reuse.test.mjs`, `bounded-worker-staging.test.mjs`, `input-snapshot-safety.test.mjs` (82/82 tests pass; Review Cycle 3 approved 8.5/10; packed install smoke deferred to Phase 09 per user gate amendment).
+
+### 2026-10-12 — feat(vscode): refresh, immutable generations, and runtime diagnostics (Phase 06)
+
+- Implemented revisioned coalesced single-flight refresh in `extensions/vscode-model-bindings/src/extension.ts` with 200 ms debounce, immediate invalidation withdrawal before debounce/async work, and cancellation token support.
+- Implemented scoped atomic-swap template watcher observing `.evcrate-vscode/evcrate/agent-templates/` and `agent-intent.json` with fallback polling.
+- Implemented persistent authority storage accounting and locking (`O_CREAT | O_EXCL` lockfile, 64 generations / 4 MiB instance cap, 16 MiB authority cap, closed-editor cleanup guidance).
+- Implemented runtime diagnostics v1 (`evcrate.vscode.showDiagnostics`) with Markdown report and JSON clipboard copy displaying authority, generation metrics, and cached-selection warnings.
+- Verified test suites in `tests/vscode-companion/` (41/41 companion tests pass, 98/98 adapter tests pass).
+
 ### 2026-10-12 — feat(vscode): implement runtime tiers, actor overrides, and picker commands (Phase 05)
 
 - Implemented runtime model catalog querying in `extensions/vscode-model-bindings/src/model-catalog.ts` via `vscode.lm.selectChatModels` (`queryChatModelCatalog`), validating entries (`validateCatalogEntry`), formatting selectors as `<name> (<vendor>)`, detecting ambiguous selectors (`findAmbiguousSelectors`), and compiling frozen snapshots (`buildCatalogSnapshot`) without inference probes or preferred-model heuristics.

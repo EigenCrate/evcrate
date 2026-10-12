@@ -54,6 +54,12 @@
     "dist/adapters/vscode/workflows.js"
   ],
   "output_root": ".evcrate-vscode",
+  "overlay_root": ".evcrate/targets/vscode/files",
+  "owned_paths": [
+    "files/evcrate/companion/evcrate-model-bindings-2.11.0.vsix",
+    "files/evcrate/companion/package.json",
+    "files/evcrate/companion/source-receipt.json"
+  ],
   "additional_roots": [],
   "project_docs": [],
   "patches": [],
