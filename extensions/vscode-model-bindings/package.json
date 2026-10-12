@@ -30,6 +30,23 @@
     }
   },
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "evcrate-sidebar",
+          "title": "EVCrate",
+          "icon": "media/evcrate-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "evcrate-sidebar": [
+        {
+          "id": "evcrate.modelBindingsView",
+          "name": "Model Bindings"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "evcrate.configureAgentModels",
@@ -51,6 +68,30 @@
         "command": "evcrate.clearModelBindings",
         "title": "EVCrate: Clear Model Bindings"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "evcrate.selectInstallation",
+          "when": "view == evcrate.modelBindingsView",
+          "group": "evcrate@1"
+        },
+        {
+          "command": "evcrate.configureAgentModels",
+          "when": "view == evcrate.modelBindingsView",
+          "group": "evcrate@2"
+        },
+        {
+          "command": "evcrate.clearModelBindings",
+          "when": "view == evcrate.modelBindingsView",
+          "group": "evcrate@3"
+        },
+        {
+          "command": "evcrate.showModelBindings",
+          "when": "view == evcrate.modelBindingsView",
+          "group": "evcrate@4"
+        }
+      ]
+    }
   }
 }

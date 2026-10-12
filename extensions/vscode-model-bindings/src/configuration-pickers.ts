@@ -28,11 +28,13 @@ export function getAvailableActorIds(pluginFsPath?: string | null): readonly str
     try {
       const manifestPath = join(pluginFsPath, 'evcrate', 'agent-intent.json');
       const raw = JSON.parse(readFileSync(manifestPath, 'utf8'));
-      if (raw && typeof raw.actors === 'object') {
-        const ids = Object.keys(raw.actors).sort();
-        if (ids.length > 0) return ids;
+      if (raw && typeof raw.actors === 'object' && !Array.isArray(raw.actors)) {
+        return Object.keys(raw.actors).sort();
       }
-    } catch {}
+    } catch {
+      return [];
+    }
+    return [];
   }
   return CANONICAL_ACTOR_IDS;
 }

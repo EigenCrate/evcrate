@@ -412,6 +412,10 @@ bindings, refresh/diagnostics, deterministic packaging, and consented installati
 Phase 09 adds integrated package contracts and isolated Windows host evidence. This
 does not qualify interactive Copilot Chat behavior or authorize rollout.
 
+The companion contributes an `EVCrate` Activity Bar container (`evcrate-sidebar`, `media/evcrate-icon.svg`) and `Model Bindings` view (`evcrate.modelBindingsView`).
+Its native `TreeDataProvider` in `extensions/vscode-model-bindings/src/sidebar-tree-provider.ts` renders `Installation Root`, `Model Tiers`, and `Agents (17)`; tier/actor clicks call `evcrate.configureAgentModels` / `evcrate.configureActorModel` with the row's target.
+`sidebar-snapshot.ts` captures revision-consistent tree state; `scripts/vscode-companion-media.mjs` validates and packages extension SVG media.
+
 - **Scope and Bounds**: Support scope is local-only (`file://`): local single-folder projects, local HOME installations, local multi-root workspaces (requiring explicit window root selection), and partitioned local profiles. Remote authorities (`vscode-remote://`, `wsl://`, `ssh-remote`, `dev-container`) are unsupported and fail closed (`UNSUPPORTED_REMOTE_AUTHORITY`) without HOME fallback.
 - **Feasibility Status (Phase 01)**: Offline feasibility evaluation is complete (10/10 automated harness checks PASS on Linux; pinned host tuple: VS Code `1.140.0` commit `07f806f999227108933c2e30515b26eecc1fda74` and Copilot Chat `0.68.0`; [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md), [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md)).
 - **Contracts & Ownership (Phase 02 — DONE 2026-10-12)**: Pure contract modules and standalone extension compilation boundaries are implemented ([interface-freeze.md](../plans/261011-2349-vscode-runtime-model-bindings/reports/interface-freeze.md); Review Cycle 2 approved 8.5/10, 0 critical issues; 4/4 companion contract tests in `tests/vscode-companion/contracts.test.mjs` + 97/97 VS Code adapter tests = 101/101 passing):

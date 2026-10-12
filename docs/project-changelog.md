@@ -13,6 +13,8 @@
 - **N-03:** All eight hook events pass; malformed calls fail closed; scout and privacy behavior observed.
 - **Runtime:** Windows `code.cmd` resolves to `Code.exe` + `cli.js`; companion fixes cover drive-path roots, remote-authority fallback, proposal-disabled registration, frozen exports and atomic watcher swaps.
 - **Automated gates:** Scoped QA suites passed 211/211 (`tester-261012-2000-phase-09-integrated-qualification.md`: companion+VSIX 54/54, adapters 98/98, CLI 48/48, integration 6/6, VS Code publication 5/5), plus separate manifest-reuse (6/6) and private release artifacts (18/18) runs. `test:vscode-companion` is wired into `npm test` (full monolithic `npm test` and four medium review follow-ups remain open).
+- **Sidebar tree view:** Added the `EVCrate` Activity Bar icon (`evcrate-sidebar`, `media/evcrate-icon.svg`) and native Sidebar `TreeDataProvider` (`evcrate.modelBindingsView`, `EvcrateSidebarTreeProvider`); `sidebar-snapshot.ts` captures row state and `scripts/vscode-companion-media.mjs` validates/packages SVG media. Tier/actor rows invoke targeted configuration commands.
+  Final VSIX SHA-256: `033f0b54466af9ba0ea4828c692cb7538bfbc14ba4c6389b7b2b236d93f4ff5a`; `buildIdentity`: `3285fa1e52d6f500095506b3c5b007828cac7646ed27e5aad3c52491aa58fdbe`; automated tests passed `163/163`. Automated verification is distinct from live interactive host UI checks; those remain unclaimed.
 - **Boundary:** Interactive picker/Chat, authenticated inference, child model, live selection recovery and Linux GUI remain blocked; no broad Windows-support or rollout claim.
 
 ### 2026-10-12 — feat(cli): consented postpublish VS Code companion installation (Phase 08)
@@ -794,5 +796,4 @@
 
 ## Historical entries
 
-Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md).
-The current changelog remains the maintained phase mirror for the active milestone.
+Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md); this document remains the maintained phase mirror for the active milestone.

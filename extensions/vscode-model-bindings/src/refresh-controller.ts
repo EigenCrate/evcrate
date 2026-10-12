@@ -35,6 +35,7 @@ export interface RefreshControllerOptions {
   readonly onErrorMessage?: (message: string) => void;
   readonly ensureCatalogSubscribed?: () => void;
   readonly syncPluginAgentsDir?: boolean;
+  readonly onDidCompleteRefresh?: () => void;
 }
 
 const IMMEDIATE_WITHDRAW_REASONS: Record<RefreshTriggerReason, boolean> = {
@@ -98,19 +99,10 @@ export class RefreshController {
     }
     const waitPromise = new Promise<boolean>((resolve) => { this._waiters.push({ targetRevision, resolve }); });
     const debounceMs = this._options.debounceMs ?? STORAGE_AND_SOURCE_BOUNDS.refreshDebounceMs;
-    if (opts?.immediate || debounceMs <= 0) {
-      if (this._debounceTimer !== undefined) {
-        clearTimeout(this._debounceTimer);
-        this._debounceTimer = undefined;
-      }
-      this._kickSingleFlight();
-    } else {
-      clearTimeout(this._debounceTimer);
-      this._debounceTimer = setTimeout(() => {
-        this._debounceTimer = undefined;
-        this._kickSingleFlight();
-      }, debounceMs);
-    }
+    clearTimeout(this._debounceTimer);
+    this._debounceTimer = undefined;
+    if (opts?.immediate || debounceMs <= 0) this._kickSingleFlight();
+    else this._debounceTimer = setTimeout(() => { this._debounceTimer = undefined; this._kickSingleFlight(); }, debounceMs);
     return waitPromise;
   }
 
@@ -129,6 +121,7 @@ export class RefreshController {
         while (!this._disposed && this._completedRevision < this._latestRevision && this._debounceTimer === undefined) {
           const targetRevision = this._latestRevision;
           const epoch = this._activationEpoch;
+          const prevReport = this._state.lastDiagnosticsReport;
           const outcome = await executeRefreshPass(this._state, {
             ...this._options,
             syncTemplateWatcher: (pluginFsPath) => this._syncTemplateWatcher(pluginFsPath),
@@ -143,6 +136,13 @@ export class RefreshController {
           if (targetRevision === this._latestRevision) {
             this._completedRevision = targetRevision;
             this._lastPassOutcome = outcome;
+            if (this._state.lastDiagnosticsReport !== prevReport) {
+              try {
+                this._options.onDidCompleteRefresh?.();
+              } catch (err: unknown) {
+                this._options.onErrorMessage?.(`EVCrate: Sidebar callback failed: ${err instanceof Error ? err.message : String(err)}`);
+              }
+            }
             this._settleWaitersUpTo(this._completedRevision, outcome);
           }
         }

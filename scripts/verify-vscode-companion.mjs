@@ -19,6 +19,11 @@ import {
   validateExtensionJsRuntimeClosure,
   PROJECT_ROOT
 } from './build-vscode-companion.mjs';
+import {
+  ALLOWED_COMPANION_MEDIA_ARCHIVE_PATH,
+  assertCompanionMediaEntries,
+  assertRecordedCompanionMediaInputs
+} from './vscode-companion-media.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,7 +86,8 @@ export function parseZipEntries(buffer) {
       entryPath === '[Content_Types].xml' ||
       entryPath === 'extension.vsixmanifest' ||
       entryPath === 'extension/package.json' ||
-      /^extension\/dist\/[a-zA-Z0-9._-]+\.js$/u.test(entryPath);
+      /^extension\/dist\/[a-zA-Z0-9._-]+\.js$/u.test(entryPath) ||
+      ALLOWED_COMPANION_MEDIA_ARCHIVE_PATH.test(entryPath);
     if (!isAllowed) {
       throw new Error(`Unexpected entry in VSIX archive: "${entryPath}"`);
     }
@@ -227,6 +233,7 @@ export async function verifyVscodeCompanion(options = {}) {
       throw new Error(`VSIX missing required entry: ${req}`);
     }
   }
+  assertCompanionMediaEntries(entries);
 
   // Verify embedded package.json
   const extPkg = JSON.parse(entries.get('extension/package.json').data.toString('utf8'));
@@ -266,6 +273,7 @@ export async function verifyVscodeCompanion(options = {}) {
         }
       }
     }
+    assertRecordedCompanionMediaInputs(projectRoot, validReceipt.inputs);
 
     // Recompute build identity from receipt inputs and verify coherence
     const recomputedIdentity = computeBuildIdentity(

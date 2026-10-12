@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   MAX_ACTORS_PER_ROOT, MAX_TEMPLATE_BYTES, VSCODE_AGENT_INTENT_SCHEMA_V1, VSCODE_AGENT_TOOL_AUDIT_SCHEMA_V2,
@@ -43,6 +43,12 @@ test('extension package.json and core/extension contract constants maintain stri
   assert.deepEqual(pkg.activationEvents, ['onStartupFinished']);
   assert.equal(pkg.capabilities.virtualWorkspaces.supported, false);
   assert.equal(pkg.contributes.commands.length, 5);
+  assert.deepEqual(pkg.contributes.viewsContainers?.activitybar, [{ id: 'evcrate-sidebar', title: 'EVCrate', icon: 'media/evcrate-icon.svg' }]);
+  assert.equal(existsSync(join(process.cwd(), 'extensions/vscode-model-bindings', pkg.contributes.viewsContainers.activitybar[0].icon)), true);
+  assert.deepEqual(pkg.contributes.views?.['evcrate-sidebar'], [{ id: 'evcrate.modelBindingsView', name: 'Model Bindings' }]);
+  const titleMenus = pkg.contributes.menus?.['view/title'] ?? [];
+  assert.deepEqual(titleMenus.map((m) => m.command), ['evcrate.selectInstallation', 'evcrate.configureAgentModels', 'evcrate.clearModelBindings', 'evcrate.showModelBindings']);
+  assert.equal(titleMenus.every((m) => m.when === 'view == evcrate.modelBindingsView'), true);
 });
 test('canonical model intent and agent-intent-v1 / audit-v2 schemas enforce strict boundaries', () => {
   assert.deepEqual(resolveCanonicalModelIntent(undefined), { mode: 'inherit', tier: null });

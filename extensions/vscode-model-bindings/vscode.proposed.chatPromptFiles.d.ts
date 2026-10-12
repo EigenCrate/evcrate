@@ -77,6 +77,41 @@ declare module 'vscode' {
     detail?: string;
   }
 
+  export enum TreeItemCollapsibleState {
+    None = 0,
+    Collapsed = 1,
+    Expanded = 2
+  }
+
+  export class ThemeIcon {
+    readonly id: string;
+    constructor(id: string);
+  }
+
+  export interface Command {
+    title: string;
+    command: string;
+    arguments?: unknown[];
+  }
+
+  export class TreeItem {
+    label?: string;
+    id?: string;
+    description?: string;
+    tooltip?: string;
+    iconPath?: ThemeIcon | Uri;
+    command?: Command;
+    collapsibleState?: TreeItemCollapsibleState;
+    contextValue?: string;
+    constructor(label: string, collapsibleState?: TreeItemCollapsibleState);
+  }
+
+  export interface TreeDataProvider<T> {
+    readonly onDidChangeTreeData?: Event<T | T[] | undefined | null | void>;
+    getTreeItem(element: T): TreeItem | Thenable<TreeItem>;
+    getChildren(element?: T): ProviderResult<T[]>;
+  }
+
   export namespace window {
     export function showQuickPick<T extends QuickPickItem>(
       items: readonly T[] | Thenable<readonly T[]>,
@@ -85,6 +120,10 @@ declare module 'vscode' {
     export function showInformationMessage(message: string, ...items: string[]): Thenable<string | undefined>;
     export function showWarningMessage(message: string, ...items: string[]): Thenable<string | undefined>;
     export function showErrorMessage(message: string, ...items: string[]): Thenable<string | undefined>;
+    export function registerTreeDataProvider<T>(
+      viewId: string,
+      treeDataProvider: TreeDataProvider<T>
+    ): Disposable;
   }
 
   export namespace workspace {

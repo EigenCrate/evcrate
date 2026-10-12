@@ -16,6 +16,7 @@ import moduleBuiltin from 'node:module';
 import ts from 'typescript';
 
 import { buildTypeScript } from './build-typescript.mjs';
+import { listCompanionSvgMedia } from './vscode-companion-media.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -253,6 +254,7 @@ export function buildVscodeCompanion(options = {}) {
   }
 
   // 3. Enumerate and hash all development inputs
+  const mediaRecords = listCompanionSvgMedia(projectRoot);
   const inputs = {};
   const relativeInputPaths = [
     'extensions/vscode-model-bindings/package.json',
@@ -263,7 +265,8 @@ export function buildVscodeCompanion(options = {}) {
     'package.json',
     'package-lock.json',
     'scripts/build-vscode-companion.mjs',
-    'scripts/verify-vscode-companion.mjs'
+    'scripts/verify-vscode-companion.mjs',
+    'scripts/vscode-companion-media.mjs'
   ];
 
   const srcDir = path.join(extDir, 'src');
@@ -273,7 +276,15 @@ export function buildVscodeCompanion(options = {}) {
     }
   }
 
+  const mediaDataByPath = new Map(mediaRecords.map((r) => [r.sourcePath, r.data]));
+  for (const mediaRecord of mediaRecords) {
+    relativeInputPaths.push(mediaRecord.sourcePath);
+  }
   for (const relPath of relativeInputPaths.sort(compareCodePoints)) {
+    if (mediaDataByPath.has(relPath)) {
+      inputs[relPath] = computeSha256(mediaDataByPath.get(relPath));
+      continue;
+    }
     const absPath = path.join(projectRoot, relPath);
     if (!fs.existsSync(absPath)) {
       throw new Error(`Required companion input file missing: ${relPath}`);
@@ -303,6 +314,7 @@ export function buildVscodeCompanion(options = {}) {
   <Default Extension="vsixmanifest" ContentType="text/xml" />
   <Default Extension="json" ContentType="application/json" />
   <Default Extension="js" ContentType="application/javascript" />
+  <Default Extension="svg" ContentType="image/svg+xml" />
 </Types>
 `;
 
@@ -341,6 +353,13 @@ export function buildVscodeCompanion(options = {}) {
     vsixRecords.push({
       path: `extension/dist/${file}`,
       data
+    });
+  }
+
+  for (const record of mediaRecords) {
+    vsixRecords.push({
+      path: record.archivePath,
+      data: record.data
     });
   }
 

@@ -256,6 +256,9 @@ Pipes/CI/`--json` do not prompt and require explicit flags:
 - Settings: `--register-vscode-settings` / `--no-register-vscode-settings` (manual: `"chat.pluginLocations": { "/path/to/.evcrate-vscode": true }`).
 - Companion: `--install-vscode-companion` / `--no-install-vscode-companion` (`--vscode-editor <path>`, `--vscode-profile <name>`).
 Dry-run never writes settings or installs extensions. Requested companion install failure returns exit 5 while keeping publication committed on stdout (status on stderr). Skills, commands, and hooks activate on plugin registration; companion agent contribution requires launching VS Code with `--enable-proposed-api=eigencrate.evcrate-model-bindings`.
+
+The companion contributes an `EVCrate` Activity Bar icon and `Model Bindings` sidebar tree (`evcrate.modelBindingsView`), with `Installation Root`, `Model Tiers`, and `Agents (17)` sections. Selecting a tier or agent row opens configuration for that item.
+
 ### Coexistence and one-copy policy
 
 - **Single Active Copy**: Do not enable both HOME (`~/.evcrate-vscode`) and project-level (`.evcrate-vscode`) plugin registrations in the same workspace to prevent duplicate command and hook registrations.

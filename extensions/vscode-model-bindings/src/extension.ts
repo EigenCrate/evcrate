@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 import type { AgentResourceDescriptor } from './agent-provider.js';
-import { ScopedBindingStore } from './binding-store.js';
+import { ScopedBindingStore, type StoredBindingResult } from './binding-store.js';
 import type { RuntimeDiagnosticsReport } from './diagnostics.js';
 import { queryChatModelCatalog } from './model-catalog.js';
 import { getApprovedRoots } from './installation-commands.js';
@@ -9,10 +9,32 @@ import { readHostRemoteAuthority } from './installation-roots.js';
 import { registerAllCommands } from './command-registration.js';
 import { createProviderManager, type ProviderManager } from './provider-registration.js';
 import { RefreshController } from './refresh-controller.js';
+import {
+  captureCommittedSidebarSnapshot,
+  createInitialSidebarSnapshot,
+  type SidebarSnapshot
+} from './sidebar-snapshot.js';
+import { EvcrateSidebarTreeProvider } from './sidebar-tree-provider.js';
 
 const providerManager: ProviderManager = createProviderManager();
 let activeController: RefreshController | null = null;
+let activeSidebarProvider: EvcrateSidebarTreeProvider | null = null;
+let activeTreeViewRegistration: vscode.Disposable | null = null;
+let currentSidebarSnapshot: SidebarSnapshot = createInitialSidebarSnapshot();
+let mismatchFollowUpUsed = false;
 let catalogSubscribed = false;
+
+function readStoredBindingsForContext(
+  context: vscode.ExtensionContext,
+  rootIdentity: string | null
+): { readonly userRes: StoredBindingResult; readonly rootRes: StoredBindingResult } {
+  const store = new ScopedBindingStore(context.globalState, context.workspaceState, readHostRemoteAuthority(vscode.env));
+  const userRes = store.getUserBindings();
+  const rootRes = rootIdentity
+    ? store.getRootBindings(rootIdentity)
+    : Object.freeze({ ok: true as const, bindings: null });
+  return { userRes, rootRes };
+}
 
 function ensureCatalogSubscribed(context: vscode.ExtensionContext): void {
   if (catalogSubscribed) return;
@@ -40,19 +62,33 @@ function ensureController(context: vscode.ExtensionContext): RefreshController {
     getWorkspaceFolderPaths: () => vscode.workspace.workspaceFolders?.map((f) => f.uri.fsPath) ?? [],
     getApprovedRoots: () => getApprovedRoots(context),
     getExplicitSelectedRootIdentity: () => context.globalState.get<string>('evcrate.selectedRootIdentity') ?? null,
-    getStoredBindings: (rootIdentity) => {
-      const store = new ScopedBindingStore(context.globalState, context.workspaceState, readHostRemoteAuthority(vscode.env));
-      const userRes = store.getUserBindings();
-      const rootRes = rootIdentity
-        ? store.getRootBindings(rootIdentity)
-        : Object.freeze({ ok: true as const, bindings: null });
-      return { userRes, rootRes };
-    },
+    getStoredBindings: (rootIdentity) => readStoredBindingsForContext(context, rootIdentity),
     queryCatalog: (revision) => queryChatModelCatalog(vscode.lm, revision),
     createUri: (fsPath) => vscode.Uri.file(fsPath),
     onErrorMessage: (message) => { void vscode.window.showErrorMessage(message); },
     ensureCatalogSubscribed: () => ensureCatalogSubscribed(context),
-    syncPluginAgentsDir: true
+    syncPluginAgentsDir: true,
+    onDidCompleteRefresh: () => {
+      if (!activeController || !activeSidebarProvider) return;
+      const nextSnapshot = captureCommittedSidebarSnapshot({
+        report: activeController.lastDiagnosticsReport,
+        currentRootIdentity: activeController.currentRootIdentity,
+        getStoredBindings: (rootIdentity) => readStoredBindingsForContext(context, rootIdentity),
+        catalog: activeController.catalogSnapshot
+      });
+      currentSidebarSnapshot = nextSnapshot;
+      activeSidebarProvider.refresh();
+      if (nextSnapshot.report !== null) {
+        if (nextSnapshot.settingsPending) {
+          if (!mismatchFollowUpUsed) {
+            mismatchFollowUpUsed = true;
+            void activeController.requestRefresh({ reason: 'bindings-updated' });
+          }
+        } else {
+          mismatchFollowUpUsed = false;
+        }
+      }
+    }
   });
   return activeController;
 }
@@ -71,16 +107,34 @@ export interface CompanionExtensionExports {
 }
 
 export function activate(context: vscode.ExtensionContext): CompanionExtensionExports {
-  if (activeController) {
-    activeController.dispose();
-    activeController = null;
-  }
-  catalogSubscribed = false;
+  deactivate();
+  currentSidebarSnapshot = createInitialSidebarSnapshot();
+  const sidebarProvider = new EvcrateSidebarTreeProvider(() => currentSidebarSnapshot);
+  activeSidebarProvider = sidebarProvider;
+  const treeRegistration = vscode.window.registerTreeDataProvider('evcrate.modelBindingsView', sidebarProvider);
+  activeTreeViewRegistration = treeRegistration;
   const controller = ensureController(context);
   void controller.requestRefresh({ reason: 'startup', immediate: true });
 
   context.subscriptions.push(
-    { dispose: () => controller.dispose() },
+    {
+      dispose: () => {
+        if (activeController === controller) activeController = null;
+        controller.dispose();
+      }
+    },
+    {
+      dispose: () => {
+        if (activeTreeViewRegistration === treeRegistration) activeTreeViewRegistration = null;
+        treeRegistration.dispose();
+      }
+    },
+    {
+      dispose: () => {
+        if (activeSidebarProvider === sidebarProvider) activeSidebarProvider = null;
+        sidebarProvider.dispose();
+      }
+    },
     vscode.workspace.onDidGrantWorkspaceTrust(() => {
       void controller.requestRefresh({ reason: 'trust-changed', immediate: true });
     }),
@@ -116,10 +170,23 @@ export function activate(context: vscode.ExtensionContext): CompanionExtensionEx
 
 export function deactivate(): void {
   if (activeController) {
-    activeController.dispose();
+    const controller = activeController;
     activeController = null;
+    controller.dispose();
   } else {
     providerManager.dispose();
   }
+  if (activeTreeViewRegistration) {
+    const registration = activeTreeViewRegistration;
+    activeTreeViewRegistration = null;
+    registration.dispose();
+  }
+  if (activeSidebarProvider) {
+    const provider = activeSidebarProvider;
+    activeSidebarProvider = null;
+    provider.dispose();
+  }
+  currentSidebarSnapshot = createInitialSidebarSnapshot();
+  mismatchFollowUpUsed = false;
   catalogSubscribed = false;
 }
