@@ -6,6 +6,7 @@ import path from 'node:path';
  */
 export const ASSET_INVENTORY = [
   'agents/snyk-expert.md',
+  'skills/cmd-snyk-remediate/SKILL.md',
   'skills/dependency-upgrade-review/SKILL.md',
   'skills/dependency-upgrade-review/references/compatibility-evidence.md',
   'skills/dependency-upgrade-review/references/review-output.md',
