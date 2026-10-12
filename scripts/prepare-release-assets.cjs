@@ -104,7 +104,8 @@ function main() {
   console.log('Running build and distribution checks...');
   execNpmSync(['run', 'build:all'], { cwd: projectRoot, stdio: 'inherit' });
   execNpmSync(['run', 'distribute:check'], { cwd: projectRoot, stdio: 'inherit' });
-
+  console.log('Validating VS Code companion extension...');
+  execNpmSync(['run', 'check:vscode-companion', '--', '--mode=development-checkout'], { cwd: projectRoot, stdio: 'inherit' });
   // 2. Verify runtime closure on fresh build
   console.log('Validating runtime closure...');
   validateRuntimeClosure(projectRoot);

@@ -2,6 +2,14 @@
 
 Historical phase entries moved from [project-changelog.md](./project-changelog.md) to keep the maintained phase mirror below the repository's 800-line documentation limit. Paths and evidence are preserved; current Phase 09 milestone status remains in the main changelog.
 
+### 2026-09-14 — feat(test): self-contained Windows qualification harness (Phase 05)
+
+- **Status:** Phase 05 DONE (2026-09-14; 100%, 60/60 scoped checks, Cycle 2 review 10/10; [plan](../plans/260914-0636-windows-release-qualification/phase-05-self-contained-windows-qualification-harness.md), [review](../plans/reports/code-review-260914-2030-phase-05-self-contained-windows-qualification-harness-cycle-2.md)). Delivered Node-builtins-only qualification CLI with strict host/receipt/byte preflight, safe PowerShell/`cmd.exe` runners, smoke/full lifecycle controllers, and isolated negative scenarios.
+
+### 2026-09-14 — feat(release): deterministic Windows fixture and predecessor resolver (Phase 04)
+
+- **Status:** Phase 04 DONE (2026-09-14; 100%, 39/39 suites, Cycle 2 review 10/10; [plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md), [tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md), [review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md)). Factored deterministic four-asset Windows fixtures (`buildWindowsTestReleaseSet`), irreversible bootstrap/latest-stable predecessor resolution, and private staged streaming downloads with exact-four verification.
+
 ### 2026-09-13 — docs(distribution): post-verification operator and architecture documentation (Phase 09)
 
 - Reconciled code and design contracts against Phase 08 evidence. [Phase 09 plan](../plans/260912-0051-hook-materialization-scope-distribution/phase-09-post-verification-operator-documentation.md).

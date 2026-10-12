@@ -90,3 +90,87 @@ test('retired commands and options fail ordinary usage parsing', () => {
     assert.equal(codeOf(() => parseArguments(argv)), 'USAGE_INVALID');
   }
 });
+
+test('parses companion installation flags and scalar options', () => {
+  const invPositive = parseArguments(['publish', '--apply', '--target', 'vscode', '--install-vscode-companion']);
+  assert.equal(invPositive.options.installVscodeCompanion, true);
+
+  const invNegative = parseArguments(['publish', '--apply', '--target', 'vscode', '--no-install-vscode-companion']);
+  assert.equal(invNegative.options.installVscodeCompanion, false);
+
+  const invFull = parseArguments([
+    'publish', '--apply', '--target', 'vscode', '--install-vscode-companion',
+    '--vscode-editor', '/usr/bin/code', '--vscode-profile', 'test-profile'
+  ]);
+  assert.equal(invFull.options.installVscodeCompanion, true);
+  assert.equal(invFull.options.vscodeEditor, '/usr/bin/code');
+  assert.equal(invFull.options.vscodeProfile, 'test-profile');
+
+  const invDefault = parseArguments(['publish', '--apply', '--target', 'vscode']);
+  assert.equal(invDefault.options.installVscodeCompanion, undefined);
+  assert.equal(invDefault.options.vscodeEditor, undefined);
+  assert.equal(invDefault.options.vscodeProfile, undefined);
+});
+
+test('rejects duplicate or conflicting companion flags', () => {
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--install-vscode-companion', '--no-install-vscode-companion'])),
+    'USAGE_INVALID'
+  );
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--install-vscode-companion', '--install-vscode-companion'])),
+    'USAGE_INVALID'
+  );
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--no-install-vscode-companion', '--no-install-vscode-companion'])),
+    'USAGE_INVALID'
+  );
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--vscode-editor', '/bin/code1', '--vscode-editor', '/bin/code2'])),
+    'USAGE_INVALID'
+  );
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--vscode-profile', 'p1', '--vscode-profile', 'p2'])),
+    'USAGE_INVALID'
+  );
+});
+
+test('rejects companion options on non-eligible commands', () => {
+  assert.equal(codeOf(() => parseArguments(['recover', '--install-vscode-companion'])), 'USAGE_INVALID');
+  assert.equal(codeOf(() => parseArguments(['version', '--vscode-editor', '/bin/code'])), 'USAGE_INVALID');
+  assert.equal(codeOf(() => parseArguments(['resources', 'list', '--vscode-profile', 'p1'])), 'USAGE_INVALID');
+});
+
+test('rejects companion options when target does not include vscode', () => {
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'claude', '--install-vscode-companion'])),
+    'VALIDATION_INVALID'
+  );
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'omp', '--vscode-editor', '/bin/code'])),
+    'VALIDATION_INVALID'
+  );
+});
+
+test('rejects invalid --vscode-editor and --vscode-profile values', () => {
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--vscode-editor', 'relative/code'])),
+    'VALIDATION_INVALID'
+  );
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--vscode-editor', '/usr/bin/../code'])),
+    'VALIDATION_INVALID'
+  );
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--vscode-editor', '/usr/bin/code\0'])),
+    'VALIDATION_INVALID'
+  );
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--vscode-profile', 'bad\nprofile'])),
+    'VALIDATION_INVALID'
+  );
+  assert.equal(
+    codeOf(() => parseArguments(['publish', '--apply', '--target', 'vscode', '--vscode-profile', 'bad/profile'])),
+    'VALIDATION_INVALID'
+  );
+});

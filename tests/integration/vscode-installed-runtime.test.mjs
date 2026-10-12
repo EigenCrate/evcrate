@@ -1,10 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, cpSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { spawnSync } from 'node:child_process';
-
+import { CompanionAgentProvider } from '../../.cache/evcrate/vscode-model-bindings-dist/agent-provider.js';
+import { ScopedBindingStore } from '../../.cache/evcrate/vscode-model-bindings-dist/binding-store.js';
+import { fsPathToLocalRootUri } from '../../.cache/evcrate/vscode-model-bindings-dist/installation-roots.js';
+import { buildCatalogSnapshot } from '../../.cache/evcrate/vscode-model-bindings-dist/model-catalog.js';
+import { RefreshController } from '../../.cache/evcrate/vscode-model-bindings-dist/refresh-controller.js';
+import { stageAgentGeneration } from '../../.cache/evcrate/vscode-model-bindings-dist/resource-storage.js';
+import { parseArguments } from '../../dist/cli/arguments.js';
+import { resolveInvocationContext } from '../../dist/context/invocation-context.js';
+import { coordinateVscodeCompanionInstallation } from '../../dist/cli/vscode-companion-installation.js';
+import { findEditorOnPath } from '../../dist/cli/vscode-editor-launcher.js';
+import { validateCompanionInstallNotice } from '../../dist/adapters/vscode/companion-cli-contracts.js';
 const repository = process.cwd();
 
 function createTempDir(prefix = 'vscode-integration-') {
@@ -399,5 +410,290 @@ test('vscode-installed-runtime: executes hook commands configured in hooks.json 
     assert.equal(preParsed.permissionDecision, undefined);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function computeTreeDigest(rootDir) {
+  function walk(dir) {
+    const out = [];
+    for (const ent of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, ent.name);
+      if (ent.isDirectory()) out.push(...walk(full));
+      else out.push(full);
+    }
+    return out;
+  }
+  const files = walk(rootDir).sort();
+  const h = createHash('sha256');
+  for (const f of files) {
+    const rel = relative(rootDir, f).replace(/\\/gu, '/');
+    const digest = createHash('sha256').update(readFileSync(f)).digest('hex');
+    h.update(`${rel}:${digest}\n`);
+  }
+  return { count: files.length, sha256: h.digest('hex') };
+}
+
+class SimpleMemento {
+  constructor() {
+    this.map = new Map();
+  }
+  get(k, def) {
+    return this.map.has(k) ? this.map.get(k) : def;
+  }
+  async update(k, v) {
+    if (v === undefined) this.map.delete(k);
+    else this.map.set(k, v);
+  }
+}
+
+test('vscode-installed-runtime: real projected .evcrate-vscode templates integrate with companion runtime, precedence, immutability, and hash preservation', async () => {
+  const env = setupMaterializedEnvironment();
+  try {
+    const storageDir = join(env.root, 'companion-storage');
+    mkdirSync(storageDir, { recursive: true });
+
+    // Static agents directory must not exist in projected .evcrate-vscode
+    assert.equal(existsSync(join(env.pluginDir, 'com.github.copilot', 'agents')), false);
+
+    const intentJson = JSON.parse(readFileSync(join(env.pluginDir, 'evcrate', 'agent-intent.json'), 'utf8'));
+    const auditJson = JSON.parse(readFileSync(join(env.pluginDir, 'evcrate', 'agent-tool-audit.json'), 'utf8'));
+    assert.equal(intentJson.schema, 'evcrate-vscode-agent-intent-v1');
+    assert.equal(auditJson.schema, 'evcrate-vscode-agent-tool-audit-v2');
+    const actorIds = Object.keys(intentJson.actors).sort();
+    assert.equal(actorIds.length, 17);
+
+    const canonicalAgentsDir = join(repository, '.evcrate', 'source', '.claude', 'agents');
+    const canonicalBefore = computeTreeDigest(canonicalAgentsDir);
+    const publishedBefore = computeTreeDigest(env.pluginDir);
+
+    const globalState = new SimpleMemento();
+    const workspaceState = new SimpleMemento();
+    const store = new ScopedBindingStore(globalState, workspaceState);
+    const provider = new CompanionAgentProvider({
+      event: () => ({ dispose: () => {} }),
+      fire: () => {},
+      dispose: () => {}
+    });
+
+    let catalogModels = [
+      { vendor: 'copilot', id: 'claude-opus-4', name: 'Claude Opus 4' },
+      { vendor: 'copilot', id: 'claude-sonnet-4', name: 'Claude Sonnet 4' },
+      { vendor: 'copilot', id: 'claude-haiku-3.5', name: 'Claude Haiku 3.5' },
+      { vendor: 'copilot', id: 'gpt-4.1', name: 'GPT-4.1' },
+      { vendor: 'copilot', id: 'o3-mini', name: 'o3-mini' }
+    ];
+    const rootId = fsPathToLocalRootUri(env.projectDir).rootIdentity;
+
+    const controller = new RefreshController({
+      instanceUuid: '11111111-2222-4333-8444-555555555555',
+      baseStorageFsPath: storageDir,
+      debounceMs: 10,
+      tryRegisterProvider: () => ({
+        qualified: true, authority: 'local-file', remoteAuthority: null, workspaceTrusted: true, proposalSupported: true
+      }),
+      getActiveProvider: () => provider,
+      withdrawProvider: () => provider.withdrawInventory(),
+      disposeProvider: () => provider.dispose(),
+      getWorkspaceFolderPaths: () => [env.projectDir],
+      getCustomHomePath: () => join(env.root, 'no-home'),
+      getApprovedRoots: () => new Set([rootId]),
+      getExplicitSelectedRootIdentity: () => null,
+      getStoredBindings: (rid) => ({
+        userRes: store.getUserBindings(),
+        rootRes: rid ? store.getRootBindings(rid) : { ok: true, bindings: null }
+      }),
+      queryCatalog: async (rev) => buildCatalogSnapshot(catalogModels, rev),
+      createUri: (fsPath) => {
+        const u = fsPathToLocalRootUri(fsPath);
+        return { scheme: 'file', authority: '', path: u.path, query: '', fragment: '', fsPath, toString: () => u.rootIdentity };
+      },
+      watchPluginRoot: () => ({ dispose: () => {} }),
+      onErrorMessage: () => {}
+    });
+
+    // 1. Bind user tiers for all 3 required tiers -> all 17 actors contributed in gen-1
+    await store.saveUserBindings({
+      schema: 'evcrate-vscode-bindings-v1',
+      revision: 1,
+      tiers: {
+        opus: { vendor: 'copilot', id: 'claude-opus-4' },
+        sonnet: { vendor: 'copilot', id: 'claude-sonnet-4' },
+        haiku: { vendor: 'copilot', id: 'claude-haiku-3.5' }
+      },
+      actors: {}
+    });
+    await controller.requestRefresh({ reason: 'startup', immediate: true });
+    assert.equal(provider.currentResources.length, 17);
+    assert.equal(controller.currentGenerationId, 1);
+
+    const gen1Planner = provider.currentResources.find((r) => r.actorId === 'evc-planner');
+    const gen1PlannerContent = readFileSync(gen1Planner.fsPath, 'utf8');
+    assert.match(gen1PlannerContent, /model:\s*"Claude Opus 4 \(copilot\)"/);
+
+    // 2. Cross-scope precedence: user.actor beats root.tier, root.actor beats user.actor
+    await store.saveUserBindings({
+      schema: 'evcrate-vscode-bindings-v1',
+      revision: 2,
+      tiers: {
+        opus: { vendor: 'copilot', id: 'claude-opus-4' },
+        sonnet: { vendor: 'copilot', id: 'claude-sonnet-4' },
+        haiku: { vendor: 'copilot', id: 'claude-haiku-3.5' }
+      },
+      actors: {
+        'evc-planner': { kind: 'model', vendor: 'copilot', id: 'gpt-4.1' }
+      }
+    });
+    await store.saveRootBindings(rootId, {
+      schema: 'evcrate-vscode-bindings-v1',
+      revision: 1,
+      tiers: {
+        opus: { vendor: 'copilot', id: 'claude-sonnet-4' }
+      },
+      actors: {}
+    });
+    await controller.requestRefresh({ reason: 'bindings-updated', immediate: true });
+    assert.equal(controller.currentGenerationId, 2);
+    // user.actor (GPT-4.1) beats root.tier (Claude Opus 4) for evc-planner
+    assert.equal(controller.lastDiagnosticsReport.diagnostics.actors['evc-planner'].effectiveSource, 'user.actor');
+    assert.equal(controller.lastDiagnosticsReport.diagnostics.actors['evc-planner'].renderedSelector, 'GPT-4.1 (copilot)');
+
+    // Now set root.actor for evc-planner -> beats user.actor
+    await store.saveRootBindings(rootId, {
+      schema: 'evcrate-vscode-bindings-v1',
+      revision: 2,
+      tiers: {
+        opus: { vendor: 'copilot', id: 'claude-sonnet-4' }
+      },
+      actors: {
+        'evc-planner': { kind: 'model', vendor: 'copilot', id: 'o3-mini' }
+      }
+    });
+    await controller.requestRefresh({ reason: 'bindings-updated', immediate: true });
+    assert.equal(controller.currentGenerationId, 3);
+    assert.equal(controller.lastDiagnosticsReport.diagnostics.actors['evc-planner'].effectiveSource, 'root.actor');
+    assert.equal(controller.lastDiagnosticsReport.diagnostics.actors['evc-planner'].renderedSelector, 'o3-mini (copilot)');
+
+    // In-flight gen-1 file on disk remains byte-for-byte identical
+    assert.equal(readFileSync(gen1Planner.fsPath, 'utf8'), gen1PlannerContent);
+
+    // Republish (overwrite .evcrate-vscode from source) preserves bindings and canonical/published hashes
+    cpSync(join(repository, '.evcrate/source/.evcrate-vscode'), env.pluginDir, { recursive: true });
+    await controller.requestRefresh({ reason: 'template-changed', immediate: true });
+    assert.equal(controller.lastDiagnosticsReport.diagnostics.actors['evc-planner'].renderedSelector, 'o3-mini (copilot)');
+
+    const canonicalAfter = computeTreeDigest(canonicalAgentsDir);
+    const publishedAfter = computeTreeDigest(env.pluginDir);
+    assert.deepEqual(canonicalAfter, canonicalBefore, 'Canonical agent files must remain untouched');
+    assert.deepEqual(publishedAfter, publishedBefore, 'Published .evcrate-vscode files must remain untouched');
+    controller.dispose();
+  } finally {
+    env.cleanup();
+  }
+});
+
+test('vscode-installed-runtime: isolated temp-dir VS Code CLI installs packaged companion VSIX, verifies buildIdentity, and rejects identity mismatch with exit 5', async (t) => {
+  const editorPath = findEditorOnPath(process.env, process.platform);
+  if (!editorPath) {
+    t.skip('VS Code CLI not found on PATH');
+    return;
+  }
+
+  const env = setupMaterializedEnvironment();
+  try {
+    const isolatedUserDataDir = join(env.root, 'vscode-user-data');
+    const isolatedExtensionsDir = join(env.root, 'vscode-extensions');
+    mkdirSync(isolatedUserDataDir, { recursive: true });
+    mkdirSync(isolatedExtensionsDir, { recursive: true });
+
+    const invocation = parseArguments([
+      'publish', '--apply', '--target', 'vscode', '--scope', 'project',
+      '--project-root', env.projectDir, '--install-vscode-companion',
+      '--vscode-editor', editorPath, '--json'
+    ]);
+    const context = resolveInvocationContext({ ...invocation.options, projectRoot: env.projectDir });
+    const committedResult = {
+      protocol: 'evcrate-resource-control',
+      protocolVersion: 1,
+      requestId: 'req-live-cli-1',
+      operation: 'publish.apply',
+      status: 'published',
+      payload: { action: 'published', scope: 'project', bindings: [] }
+    };
+
+    // 1. Fresh install into isolated temp extensions dir
+    let stderr1 = '';
+    const exit1 = await coordinateVscodeCompanionInstallation(
+      invocation,
+      context,
+      committedResult,
+      {
+        userDataDirectory: isolatedUserDataDir,
+        extensionsDirectory: isolatedExtensionsDir,
+        vscodeCompanionConsole: {
+          isOutputTTY: false,
+          confirm: async () => false,
+          writeStderr: (t) => { stderr1 += t; }
+        }
+      },
+      'req-live-cli-1'
+    );
+    assert.equal(exit1, undefined, `Expected exit1 undefined (0), got ${exit1} with stderr: ${stderr1}`);
+    const notice1 = validateCompanionInstallNotice(JSON.parse(stderr1));
+    assert.equal(notice1.status, 'installed');
+    assert.equal(notice1.exitCode, 0);
+
+    // Verify unpacked extension package.json in isolatedExtensionsDir contains exact buildIdentity
+    const installedPkgPath = join(isolatedExtensionsDir, `eigencrate.evcrate-model-bindings-${notice1.version}`, 'package.json');
+    assert.equal(existsSync(installedPkgPath), true, 'Unpacked extension package.json must exist in isolated extensions directory');
+    const installedPkg = JSON.parse(readFileSync(installedPkgPath, 'utf8'));
+    assert.equal(installedPkg.buildIdentity, notice1.buildIdentity);
+
+    // 2. Second run detects already-installed with verified buildIdentity without reinstalling
+    let stderr2 = '';
+    const exit2 = await coordinateVscodeCompanionInstallation(
+      invocation,
+      context,
+      committedResult,
+      {
+        userDataDirectory: isolatedUserDataDir,
+        extensionsDirectory: isolatedExtensionsDir,
+        vscodeCompanionConsole: {
+          isOutputTTY: false,
+          confirm: async () => false,
+          writeStderr: (t) => { stderr2 += t; }
+        }
+      },
+      'req-live-cli-2'
+    );
+    assert.equal(exit2, undefined);
+    const notice2 = validateCompanionInstallNotice(JSON.parse(stderr2));
+    assert.equal(notice2.status, 'already-installed');
+    assert.equal(notice2.exitCode, 0);
+
+    // 3. Same version (2.11.0) with different buildIdentity on disk triggers manual-setup-required and exit 5
+    installedPkg.buildIdentity = 'f'.repeat(64);
+    writeFileSync(installedPkgPath, JSON.stringify(installedPkg, null, 2));
+    let stderr3 = '';
+    const exit3 = await coordinateVscodeCompanionInstallation(
+      invocation,
+      context,
+      committedResult,
+      {
+        userDataDirectory: isolatedUserDataDir,
+        extensionsDirectory: isolatedExtensionsDir,
+        vscodeCompanionConsole: {
+          isOutputTTY: false,
+          confirm: async () => false,
+          writeStderr: (t) => { stderr3 += t; }
+        }
+      },
+      'req-live-cli-3'
+    );
+    assert.equal(exit3, 5);
+    const notice3 = validateCompanionInstallNotice(JSON.parse(stderr3));
+    assert.equal(notice3.status, 'manual-setup-required');
+    assert.equal(notice3.exitCode, 5);
+  } finally {
+    env.cleanup();
   }
 });

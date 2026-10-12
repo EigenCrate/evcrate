@@ -2,8 +2,77 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-11
+**Updated:** 2026-10-12
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-12 — test(vscode): integrated contract and isolated host qualification (Phase 09)
+**Status:** Package gates and isolated Windows VS Code 1.140.0 receipts N-01–N-03 pass; interactive GUI and authenticated inference remain blocked. [Integrated report](../plans/261011-2349-vscode-runtime-model-bindings/reports/integrated-qualification.md) · [Native receipts](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-qualification.md).
+- **Candidate:** VSIX SHA-256 `833e982d1cb08139e4df4a4891a4622d5f001076ab55a66a77f80f70f449cc89`; buildIdentity `68a82c4549d3b68a8cab7b73b3252a46d195d87634e8a08023af64d1119bb965`.
+- **N-01:** Disposable user-data/extensions install and reprobe pass; same-version identity mismatch requires exit-5 manual setup while committed stdout is preserved.
+- **N-02:** Isolated Extension Host exercised five commands, 17 actors and precedence; `hostObservedModel` stayed null.
+- **N-03:** All eight hook events pass; malformed calls fail closed; scout and privacy behavior observed.
+- **Runtime:** Windows `code.cmd` resolves to `Code.exe` + `cli.js`; companion fixes cover drive-path roots, remote-authority fallback, proposal-disabled registration, frozen exports and atomic watcher swaps.
+- **Automated gates:** Scoped QA suites passed 211/211 (`tester-261012-2000-phase-09-integrated-qualification.md`: companion+VSIX 54/54, adapters 98/98, CLI 48/48, integration 6/6, VS Code publication 5/5), plus separate manifest-reuse (6/6) and private release artifacts (18/18) runs. `test:vscode-companion` is wired into `npm test` (full monolithic `npm test` and four medium review follow-ups remain open).
+- **Sidebar tree view:** Added the `EVCrate` Activity Bar icon (`evcrate-sidebar`, `media/evcrate-icon.svg`) and native Sidebar `TreeDataProvider` (`evcrate.modelBindingsView`, `EvcrateSidebarTreeProvider`); `sidebar-snapshot.ts` captures row state and `scripts/vscode-companion-media.mjs` validates/packages SVG media. Tier/actor rows invoke targeted configuration commands.
+  Final VSIX SHA-256: `033f0b54466af9ba0ea4828c692cb7538bfbc14ba4c6389b7b2b236d93f4ff5a`; `buildIdentity`: `3285fa1e52d6f500095506b3c5b007828cac7646ed27e5aad3c52491aa58fdbe`; automated tests passed `163/163`. Automated verification is distinct from live interactive host UI checks; those remain unclaimed.
+- **Boundary:** Interactive picker/Chat, authenticated inference, child model, live selection recovery and Linux GUI remain blocked; no broad Windows-support or rollout claim.
+
+### 2026-10-12 — feat(cli): consented postpublish VS Code companion installation (Phase 08)
+
+- Added consented postpublish installation via `--install-vscode-companion` / `--no-install-vscode-companion`, with `--vscode-editor` and profile selection, pre-mutation validation, post-commit execution and fail-safe noninteractive behavior.
+- Verified committed VSIX identity and installation reprobe; preserves publication stdout on install failure, emits an `install-notice-v1` stderr notice and shows proposed-API enablement guidance. Live native install smoke moved to Phase 09.
+
+### 2026-10-12 — feat(distribution): hashed VSIX, snapshot overlay, and build integration (Phase 07)
+
+- Added deterministic offline VSIX build, target overlay, strict packed/development verifier, and release packaging bound to companion closure and byte parity.
+- Verified distribution and snapshot-staging suites (82/82); packed install smoke moved to Phase 09.
+
+### 2026-10-12 — feat(vscode): refresh, immutable generations, and runtime diagnostics (Phase 06)
+
+- Added coalesced revisioned refresh, scoped atomic-swap template watching with fallback polling, and persistent authority storage with lockfile protection.
+- Added `evcrate.vscode.showDiagnostics` Markdown/JSON report and verified companion tests (41/41) plus adapter tests (98/98).
+
+### 2026-10-12 — feat(vscode): implement runtime tiers, actor overrides, and picker commands (Phase 05)
+
+- Implemented runtime model catalog querying in `extensions/vscode-model-bindings/src/model-catalog.ts` via `vscode.lm.selectChatModels` (`queryChatModelCatalog`), validating entries (`validateCatalogEntry`), formatting selectors as `<name> (<vendor>)`, detecting ambiguous selectors (`findAmbiguousSelectors`), and compiling frozen snapshots (`buildCatalogSnapshot`) without inference probes or preferred-model heuristics.
+- Implemented scoped versioned binding store in `binding-store.ts` (`ScopedBindingStore`), managing partitioned user defaults (`globalState`) and installation-scoped root workspace overrides (`workspaceState`), validating schema bounds (`validateBindingsV1` <= 64 KiB), checking CAS revisions, and rejecting unsupported remote authorities (`UNSUPPORTED_REMOTE_AUTHORITY`).
+- Implemented pure inventory resolver in `binding-resolver.ts` (`resolveInventoryBindings`) enforcing strict precedence layering (`root.actor > user.actor > canonical.inherit > root.tier > user.tier > unresolved`), omitting frontmatter `model` selector for inherit actors unless explicitly overridden, validating catalog availability, and isolating withheld reasons.
+- Implemented QuickPick configuration UX and commands in `configuration-pickers.ts`, `configuration-commands.ts`, `clear-commands.ts`, and `command-registration.ts` (`evcrate.configureAgentModels`, `evcrate.configureActorModel`, `evcrate.clearModelBindings`, `evcrate.showModelBindings`, `evcrate.selectInstallation`).
+- Integrated dynamic provider refresh in `extension.ts` and `generation-loader.ts` with catalog change subscriptions (`vscode.lm.onDidChangeChatModels`), single-flight debounced refreshes, and fail-closed handling for corrupt states.
+- Verified test suites in `tests/vscode-companion/` (34/34 companion tests pass, 232/232 core adapter tests pass; Review Cycle 2 approved 8/10, 0 critical issues; user approved). Live native editor qualification remains deferred to Phase 09 per user gate amendment.
+
+### 2026-10-12 — feat(vscode): implement companion provider runtime (Phase 04)
+
+- Resolved Phase 02 Review Cycle 2 contract items: idempotent canonical URI serialization across percent encoding/spaces/Unicode/Windows drives with control character rejection (`W-A`), extracted leaf module `binding-contracts.ts` eliminating circular value imports (`W-B`), and enforced `<=512` actor bounds, string length caps, and diagnostic coherence in `validateRuntimeDiagnosticsV1` (`W-C`).
+- Implemented guarded host activation in `extensions/vscode-model-bindings/src/{extension.ts,installation-roots.ts}` (`inspectHostGuard` checking workspace trust, proposal availability, and non-remote authority). Non-local remote authorities (`ssh-remote`, `dev-container`, `wsl`) and untrusted workspaces fail closed without silent fallback to local HOME.
+- Implemented candidate root resolution in `installation-roots.ts` enforcing strict precedence (`project > HOME`), directory discovery (`.evcrate-vscode/evcrate/agent-templates/` and `.evcrate-vscode/evcrate/agent-intent.json`), and approval filtering via workspace state.
+- Implemented secure generation loader in `generation-loader.ts` validating relative template paths (`validateSafeTemplatePath` preventing path traversal, symlink escape, and null-bytes), verifying SHA-256 integrity, enforcing size limits (`<= 256 KiB`), and isolating per-actor errors into `withheldReasons`. Computes stable template inventory SHA-256 for generation deduplication.
+- Implemented agent template renderer in `agent-renderer.ts` injecting validated model selectors into frontmatter, protecting code fences, preserving immutable intent body, omitted tools, arguments, and metadata, and rebasing relative references without modifying external URLs.
+- Implemented atomic generation staging in `resource-storage.ts` using `mkdtemp` and directory rename into extension storage, validating storage budgets (`STORAGE_AND_SOURCE_BOUNDS`).
+- Implemented single-instance `CompanionAgentProvider` in `agent-provider.ts` for VS Code's proposed `CustomAgentProvider` interface (`provideCustomAgents`), deduplicating change events on identical inventory and honoring cancellation tokens.
+- Added comprehensive companion behavior suites in `tests/vscode-companion/{prerequisites-regressions,provider-runtime,storage-and-provider}.test.mjs` (13/13 companion tests pass; 232/232 core adapter tests pass; Review Cycle 3 approved 7/10, 0 critical issues).
+
+### 2026-10-12 — feat(vscode): immutable agent templates and truthful build intent (Phase 03)
+
+- Converted VS Code static agent projection to immutable templates at `.evcrate-vscode/evcrate/agent-templates/${name}.md` with disposition `immutable-template`; deleted all 17 static host-discovered agent files (`.evcrate-vscode/com.github.copilot/agents/*.agent.md`).
+- Stripped actionable `model` frontmatter key from emitted templates while preserving tools, arguments, description, `user-invocable`, and supporting references.
+- Emitted deterministic `evcrate/agent-intent.json` manifest (`evcrate-vscode-agent-intent-v1`) capturing canonical tier intent (`canonicalTier`), template path, SHA-256 digest, source path, and supporting reference base for all 17 canonical actors.
+- Upgraded tool audit artifact `evcrate/agent-tool-audit.json` to schema v2 (`evcrate-vscode-agent-tool-audit-v2`), recording immutable-template disposition and canonical tier intent with zero falsified effective model claims.
+- Deleted obsolete `src/adapters/vscode/models.ts` (`VSCODE_LOCAL_MODEL_MAP`, `resolveLocalModel`, `buildVscodeModelMap`) and generated `evcrate/model-map.json` without compatibility shims.
+- Updated `src/adapters/vscode/{names,inventory,configuration-activation-guide,adapter,metadata,index}.ts`, `src/adapters/projection-utils.ts`, target manifest `.evcrate/targets/vscode/manifest.json`, projection inventory `evcrate/projection-inventory.json`, and activation guide `evcrate/examples/activation-guide.md`.
+- Updated test suites in `tests/adapters/vscode-configuration.test.mjs` and `tests/adapters/vscode-resource-projection.test.mjs` (665 passed, 0 failed, 1 skipped; user approved).
+
+### 2026-10-12 — feat(vscode): implement runtime model bindings contracts and ownership boundaries (Phase 02)
+
+- Implemented pure contract and validation modules under `src/adapters/vscode/{model-intent.ts,companion-package-contracts.ts,companion-cli-contracts.ts}` (`evcrate-vscode-agent-intent-v1`, `evcrate-vscode-agent-tool-audit-v2`, `evcrate-vscode-companion-descriptor-v1`, `evcrate-vscode-companion-source-receipt-v1`, `evcrate-vscode-companion-install-v1`, `verifyCompanionLayoutContract`, `validateCompanionCliOptions`) and standalone extension workspace `extensions/vscode-model-bindings/{package.json,tsconfig.json,vscode.proposed.chatPromptFiles.d.ts,src/runtime-contracts.ts,src/diagnostics-contracts.ts,src/contracts.ts}` (`evcrate-vscode-bindings-v1`, `evcrate-vscode-runtime-bindings-v1`, `validateLocalRootUri`, `resolveInstallationRoot`, `resolveEffectiveActorBinding`, `STORAGE_AND_SOURCE_BOUNDS`).
+- Verified standalone extension and root compilation plus boundary suites in `tests/vscode-companion/contracts.test.mjs` (4/4 companion contract tests + 97/97 VS Code adapter tests = 101/101 passing; Review Cycle 2 approved 8.5/10, 0 critical issues; [interface-freeze.md](../plans/261011-2349-vscode-runtime-model-bindings/reports/interface-freeze.md)).
+- Existing static VS Code projection (`.evcrate/source/.evcrate-vscode/**`) and core CLI runtime closure remain untouched until Phase 03/07/08 cutover; live native editor qualification remains deferred to Phase 09 real-case verification per the explicit 2026-10-12 user gate amendment.
+
+### 2026-10-12 — docs(vscode): native feasibility evaluation for runtime model bindings companion (Phase 01)
+
+- Evaluated proposed `chatPromptFiles` API (`registerCustomAgentProvider`) for private companion model bindings on Linux x86_64 host (pinned candidate VS Code 1.140.0 commit `07f806f999227108933c2e30515b26eecc1fda74`).
+- Offline spike test harness passed 10/10 checks as documented in [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md) and [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md). Validated selector formatting, ambiguity rejection (`SELECTOR_AMBIGUOUS`), precedence layering, fail-closed remote authority rejection (`vscode-remote://`, `wsl://`), local file URI acceptance, simulated generation retention bounds, frontmatter contracts, simulated in-turn generation immutability, and storage isolation. Temporary spike removed; artifact packaging and digest recorded in report.
+- Native runtime qualification gates remain deferred to Phase 09 real-case verification per the explicit 2026-10-12 user gate amendment ([interface-freeze.md](../plans/261011-2349-vscode-runtime-model-bindings/reports/interface-freeze.md)); existing static projection remains unchanged.
 
 ### 2026-10-11 — feat(vscode): shorten plugin identity and use container-local command names
 
@@ -725,50 +794,6 @@
   29/29; build and CLI help checks pass. Native Windows execution and live
   npm/GitHub publication remain downstream gates.
 
-### 2026-09-14 — feat(test): self-contained Windows qualification harness (Phase 05)
-
-**Status:** Phase 05 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
-**Plan:** [Phase 05 plan](../plans/260914-0636-windows-release-qualification/phase-05-self-contained-windows-qualification-harness.md)
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2030-phase-05-self-contained-windows-qualification-harness-cycle-2.md)
-
-- Delivered the Node-builtins-only qualification CLI with strict host,
-  receipt, and exact-byte preflight; safe PowerShell/`cmd.exe` runners;
-  smoke/full lifecycle controllers; immutable-state and PATH observers; and
-  isolated negative scenarios.
-- Scoped checks passed 60/60: distribution/harness 28/28, release artifacts
-  17/17, and Linux installer wildcard 15/15. Direct `--help` invocation
-  exited 0, confirming the standalone entrypoint.
-- Native Windows smoke/full execution remains an explicit downstream Phase 09
-  evidence gate; Phase 07 workflow wiring is complete but does not execute hosted
-  rows. This deterministic host-independent evidence makes no runtime support claim.
-- Handoff advanced to Phase 06 — semantic-release candidate, receipt, and
-  publisher.
-
-### 2026-09-14 — feat(release): deterministic Windows fixture and predecessor resolver (Phase 04)
-
-**Status:** Phase 04 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
-**Plan:** [Phase 04 plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md)
-**Evidence:** [Cycle 2 tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md)
-and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md).
-
-- Factored shared fixture record ordering, controller/build-manifest digests, real
-  installer bytes, and fixed timestamp metadata; `buildWindowsTestReleaseSet`
-  now uses `buildReleaseArchives` and emits exactly four Windows assets.
-- Added bounded stable-release enumeration and exact-label/canonical-name
-  predecessor resolution. Bootstrap uses verified `1.0.0`/`v1.0.0` bytes with
-  lowercase `a`×40 identity only before qualification history; latest stable is
-  mandatory afterward, with no older/bootstrap fallback.
-- Added private staged streaming downloads with cross-origin token stripping,
-  bounded error/stream bytes, pre/post-promotion exact-four verification, strict
-  CLI flags, and cleanup of partial output on failure.
-- Focused Phase 04, release, and Linux installer suites pass 39/39 (100%).
-  This deterministic Linux evidence does not qualify native Windows runtime.
-
-### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
-
-- Scope distribution baseline: scalar `--scope home|project`, normalized project descriptors and identity hashing, runtime closures, single-snapshot planning, generic transaction engine, schema-2 state migration/recovery, and contract proofs across all targets.
-- Retained evidence: `npm run build`, `npm run test:publication`, `npm run test:integration`, and all target manifests green. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 ## Historical entries
 
-Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md).
-The current changelog remains the maintained phase mirror for the active milestone.
+Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md); this document remains the maintained phase mirror for the active milestone.

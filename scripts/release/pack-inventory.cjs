@@ -49,8 +49,39 @@ function collectPackInventory(projectRoot) {
       data
     });
   }
-
+  verifyPackCompanionArtifacts(records, projectRoot);
   return records;
+}
+
+function verifyPackCompanionArtifacts(records, projectRoot) {
+  const descRecord = records.find((r) => r.path === '.evcrate/targets/vscode/files/evcrate/companion/package.json');
+  if (!descRecord) {
+    throw new Error('Required VS Code companion descriptor missing from pack records: .evcrate/targets/vscode/files/evcrate/companion/package.json');
+  }
+
+  const desc = JSON.parse(descRecord.data.toString('utf8'));
+  const expectedVsixPath = `.evcrate/targets/vscode/files/evcrate/companion/evcrate-model-bindings-${desc.version}.vsix`;
+  const vsixRecord = records.find((r) => r.path === expectedVsixPath);
+  if (!vsixRecord) {
+    throw new Error(`Companion VSIX missing from pack records: ${expectedVsixPath}`);
+  }
+  if (vsixRecord.sha256 !== desc.vsixSha256) {
+    throw new Error(`Pack inventory companion VSIX sha256 (${vsixRecord.sha256}) mismatches descriptor (${desc.vsixSha256})`);
+  }
+
+  const receiptRecord = records.find((r) => r.path === '.evcrate/targets/vscode/files/evcrate/companion/source-receipt.json');
+  if (!receiptRecord) {
+    throw new Error('Companion source receipt missing from pack records');
+  }
+
+  const projVsixPath = `.evcrate/source/.evcrate-vscode/evcrate/companion/evcrate-model-bindings-${desc.version}.vsix`;
+  const projVsixRecord = records.find((r) => r.path === projVsixPath);
+  if (!projVsixRecord) {
+    throw new Error(`Projected companion VSIX missing from pack records: ${projVsixPath}`);
+  }
+  if (projVsixRecord.sha256 !== desc.vsixSha256) {
+    throw new Error(`Projected companion VSIX sha256 (${projVsixRecord.sha256}) mismatches descriptor (${desc.vsixSha256})`);
+  }
 }
 
 function collectBuildManifestDigests(projectRoot) {
@@ -119,5 +150,6 @@ module.exports = {
   EXPECTED_TARGETS,
   collectPackInventory,
   collectBuildManifestDigests,
-  getInstallerEntry
+  getInstallerEntry,
+  verifyPackCompanionArtifacts
 };

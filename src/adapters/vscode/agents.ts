@@ -1,40 +1,36 @@
+import { createHash } from 'node:crypto';
 import { ControlPlaneError } from '../../errors/control-plane-error.js';
 import type { ProjectionBuildContext } from '../types.js';
 import { filesUnder, sourcePath, decodeUtf8, copyText, writeJson } from './common.js';
-import { parseFrontmatter, serializeFrontmatter, mapAgentTools, resolveLocalModel } from './metadata.js';
+import { parseFrontmatter, serializeFrontmatter, mapAgentTools } from './metadata.js';
 import { transformVscodePrompt } from './references.js';
 import type { VscodeCommandMapEntry, VscodeSkillMapEntry, VscodeAgentMapEntry } from './names.js';
+import {
+  resolveCanonicalModelIntent,
+  validateAgentIntentManifest,
+  validateAgentToolAuditV2,
+  VSCODE_AGENT_INTENT_SCHEMA_V1,
+  VSCODE_AGENT_TOOL_AUDIT_SCHEMA_V2,
+  type CanonicalModelIntent,
+  type VscodeAgentIntentManifestV1,
+  type VscodeAgentIntentRecord,
+  type VscodeAgentToolAuditV2,
+  type VscodeAgentAuditEntryV2
+} from './model-intent.js';
 
-export interface VscodeAgentAudit {
-  readonly source: string;
-  readonly target: string;
-  readonly model: {
-    readonly source?: string;
-    readonly target: string | null;
-    readonly disposition: string;
-  };
-  readonly tools: {
-    readonly mapped: readonly string[];
-    readonly dropped: readonly string[];
-    readonly explicitNone: boolean;
-  };
-  readonly delegation: {
-    readonly allowed: boolean;
-    readonly agents: readonly string[];
-  };
-}
 
 export function convertVscodeAgents(
   context: ProjectionBuildContext,
   agentMap: Record<string, VscodeAgentMapEntry>,
   commandMap: Record<string, VscodeCommandMapEntry>,
   skills: readonly VscodeSkillMapEntry[]
-): Record<string, VscodeAgentAudit> {
+): Record<string, VscodeAgentAuditEntryV2> {
   const agentFiles = filesUnder(context, 'agents')
     .filter((file) => file.path.endsWith('.md'))
     .sort((a, b) => a.path.localeCompare(b.path));
 
-  const audits: Record<string, VscodeAgentAudit> = {};
+  const audits: Record<string, VscodeAgentAuditEntryV2> = {};
+  const intentRecords: Record<string, VscodeAgentIntentRecord> = {};
 
   for (const file of agentFiles) {
     const rel = sourcePath('agents', file);
@@ -54,8 +50,6 @@ export function convertVscodeAgents(
     }
 
     const body = transformVscodePrompt(parsed.body, commandMap, skills);
-
-
     const sourceToolsField = parsed.fields.tools;
     const toolResult = mapAgentTools(sourceToolsField);
 
@@ -64,12 +58,13 @@ export function convertVscodeAgents(
       description
     };
 
-    if (typeof parsed.fields['user-invocable'] === 'boolean') {
-      outFrontmatter['user-invocable'] = parsed.fields['user-invocable'];
-    } else {
-      outFrontmatter['user-invocable'] = true;
-    }
-
+    const userInvocable = typeof parsed.fields['user-invocable'] === 'boolean'
+      ? parsed.fields['user-invocable']
+      : true;
+    outFrontmatter['user-invocable'] = userInvocable;
+    const disableModelInvocation = typeof parsed.fields['disable-model-invocation'] === 'boolean'
+      ? parsed.fields['disable-model-invocation']
+      : false;
     if (typeof parsed.fields['disable-model-invocation'] === 'boolean') {
       outFrontmatter['disable-model-invocation'] = parsed.fields['disable-model-invocation'];
     }
@@ -87,14 +82,18 @@ export function convertVscodeAgents(
       }
     }
 
-    // Model resolution and validation
-    const sourceModel = typeof parsed.fields.model === 'string' ? parsed.fields.model.trim() : undefined;
-    const modelResolution = resolveLocalModel(sourceModel);
-    if (modelResolution.mode === 'unavailable') {
-      throw new ControlPlaneError('CAPABILITY_UNSUPPORTED', 'LOCAL_MODEL_UNAVAILABLE');
+    // Model intent resolution and strict validation - strip actionable model selector from template
+    const rawModel = parsed.fields.model;
+    if (rawModel !== undefined && rawModel !== null && typeof rawModel !== 'string') {
+      throw new ControlPlaneError('VALIDATION_INVALID', 'Agent model must be a string if defined');
     }
-    if (modelResolution.mode === 'pin' && sourceModel) {
-      outFrontmatter.model = sourceModel;
+    const sourceModel = typeof rawModel === 'string' ? rawModel.trim() : undefined;
+    let canonicalIntent: CanonicalModelIntent;
+    try {
+      canonicalIntent = resolveCanonicalModelIntent(sourceModel);
+    } catch (err) {
+      if (err instanceof ControlPlaneError) throw err;
+      throw new ControlPlaneError('VALIDATION_INVALID', err instanceof Error ? err.message : String(err));
     }
 
     // Preserve skills array if present (e.g. snyk-expert)
@@ -114,13 +113,40 @@ export function convertVscodeAgents(
     const rendered = serializeFrontmatter(outFrontmatter, body);
     copyText(context, file.path, entry.target, () => rendered);
 
+    const templateSha256 = createHash('sha256').update(rendered, 'utf8').digest('hex');
+    const sourcePathStr = `.claude/agents/${sourceName}.md`;
+    const templatePathStr = entry.target;
+
+    intentRecords[sourceName] = Object.freeze({
+      actorId: sourceName,
+      sourcePath: sourcePathStr,
+      templatePath: templatePathStr,
+      templateSha256,
+      referenceBase: 'agents',
+      intent: canonicalIntent,
+      tools: Object.freeze({
+        mapped: toolResult.mapped,
+        dropped: toolResult.dropped,
+        explicitNone: toolResult.isExplicitNone
+      }),
+      delegation: Object.freeze({
+        allowed: toolResult.canDelegate,
+        agents: toolResult.canDelegate ? Object.freeze(['*']) : Object.freeze([])
+      }),
+      visibility: Object.freeze({
+        userInvocable,
+        disableModelInvocation
+      })
+    });
+
     audits[sourceName] = Object.freeze({
-      source: rel,
-      target: entry.target,
-      model: Object.freeze({
-        source: sourceModel,
-        target: modelResolution.mode === 'pin' ? modelResolution.nativeModel : null,
-        disposition: modelResolution.mode === 'pin' ? 'pinned' : 'inherited'
+      source: sourcePathStr,
+      target: templatePathStr,
+      templateSha256,
+      modelIntent: Object.freeze({
+        ...(sourceModel !== undefined ? { source: sourceModel } : {}),
+        tier: canonicalIntent.tier,
+        disposition: canonicalIntent.tier !== null ? 'tier-required' : 'inherit'
       }),
       tools: Object.freeze({
         mapped: toolResult.mapped,
@@ -134,10 +160,20 @@ export function convertVscodeAgents(
     });
   }
 
-  writeJson(context, 'evcrate/agent-tool-audit.json', {
-    schema: 'evcrate-vscode-agent-tool-audit-v1',
+  const intentManifest: VscodeAgentIntentManifestV1 = {
+    schema: VSCODE_AGENT_INTENT_SCHEMA_V1,
+    pluginName: 'evc',
+    actors: intentRecords
+  };
+  const validatedIntent = validateAgentIntentManifest(intentManifest);
+  writeJson(context, 'evcrate/agent-intent.json', validatedIntent);
+
+  const toolAudit: VscodeAgentToolAuditV2 = {
+    schema: VSCODE_AGENT_TOOL_AUDIT_SCHEMA_V2,
     agents: audits
-  });
+  };
+  const validatedAudit = validateAgentToolAuditV2(toolAudit);
+  writeJson(context, 'evcrate/agent-tool-audit.json', validatedAudit);
 
   return Object.freeze(audits);
 }

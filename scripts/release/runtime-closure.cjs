@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const moduleBuiltin = require('node:module');
 const { extractSpecifiersFromAst } = require('./ast-scanner.cjs');
+const zlib = require('node:zlib');
+const crypto = require('node:crypto');
 
 function assertNoSymlinkAncestors(targetPath) {
   let current = path.resolve(targetPath);
@@ -110,16 +112,95 @@ function traverseRuntimeClosure(packageRoot, entrypoints) {
   return Array.from(visited).map((p) => path.relative(packageRoot, p).replace(/\\/gu, '/'));
 }
 
+function validateVscodeCompanionClosure(packageRoot) {
+  const companionDescPath = path.join(packageRoot, '.evcrate', 'targets', 'vscode', 'files', 'evcrate', 'companion', 'package.json');
+  if (!fs.existsSync(companionDescPath)) {
+    throw new Error(`Required VS Code companion descriptor missing at ${companionDescPath}`);
+  }
+  const desc = JSON.parse(fs.readFileSync(companionDescPath, 'utf8'));
+  const vsixPath = path.join(packageRoot, '.evcrate', 'targets', 'vscode', 'files', 'evcrate', 'companion', `evcrate-model-bindings-${desc.version}.vsix`);
+  if (!fs.existsSync(vsixPath)) {
+    throw new Error(`Required companion VSIX missing at ${vsixPath}`);
+  }
+
+  const vsixBuffer = fs.readFileSync(vsixPath);
+  const actualHash = crypto.createHash('sha256').update(vsixBuffer).digest('hex');
+  if (actualHash !== desc.vsixSha256) {
+    throw new Error(`Companion VSIX sha256 mismatch in closure check: expected ${desc.vsixSha256}, got ${actualHash}`);
+  }
+
+  const jsFilesToCheck = [];
+  let eocdOffset = -1;
+  for (let i = vsixBuffer.length - 22; i >= Math.max(0, vsixBuffer.length - 65557); i -= 1) {
+    if (vsixBuffer.readUInt32LE(i) === 0x06054b50) { eocdOffset = i; break; }
+  }
+  if (eocdOffset === -1) {
+    throw new Error(`Invalid companion VSIX: EOCD not found`);
+  }
+
+  const cdOffset = vsixBuffer.readUInt32LE(eocdOffset + 16);
+  const cdSize = vsixBuffer.readUInt32LE(eocdOffset + 12);
+  const recordCount = vsixBuffer.readUInt16LE(eocdOffset + 8);
+  if (cdOffset + cdSize > eocdOffset) {
+    throw new Error(`Invalid companion VSIX: Central directory overflows EOCD`);
+  }
+
+  let curr = cdOffset;
+  for (let i = 0; i < recordCount && curr + 46 <= cdOffset + cdSize; i += 1) {
+    if (vsixBuffer.readUInt32LE(curr) !== 0x02014b50) {
+      throw new Error(`Invalid Central Directory header signature in companion VSIX`);
+    }
+    const method = vsixBuffer.readUInt16LE(curr + 10);
+    const compSize = vsixBuffer.readUInt32LE(curr + 20);
+    const nameLen = vsixBuffer.readUInt16LE(curr + 28);
+    const extraLen = vsixBuffer.readUInt16LE(curr + 30);
+    const commentLen = vsixBuffer.readUInt16LE(curr + 32);
+    const localOff = vsixBuffer.readUInt32LE(curr + 42);
+    const entryName = vsixBuffer.subarray(curr + 46, curr + 46 + nameLen).toString('utf8');
+    curr += 46 + nameLen + extraLen + commentLen;
+
+    if (entryName.startsWith('extension/dist/') && entryName.endsWith('.js')) {
+      if (localOff + 30 > vsixBuffer.length) {
+        throw new Error(`Local header for ${entryName} overflows buffer`);
+      }
+      const localNameLen = vsixBuffer.readUInt16LE(localOff + 26);
+      const localExtraLen = vsixBuffer.readUInt16LE(localOff + 28);
+      const dataOff = localOff + 30 + localNameLen + localExtraLen;
+      if (dataOff + compSize > vsixBuffer.length) {
+        throw new Error(`Compressed data for ${entryName} overflows buffer`);
+      }
+      const compData = vsixBuffer.subarray(dataOff, dataOff + compSize);
+      const data = method === 0 ? compData : zlib.inflateRawSync(compData, { maxOutputLength: 16 * 1024 * 1024 });
+      jsFilesToCheck.push({ name: entryName, content: data.toString('utf8') });
+    }
+  }
+
+  if (jsFilesToCheck.length === 0) {
+    throw new Error(`No JS files found in companion VSIX`);
+  }
+  for (const { name, content } of jsFilesToCheck) {
+    const specifiers = extractSpecifiersFromAst(name, content);
+    for (const spec of specifiers) {
+      if (spec.startsWith('node:') || spec === 'vscode') continue;
+      if (moduleBuiltin.isBuiltin(spec)) continue;
+      if (spec.startsWith('.')) continue;
+      throw new Error(`Forbidden external module "${spec}" in companion ${name}`);
+    }
+  }
+  return { valid: true, companionVerified: true, filesChecked: jsFilesToCheck.length };
+}
+
 function validateRuntimeClosure(packageRoot) {
   const entrypoints = ['dist/cli/evcrate.js', 'dist/index.js'];
   const visited = traverseRuntimeClosure(packageRoot, entrypoints);
-
+  const companion = validateVscodeCompanionClosure(packageRoot);
 
   return {
     valid: true,
     entrypoints,
     visitedCount: visited.length,
-    visited
+    visited,
+    companion
   };
 }
 
@@ -128,5 +209,6 @@ module.exports = {
   extractSpecifiersFromAst,
   resolveAndValidateSpecifier,
   traverseRuntimeClosure,
-  validateRuntimeClosure
+  validateRuntimeClosure,
+  validateVscodeCompanionClosure
 };
