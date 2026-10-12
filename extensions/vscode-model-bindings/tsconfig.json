@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "declaration": true,
+    "rootDir": "src",
+    "outDir": "../../.cache/evcrate/vscode-model-bindings-dist",
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+    "incremental": true,
+    "tsBuildInfoFile": "../../.cache/evcrate/vscode-model-bindings.tsbuildinfo"
+  },
+  "include": [
+    "src/**/*.ts",
+    "vscode.proposed.chatPromptFiles.d.ts"
+  ]
+}

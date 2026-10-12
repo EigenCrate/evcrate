@@ -46,11 +46,25 @@ To activate EVCrate Local:
      }
    }
    \`\`\`
-3. Reload or restart VS Code. The EVCrate agents (e.g. \`@evc-code-reviewer\`), skills, and hook rules will now be active in Copilot Chat Local mode.
+3. Reload or restart VS Code. The EVCrate skills (\`/evc:cmd-*\`), bootstrap instructions, and lifecycle hooks will now be active in Copilot Chat Local mode.
+
+**Important Notice on Agent Templates**: Agent actors (\`@evc-*\`) are published as immutable templates in \`evcrate/agent-templates/\` (intended layout outside host-discovered static agent directories, subject to Phase 09 live discovery qualification). Plugin registration alone activates skills, instructions, and hooks, but does not activate agents. Agent contribution requires the private companion extension and runtime model bindings.
 
 ---
 
-## 4. Deactivation and Uninstallation
+## 4. Companion Extension and Runtime Model Bindings Architecture
+
+Agent actors (\`@evc-*\`) are authored as immutable templates in \`evcrate/agent-templates/\` and require the private companion extension (\`eigencrate.evcrate-model-bindings\`) for runtime model resolution:
+
+- **Companion Packaging & Installation**: The private companion extension (\`eigencrate.evcrate-model-bindings\`) is packaged and verified in the published VS Code output. You can install it using \`evcrate publish --apply --target vscode --install-vscode-companion\` (or interactively confirm the post-publish prompt).
+- **Proposed API Enablement**: When the companion is deployed, activation requires launching VS Code with the proposed \`chatPromptFiles\` API flag:
+   \`\`\`bash
+   code --enable-proposed-api=eigencrate.evcrate-model-bindings
+   \`\`\`
+- **Runtime Enrollment & Model Selection**: Once the companion runtime is packaged, users will enroll their installation root and bind user-selected models to canonical tiers (\`opus\`, \`sonnet\`, \`haiku\`).
+---
+
+## 5. Deactivation and Uninstallation
 
 To deactivate or remove EVCrate Local:
 
@@ -59,7 +73,7 @@ To deactivate or remove EVCrate Local:
 
 ---
 
-## 5. Opt-in MCP Server Configuration
+## 6. Opt-in MCP Server Configuration
 
 EVCrate provides an example MCP server configuration in \`evcrate/examples/mcp-servers.example.json\`.
 
@@ -72,7 +86,7 @@ To opt in to MCP servers:
 
 ---
 
-## 6. Project and Runtime Configuration
+## 7. Project and Runtime Configuration
 
 To customize project policies (such as documentation line limits, plan naming formats, and coding level guidance):
 1. Review \`evcrate/examples/evcrate-config.example.json\`.

@@ -9,7 +9,6 @@ import {
   renderActivationGuide,
   classifySourceSettings
 } from './configuration.js';
-import { buildVscodeModelMap } from './metadata.js';
 import { discoverAllVscodeNames } from './names.js';
 import { generateVscodeInstructions } from './instructions.js';
 import { convertVscodeWorkflows } from './workflows.js';
@@ -114,9 +113,6 @@ function build(context: ProjectionBuildContext): void {
   }
   const settingsDisposition = classifySourceSettings(sourceSettings);
   writeJson(context, 'evcrate/settings-disposition.json', settingsDisposition);
-
-  const modelMap = buildVscodeModelMap();
-  writeJson(context, 'evcrate/model-map.json', modelMap);
 }
 
 function validate(context: ProjectionBuildContext): ProjectionValidation {

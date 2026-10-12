@@ -7,9 +7,12 @@ import {
   renderEvcrateConfigExample,
   renderActivationGuide,
   validateLocalConfiguration,
-  resolveLocalModel,
-  buildVscodeModelMap,
-  VSCODE_LOCAL_MODEL_MAP
+  resolveCanonicalModelIntent,
+  validateAgentIntentManifest,
+  validateAgentToolAuditV2,
+  VSCODE_AGENT_INTENT_SCHEMA_V1,
+  VSCODE_AGENT_TOOL_AUDIT_SCHEMA_V2,
+  VSCODE_CANONICAL_TIERS
 } from '../../dist/adapters/vscode/index.js';
 
 test('configuration: classifySourceSettings correctly maps and classifies keys', () => {
@@ -89,35 +92,31 @@ test('configuration: renderEvcrateConfigExample and renderActivationGuide output
   assert.ok(guide.includes('chat.pluginLocations'));
   assert.ok(guide.includes('Workspace Trust'));
   assert.ok(guide.includes('Inert by Default'));
+  assert.ok(guide.includes('Companion Extension'));
+  assert.ok(guide.includes('eigencrate.evcrate-model-bindings'));
+  assert.ok(guide.includes('chatPromptFiles'));
 });
 
-test('configuration: resolveLocalModel handles pin, inheritance, and unavailable models', () => {
-  assert.deepEqual(resolveLocalModel('opus'), { mode: 'pin', nativeModel: 'claude-3-opus' });
-  assert.deepEqual(resolveLocalModel('sonnet'), { mode: 'pin', nativeModel: 'claude-3.5-sonnet' });
-  assert.deepEqual(resolveLocalModel('haiku'), { mode: 'pin', nativeModel: 'claude-3.5-haiku' });
+test('configuration: resolveCanonicalModelIntent handles canonical tiers, inheritance, and invalid models', () => {
+  assert.deepEqual(resolveCanonicalModelIntent('opus'), { mode: 'tier', tier: 'opus' });
+  assert.deepEqual(resolveCanonicalModelIntent('sonnet'), { mode: 'tier', tier: 'sonnet' });
+  assert.deepEqual(resolveCanonicalModelIntent('haiku'), { mode: 'tier', tier: 'haiku' });
 
-  assert.deepEqual(resolveLocalModel(undefined), { mode: 'inherit', nativeModel: null });
-  assert.deepEqual(resolveLocalModel(null), { mode: 'inherit', nativeModel: null });
-  assert.deepEqual(resolveLocalModel(''), { mode: 'inherit', nativeModel: null });
-  assert.deepEqual(resolveLocalModel('inherit'), { mode: 'inherit', nativeModel: null });
+  assert.deepEqual(resolveCanonicalModelIntent(undefined), { mode: 'inherit', tier: null });
+  assert.deepEqual(resolveCanonicalModelIntent(null), { mode: 'inherit', tier: null });
+  assert.deepEqual(resolveCanonicalModelIntent(''), { mode: 'inherit', tier: null });
+  assert.deepEqual(resolveCanonicalModelIntent('inherit'), { mode: 'inherit', tier: null });
 
-  const unavail = resolveLocalModel('future-unsupported-model');
-  assert.equal(unavail.mode, 'unavailable');
-  assert.equal(unavail.code, 'LOCAL_MODEL_UNAVAILABLE');
-
-  const invalidType = resolveLocalModel(12345);
-  assert.equal(invalidType.mode, 'unavailable');
-  assert.equal(invalidType.code, 'LOCAL_MODEL_UNAVAILABLE');
+  assert.throws(() => resolveCanonicalModelIntent('future-unsupported-model'), { code: 'CONTRACT_INVALID' });
+  assert.throws(() => resolveCanonicalModelIntent('claude-3-opus'), { code: 'CONTRACT_INVALID' });
+  assert.throws(() => resolveCanonicalModelIntent(12345), { code: 'CONTRACT_INVALID' });
 });
 
-test('configuration: buildVscodeModelMap produces valid audit map schema', () => {
-  const map = buildVscodeModelMap();
-  assert.equal(map.schema, 'evcrate-vscode-model-map-v1');
-  assert.equal(map.mappings.opus.nativeModel, 'claude-3-opus');
-  assert.equal(map.mappings.sonnet.nativeModel, 'claude-3.5-sonnet');
-  assert.equal(map.mappings.haiku.nativeModel, 'claude-3.5-haiku');
-  assert.equal(map.mappings.inherit.nativeModel, null);
-  assert.ok(map.unsupported.skillModelPins);
+test('configuration: obsolete local model map exports are completely removed', async () => {
+  const vscodeExports = await import('../../dist/adapters/vscode/index.js');
+  assert.equal(vscodeExports.resolveLocalModel, undefined);
+  assert.equal(vscodeExports.buildVscodeModelMap, undefined);
+  assert.equal(vscodeExports.VSCODE_LOCAL_MODEL_MAP, undefined);
 });
 
 test('configuration: validateLocalConfiguration enforces security and secret bounds', () => {

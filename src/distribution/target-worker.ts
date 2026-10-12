@@ -15,6 +15,7 @@ import {
 import type { TargetManifest } from '../manifests/types.js';
 import { normalizeTarget, type PersistedTarget } from '../protocol/validation.js';
 import { collectBaselineOwners } from './local-staging-fs.js';
+import { mergeTargetOverlayArtifacts } from './overlay-staging.js';
 
 export interface WorkerRequest {
   readonly type: 'BUILD_TARGET';
@@ -90,6 +91,7 @@ export function executeTargetBuild(request: WorkerRequest): {
     const adapter = manifest.id === 'vscode' ? vscodeAdapter : getProjectionAdapter(manifest.id);
     const buildContext = createProjectionBuildContext(manifest, request.canonicalHarnessRoot, targetStage);
     adapter.build(buildContext);
+    mergeTargetOverlayArtifacts(manifest, buildContext);
     const validation = adapter.validate(buildContext);
     if (!validation.valid) {
       throw new ControlPlaneError('VALIDATION_INVALID', `Validation failed for target ${manifest.id}`);

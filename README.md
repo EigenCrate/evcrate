@@ -164,6 +164,17 @@ EVCrate provides native support for VS Code Local as an isolated Agent Plugins 1
 Publish with `evcrate publish --apply --scope project --project-root /path/to/project --target vscode` or `--scope home --target vscode`. Preview with `--dry-run --json`.
 Interactive first use prompts: `Register this plugin in VS Code settings? [y/N]`. Confirmation updates only `chat.pluginLocations` in `.vscode/settings.json` or User settings. Non-interactive/CI requires `--register-vscode-settings`. Deactivate via `"chat.pluginLocations": { "...": false }`.
 
+Publish with `evcrate publish --apply --scope project --project-root /path/to/project --target vscode`
+or `--scope home --target vscode`. Preview with `--dry-run --json`.
+
+On interactive first use, the CLI prompts to register `chat.pluginLocations` in settings and (after successful publication) optionally install the private companion extension (`eigencrate.evcrate-model-bindings`); both prompts default to No (`[y/N]`).
+Pipes/CI/`--json` do not prompt and require explicit flags:
+- Settings: `--register-vscode-settings` / `--no-register-vscode-settings` (manual: `"chat.pluginLocations": { "/path/to/.evcrate-vscode": true }`).
+- Companion: `--install-vscode-companion` / `--no-install-vscode-companion` (`--vscode-editor <path>`, `--vscode-profile <name>`).
+Dry-run never writes settings or installs extensions. Requested companion install failure returns exit 5 while keeping publication committed on stdout (status on stderr). Skills, commands, and hooks activate on plugin registration; companion agent contribution requires launching VS Code with `--enable-proposed-api=eigencrate.evcrate-model-bindings`.
+
+The companion contributes an `EVCrate` Activity Bar icon and `Model Bindings` sidebar tree (`evcrate.modelBindingsView`), with `Installation Root`, `Model Tiers`, and `Agents (17)` sections. Selecting a tier or agent row opens configuration for that item.
+
 ### Policy, coexistence, and recovery
 - **Single Active Copy**: Do not enable both HOME (`~/.evcrate-vscode`) and project (`.evcrate-vscode`) registrations in the same workspace. Project `.copilot` and `.evcrate-vscode` coexist independently.
 - **Native Hooks**: CommonJS runtime closure inspects 8 lifecycle events (`SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `PreCompact`, `SubagentStart`, `SubagentStop`, `Stop`). Heavy directories are denied; sensitive files require interactive approval. Opt-in MCP examples are inert templates.
