@@ -20,7 +20,7 @@ sonar list issues -p <project-key> --branch <branch> --format toon --page-size 5
 
 Follow pagination until exhausted before claiming a complete list; preserve all pagination metadata (`total`, `p`, `ps`). Captured JSON exports remain authoritative for durable machine-readable storage, audits, and downstream parsing. Never infer zero findings or passing status from an unexhausted, partial, or missing-metadata export. Add `--file` or `--new-code` only for requested narrower scope; a directory `--file` selector does not include subdirectories.
 
-The default statuses are `OPEN,CONFIRMED`. Use severity filters only after checking server mode: Standard uses `BLOCKER,CRITICAL,MAJOR,MINOR,INFO`; MQR uses `BLOCKER,HIGH,MEDIUM,LOW,INFO`. Do not pass Standard values to MQR.
+Discover active server statuses rather than assuming fixed defaults (Standard defaults to `OPEN,CONFIRMED`; active server vocabulary may vary). Use severity filters only after checking server mode: Standard uses `BLOCKER,CRITICAL,MAJOR,MINOR,INFO`; MQR uses `BLOCKER,HIGH,MEDIUM,LOW,INFO`. Do not pass Standard values to MQR.
 
 Optional branch-only helper (requires PowerShell):
 
@@ -63,11 +63,15 @@ The converter does **not** fetch data, merge pages, authenticate, or validate se
 
 For format selection rules, delimiter isolation, and controlled model evaluation protocols, see [Report formats](report-formats.md).
 
-## Full scans
+## Full scans and local analysis
 
 Issue/gate reads do not submit analysis. `sonar analyze agentic` analyzes a change set/selected files; `sonar integrate git --hook pre-push` installs a secrets hook. Neither is a full scanner or proof of Jenkins execution.
 
-For Jenkins, read [full scan](full-scan-workflow.md). For an explicitly requested local Maven scan:
+For local analysis lifecycles across toolchains, see [Local analysis](local-analysis.md) for approved stage ordering (preparation, instrumentation, native build, native test, coverage generation, import/upload, submission tracking, finalization), lifecycle shapes (integrated, standalone, begin/end), uninstrumented native verification, and recovery boundaries. See [Project discovery](project-discovery.md) for profile and applicability discovery.
+
+For full analysis through Jenkins, read [full scan](full-scan-workflow.md).
+
+For an explicitly requested local Maven scan (integrated build/scanner shape, requiring recorded preflight upload authorization per [Local analysis](local-analysis.md)):
 
 ```powershell
 mvn -B clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:<configured-version>:sonar

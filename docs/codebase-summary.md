@@ -21,6 +21,7 @@ source tree. The TypeScript CLI is the package control plane.
 | `scripts/` | Generation, package, release, benchmark (`benchmark-build-generation.mjs`), and TypeScript incremental build tooling (`build-typescript.mjs`, `typescript-build-cache.mjs`, `typescript-build-receipt.mjs`) | Follow each script's declared authority; generated outputs are not edited by hand. |
 | `tests/` | Contract and behavior suites | Focused regression and integration tests, not live vendor qualification. |
 | `docs/`, `plans/` | Maintained documentation and work plans | See the documentation map below. |
+| `ext/` | Standalone extension packages | Author standalone extensions outside canonical harness (e.g. Snyk specialist, SonarQube test quality). |
 
 The persisted target IDs are `claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. Standalone Gemini is retired, not Antigravity's vendor HOME directory. Codex owns `.agents/skills`; Antigravity owns exact `.agents` hook/rule leaves. `vscode` uses a separate local-build adapter route; generated outputs and manifests are build artifacts.
 
@@ -340,6 +341,28 @@ Phase 10 cuts over maintained documentation, migration guidance, and the stable 
 - **Stable release pipeline:** `.releaserc.json` configured with canonical branch `["main"]`. Workflow `.github/workflows/release.yml` triggers pushes on `main`, producing and verifying candidate artifacts on Linux before publishing automatically (`windows-smoke.yml` qualifies Windows in PRs on `windows-2025` with `pwsh.exe` and Node `24.21.0`).
 - **Candidate mirror seeding & topology guards:** `scripts/release/run-release-candidate.cjs` seeds bare candidate mirrors with `main` at `sourceCommit` and pushes all local tags. `scripts/release/publish-release.cjs` enforces `main`-only stable publication and rejects prerelease candidate versions.
 - **Normative documentation reconciliation:** Reconciled `README.md`, `code-standards.md`, `system-architecture.md`, `project-overview-pdr.md` (FR-12), `project-roadmap.md`, `pi-native-migration.md`, and `guide/SKILLS.md` covering universal `evc-cmd-*` / `evc-*` naming, single `AGENTS.md` authority, pre-upgrade customization backup warnings, and exact local-asset installer installation procedures.
+
+## Standalone SonarQube test quality extension (Phase 02)
+
+The standalone extension `ext/sonarqube-test-quality/` provides neutral SonarQube triage, test refactoring, coverage verification, and scanner lifecycles (Phase 02 establishes neutral discovery, scanner lifecycle, and test/coverage guidance references; subsequent ledger, installer, and live qualification phases remain pending):
+
+- **Source root**: `ext/sonarqube-test-quality/` contains the self-contained skill payload (`SKILL.md`, `references/`, `scripts/`, `bin/`, `evals/`, `tests/`).
+- **Profile and applicability discovery (`references/project-discovery.md`)**:
+  - Deterministic discovery order: repository manifests → approved scripts, scanner configuration, tracked CI → installed tool help and versions → matching official vendor docs.
+  - Safe actual-input identity: records SHA, ref, manifests, and nonsecret config with credential redaction (`sonar.token`, `sonar.login`, etc.). Two-factor report freshness requires artifact timestamp newer than source/config mtimes AND input content digest provenance binding.
+  - Requirement contracts (`required`, `optional`, justified `not-applicable`) separated from runtime observations (`available/passed`, `available/failed`, `unsupported`, `unavailable`).
+- **Ordered scanner lifecycles and recovery (`references/local-analysis.md`)**:
+  - 8-stage sequence: Preparation → Instrumentation/Begin → Native Build → Native Test → Coverage Generation → Import & Upload → Submission Tracking → Finalization.
+  - 3 universal lifecycle shapes: Shape A (Integrated Build/Scanner), Shape B (Standalone Scanner), Shape C (Preparation→Build→End).
+  - Native semantic parity: mandatory clean uninstrumented native verification when scanner instrumentation alters compiler flags or build semantics.
+  - Auth and TLS separation: CLI query session verification (`sonar auth status`) separated from scanner process credentials; TLS verification never disabled.
+  - Stage-specific failure recovery: aborts cleanly without executing upload-capable steps or `end` hooks as cleanup.
+- **Neutral test and coverage verification (`references/testing-and-coverage.md`)**:
+  - Neutral test execution rules with two-factor coverage freshness.
+  - Counter and denominator rules: zero denominator (`0/0`) is undefined/empty, never 100%; unsupported branch coverage is marked `unsupported`, not implicitly satisfied.
+  - Retains optional Java/Maven/JaCoCo helper recipes (`scripts/calculate-jacoco-coverage.ps1`).
+- **CLI quick reference (`references/sonar-cli-commands.md`) & skill entrypoint (`SKILL.md`)**:
+  - Dynamic server status discovery rather than fixed defaults; links discovery, local analysis, and full-scan routes; requires recorded preflight upload authorization for scanner executions and uploads.
 ## Documentation navigation
 
 - [Agent guidance](../AGENTS.md) — shared agent workflows and subagent completion contract.

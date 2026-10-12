@@ -196,6 +196,28 @@ All current local projections include both skill packages. Antigravity intention
 
 Generation, resolved local links and constructed explicit-read procedure behavior are distinct from native child discovery, permission enforcement and live remediation. No all-target parity, production publication or fixed-finding claim follows from local porting. See the [qualification matrix](../plans/261001-0304-claude-snyk-agent-skill-pattern/reports/porting-qualification.md); Phase 05 live qualification remains incomplete.
 
+### Standalone Sonar remediation cycles
+
+The standalone extension `ext/sonarqube-test-quality/` provides neutral domain policy, discovery and scanner lifecycle references, with proposed sibling `cmd-sonar-remediate` skill, portable evidence actor prompt, and private evidence/sanitized-guidance templates. No canonical resources, registry/projections, native actor registration or host settings are added.
+
+The consuming host must provide real independent subagents. The parent owns a
+global maximum N with persisted failures and bounded corrections; approved native
+scanner lifecycles submit actual analyses and correlate every target's task,
+analysis, gate and complete findings. Final success requires committed-input
+qualification and independent audit, not a passing gate alone. Upload, commit and
+push authority remain separate; prompt restrictions are not a sandbox.
+
+The proposed installer explicitly selects `.agents/skills/`, `.claude/skills/`,
+or both for the same two-skill payload. Both roots use one guarded in-process
+publish/rollback transaction, with shared and legacy-lock coordination. This is
+not all-file atomic visibility or process-crash recovery. Duplicate host
+discovery requires observed path selection, not assumed precedence.
+
+Implementation acceptance uses package/installed-host behavioral evidence and
+historical supplied-report guidance, not a mandatory new live Sonar run.
+Actual remediation-run server-success claims still require the full evidence
+contract above. Ordinary local-only and Jenkins routes remain separate.
+Phase 02 implements neutral discovery, scanner lifecycle, and test/coverage guidance references in `ext/sonarqube-test-quality/`; orchestration, dual-root installer, host discovery/delegation, and live scanner qualification remain pending. Planning artifacts remain local and Git-ignored.
 ## 3. TypeScript control plane
 
 The source is organized around narrow contracts:

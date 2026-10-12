@@ -2,8 +2,16 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-11
+**Updated:** 2026-10-12
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-12 — feat(sonar): neutral discovery and scanner lifecycles (Phase 02)
+
+- Updated standalone extension `ext/sonarqube-test-quality/` references with language-neutral discovery, execution profile architecture, and ordered scanner lifecycles (installer, orchestration, and live qualification remain pending in later phases).
+- Added project discovery reference (`ext/sonarqube-test-quality/references/project-discovery.md`): defines deterministic discovery order (manifests, scanner configuration, installed tool help, vendor documentation), safe actual-input identity with credential redaction, two-factor report freshness (temporal ordering and input provenance digest binding), requirement contracts (`required`, `optional`, justified `not-applicable`), data-only execution profiles, and labeled offline scenario traces.
+- Added ordered scanner lifecycle reference (`ext/sonarqube-test-quality/references/local-analysis.md`): defines 8 ordered lifecycle stages (preparation, instrumentation, native build, native test, coverage generation, import/upload, submission tracking, finalization), 3 universal lifecycle shapes (integrated, standalone, begin/end), mandatory uninstrumented native semantic verification when scanner instrumentation alters compiler flags or build semantics, authentication separation (CLI query sessions vs scanner process credentials), TLS boundaries, and stage-specific failure recovery.
+- Generalized test and coverage verification (`ext/sonarqube-test-quality/references/testing-and-coverage.md`): neutral runner principles, two-factor coverage freshness, and counter/denominator rules (zero denominator undefined, unsupported branch tracking) while retaining optional Java/JaCoCo recipes.
+- Synchronized entrypoint (`ext/sonarqube-test-quality/SKILL.md`) and CLI reference (`ext/sonarqube-test-quality/references/sonar-cli-commands.md`) with neutral discovery/local analysis routes, dynamic server status checks, and preflight upload authorization requirements.
 
 ### 2026-10-11 — feat(vscode): shorten plugin identity and use container-local command names
 

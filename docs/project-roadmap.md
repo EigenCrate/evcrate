@@ -5,6 +5,7 @@
 **Status:** Unified `evc-*` naming and `AGENTS.md` instructions across all harnesses milestone:
 Phases 01–11 complete per the [project changelog](./project-changelog.md); VS Code plugin identity and container-aware command mapping cutover complete.
 **Updated:** 2026-10-12
+**Sonar remediation cycles milestone progress:** 25% (2/8 phases complete — 2026-10-12; Phase 01 contract freeze DONE 2026-10-12; Phase 02 neutral discovery and scanner lifecycles DONE 2026-10-12, review approved; Phase 03 unblocked; Phases 03–08 pending). Standalone extension under `ext/sonarqube-test-quality/`; domain-policy/reference delivery only; package and installed-host behavioral qualification remain pending.
 **Advisor subsystem retirement progress:** 100% (7/7 phases complete — 2026-10-11; Phase 01 interface freeze DONE 2026-10-11T07:08:04+07:00; Phases 02–07 DONE 2026-10-11; portable Linux/repo verification complete; Review Cycle 2 approved 9.8/10). Native GUI/Windows host boundaries remain host-dependent.
 **VS Code plugin identity & container-aware command mapping:** 100% (completed 2026-10-11). Plugin identity is `evc`; VS Code command skills use local `cmd-*` names within that container, while canonical and other-target commands retain `evc-cmd-*` (see [project changelog](./project-changelog.md)). These results do not claim live editor qualification or release publication.
 
@@ -31,6 +32,8 @@ Portable Linux/repo generation, build, distribution parity, and sandbox fresh/up
 
 | Phase/gate | State | Evidence or boundary |
 |---|---|---|
+| Sonar remediation cycles — Phase 01 | DONE (2026-10-12; 100%) | Contract freeze and capability preflight complete; verified standalone `ext/sonarqube-test-quality/` scope, dual-root `.agents/skills/` and `.claude/skills/` installer contracts, non-secret ledger boundaries, and no-live-gate acceptance policy. |
+| Sonar remediation cycles — Phase 02 | DONE (2026-10-12; 100%; review approved) | Neutral discovery and scanner lifecycles complete; generalized `ext/sonarqube-test-quality/SKILL.md` route table and added `project-discovery.md` and `local-analysis.md` domain references. Retains existing local and Jenkins workflows while defining ordered lifecycle shapes, non-secret authentication metadata, and evidence provenance; credentials excluded from evidence; package and installed-host behavioral qualification remain pending. |
 | Protocol and filesystem foundations | Implemented in source | Strict bounded JSON, canonical hashing, safe paths, locks, staging, CAS, and recovery modules are present under `src/`. |
 | Phase 9 packed consumer/adapter work | Historical evidence recorded | The changelog records packed-consumer contracts; it does not claim live Agent Store release or current target qualification. |
 | Phase 10 TypeScript cutover | Historical evidence recorded | The changelog records TypeScript authority and per-target cutover receipts; current `package.json` routes build/check/publish actions through the compiled CLI. |
@@ -60,6 +63,12 @@ Portable Linux/repo generation, build, distribution parity, and sandbox fresh/up
 | Live vendor qualification | GATED — operator authorization required | Each enabled installed CLI needs a bounded non-sensitive Linux qualification after upgrades. Deterministic tests do not authenticate a vendor. |
 | Release publication/rollout | Pending operator gate | npm publication, deployment, rollout, and final release remain explicitly separate from repository contracts. |
 | Windows validation | COMPLETE (2026-09-15) | [Master plan](../plans/260914-0636-windows-release-qualification/plan.md), [Phase 09 verification](../plans/reports/tester-260915-1119-phase-09-integrated-qualification.md), [Phase 10 documentation cutover](../plans/260914-0636-windows-release-qualification/phase-10-post-proof-documentation-and-support-cutover.md); build-once handoff, 4-row matrix (`windows-2025` x64, Windows PowerShell 5.1 and PowerShell 7, Node 22.19.0 and 24.21.0), publisher-only write, automatic predecessor transitions, and seven-file byte identity proven. Bounded support cutover complete; runtime/desktop/signing exclusions remain. |
+
+### Sonar remediation cycles milestone
+
+| Milestone | Progress | Evidence / next gate |
+|---|---:|---|
+| Sonar remediation cycles | **25% (2/8 phases complete)** | Phase 01 contract freeze and Phase 02 neutral discovery/scanner lifecycles complete. Standalone extension under `ext/sonarqube-test-quality/`; dual-root installer contracts defined with implementation pending Phase 06; generalized discovery, ordered scanner lifecycles, and non-secret authentication metadata delivered. Phase 03 cycle ledger and sanitized run guidance is unblocked; Phases 03–08 pending. Package and installed-host behavioral qualification pending; no live Sonar server qualification claimed. |
 
 ### Windows release qualification milestone
 
