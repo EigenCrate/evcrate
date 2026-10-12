@@ -34,6 +34,7 @@ export interface RefreshControllerOptions {
   readonly watchPluginRoot?: (pluginFsPath: string, baseStorageFsPath: string, onRelevantChange: (changedPath: string) => void) => ScopedWatcherDisposable;
   readonly onErrorMessage?: (message: string) => void;
   readonly ensureCatalogSubscribed?: () => void;
+  readonly syncPluginAgentsDir?: boolean;
 }
 
 const IMMEDIATE_WITHDRAW_REASONS: Record<RefreshTriggerReason, boolean> = {

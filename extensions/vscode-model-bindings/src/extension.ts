@@ -51,7 +51,8 @@ function ensureController(context: vscode.ExtensionContext): RefreshController {
     queryCatalog: (revision) => queryChatModelCatalog(vscode.lm, revision),
     createUri: (fsPath) => vscode.Uri.file(fsPath),
     onErrorMessage: (message) => { void vscode.window.showErrorMessage(message); },
-    ensureCatalogSubscribed: () => ensureCatalogSubscribed(context)
+    ensureCatalogSubscribed: () => ensureCatalogSubscribed(context),
+    syncPluginAgentsDir: true
   });
   return activeController;
 }

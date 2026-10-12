@@ -25,12 +25,17 @@ export async function handleConfigureAgentModels(
   const scopeChoice = await selectConfigurationScope(rootIdentity);
   if (!scopeChoice) return false;
 
-  const tierChoice = await vscode.window.showQuickPick(
-    Object.keys(CANONICAL_TIERS).map((t) => ({ label: t, description: `Canonical ${t} tier` })),
-    { placeHolder: 'Select canonical model tier to configure' }
-  );
+  const tierOptions: ReadonlyArray<{ readonly label: string; readonly tier: CanonicalModelTier | 'all'; readonly description: string }> = [
+    { label: 'All Agents (Default Model)', tier: 'all', description: 'Bind one model to all agent tiers at once' },
+    { label: 'opus', tier: 'opus', description: 'Planning & Architecture Tier (evc-planner, evc-brainstormer)' },
+    { label: 'sonnet', tier: 'sonnet', description: 'Engineering & Review Tier (evc-fullstack-developer, evc-code-reviewer, evc-debugger, +2 more)' },
+    { label: 'haiku', tier: 'haiku', description: 'Fast Discovery & Utility Tier (evc-scout, evc-tester, evc-git-manager, +6 more)' }
+  ];
+  const tierChoice = await vscode.window.showQuickPick(tierOptions, {
+    placeHolder: 'Select agent group or tier to configure'
+  });
   if (!tierChoice) return false;
-  const tier = tierChoice.label as CanonicalModelTier;
+  const targetTier: CanonicalModelTier | 'all' = tierChoice.tier ?? (tierChoice.label as CanonicalModelTier);
 
   let catalog: CatalogSnapshot;
   try {
@@ -39,7 +44,7 @@ export async function handleConfigureAgentModels(
     void vscode.window.showErrorMessage(`EVCrate: Failed to query model catalog: ${String(err)}`);
     return false;
   }
-  const selectedModel = await pickCatalogModel(catalog, `Select model for tier "${tier}"`);
+  const selectedModel = await pickCatalogModel(catalog, `Select model for "${tierChoice.label}"`);
   if (!selectedModel) return false;
 
   if (scopeChoice.scope === 'root' && getCurrentRootIdentity() !== scopeChoice.rootIdentity) {
@@ -47,29 +52,29 @@ export async function handleConfigureAgentModels(
     return false;
   }
 
+  const selection = { vendor: selectedModel.vendor, id: selectedModel.id };
+  const tierPatch: Partial<Record<CanonicalModelTier, { vendor: string; id: string }>> =
+    targetTier === 'all'
+      ? { opus: selection, sonnet: selection, haiku: selection }
+      : { [targetTier]: selection };
+
   const store = new ScopedBindingStore(context.globalState, context.workspaceState, readHostRemoteAuthority(vscode.env));
   if (scopeChoice.scope === 'user') {
     const res = store.getUserBindings();
     if (!res.ok) throw res.error;
     const current = res.bindings ?? createEmptyBindings();
-    const updated: VscodeModelBindingsV1 = {
-      ...current,
-      tiers: { ...current.tiers, [tier]: { vendor: selectedModel.vendor, id: selectedModel.id } }
-    };
+    const updated: VscodeModelBindingsV1 = { ...current, tiers: { ...current.tiers, ...tierPatch } };
     await store.saveUserBindings(updated, res.bindings?.revision);
   } else if (scopeChoice.rootIdentity) {
     const res = store.getRootBindings(scopeChoice.rootIdentity);
     if (!res.ok) throw res.error;
     const current = res.bindings ?? createEmptyBindings();
-    const updated: VscodeModelBindingsV1 = {
-      ...current,
-      tiers: { ...current.tiers, [tier]: { vendor: selectedModel.vendor, id: selectedModel.id } }
-    };
+    const updated: VscodeModelBindingsV1 = { ...current, tiers: { ...current.tiers, ...tierPatch } };
     await store.saveRootBindings(scopeChoice.rootIdentity, updated, res.bindings?.revision);
   }
   await refresh();
   void vscode.window.showInformationMessage(
-    `EVCrate: Configured tier "${tier}" → "${selectedModel.selector}" (${scopeChoice.label})`
+    `EVCrate: Configured "${tierChoice.label}" → "${selectedModel.selector}" (${scopeChoice.label})`
   );
   return true;
 }

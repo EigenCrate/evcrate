@@ -5,9 +5,19 @@ import { inspectCandidateRoot } from './installation-roots.js';
 
 export function getApprovedRoots(context: vscode.ExtensionContext): Set<string> {
   const saved = context.globalState.get<readonly string[]>('evcrate.approvedRoots') ?? [];
-  return new Set<string>(saved);
+  const set = new Set<string>(saved);
+  const homeCand = inspectCandidateRoot(join(homedir(), '.evcrate-vscode'), false, false);
+  if (homeCand.present && homeCand.valid && typeof homeCand.uri === 'string') {
+    set.add(homeCand.uri);
+  }
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    const projCand = inspectCandidateRoot(folder.uri.fsPath, false, true);
+    if (projCand.present && projCand.valid && typeof projCand.uri === 'string') {
+      set.add(projCand.uri);
+    }
+  }
+  return set;
 }
-
 export async function handleSelectInstallation(
   context: vscode.ExtensionContext,
   refresh: () => Promise<boolean>

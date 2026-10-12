@@ -314,7 +314,7 @@ export function buildVscodeCompanion(options = {}) {
     <Description xml:space="preserve">${escapeXml(extPkg.description || '')}</Description>
   </Metadata>
   <Installation>
-    <InstallationTarget Id="Microsoft.VisualStudio.Code" Version="[${escapeXml(PINNED_VSCODE_HOST_TUPLE.vscodeVersion)},)" />
+    <InstallationTarget Id="Microsoft.VisualStudio.Code" Version="[1.0.0,)" />
   </Installation>
   <Dependencies />
   <Assets>

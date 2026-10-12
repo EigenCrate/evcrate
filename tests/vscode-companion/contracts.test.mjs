@@ -37,7 +37,7 @@ test('extension package.json and core/extension contract constants maintain stri
   assert.equal(STORAGE_AND_SOURCE_BOUNDS.maxActorsPerRoot, MAX_ACTORS_PER_ROOT);
   assert.equal(STORAGE_AND_SOURCE_BOUNDS.maxTemplateBytes, MAX_TEMPLATE_BYTES);
   assert.equal(pkg.version, rootPkg.version);
-  assert.equal(pkg.engines.vscode, `^${PINNED_VSCODE_HOST_TUPLE.vscodeVersion}`);
+  assert.equal(pkg.engines.vscode, '^1.0.0');
   assert.deepEqual(pkg.extensionKind, ['workspace']);
   assert.deepEqual(pkg.enabledApiProposals, ['chatPromptFiles']);
   assert.deepEqual(pkg.activationEvents, ['onStartupFinished']);

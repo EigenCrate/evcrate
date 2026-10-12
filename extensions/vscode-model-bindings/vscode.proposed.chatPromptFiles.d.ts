@@ -92,6 +92,9 @@ declare module 'vscode' {
     export const onDidGrantWorkspaceTrust: Event<void>;
     export const workspaceFolders: readonly WorkspaceFolder[] | undefined;
     export const onDidChangeWorkspaceFolders: Event<unknown>;
+    export function getConfiguration(section?: string): {
+      get<T>(key: string): T | undefined;
+    };
   }
 
   export namespace env {
@@ -131,7 +134,10 @@ declare module 'vscode' {
 
     export interface ChatCustomAgentProvider {
       readonly onDidChangeCustomAgents?: Event<void>;
-      provideCustomAgents(token: CancellationToken): ProviderResult<ChatResource[]>;
+      provideCustomAgents(
+        contextOrToken?: CancellationToken | Record<string, unknown>,
+        token?: CancellationToken
+      ): ProviderResult<ChatResource[]>;
     }
 
     export function registerCustomAgentProvider(

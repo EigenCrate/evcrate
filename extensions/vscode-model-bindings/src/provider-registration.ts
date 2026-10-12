@@ -19,12 +19,14 @@ export function createProviderManager(): ProviderManager {
   }
 
   function tryRegister(context: vscode.ExtensionContext): HostGuardStatus {
-    const guard = inspectHostGuard({
-      remoteAuthority: readHostRemoteAuthority(vscode.env),
-      workspaceTrusted: vscode.workspace.isTrusted,
-      hasProposal: typeof vscode.chat?.registerCustomAgentProvider === 'function'
+    const remoteAuthority = readHostRemoteAuthority(vscode.env);
+    const workspaceTrusted = vscode.workspace.isTrusted;
+    const baseGuard = inspectHostGuard({
+      remoteAuthority,
+      workspaceTrusted,
+      hasProposal: true
     });
-    if (!guard.qualified) {
+    if (!baseGuard.qualified) {
       if (activeProviderDisposable) {
         activeProviderDisposable.dispose();
         activeProviderDisposable = null;
@@ -33,26 +35,52 @@ export function createProviderManager(): ProviderManager {
         activeProvider.dispose();
         activeProvider = null;
       }
-      return guard;
+      return baseGuard;
     }
     if (!activeProvider) {
       const emitter = new vscode.EventEmitter<void>();
       const candidateProvider = new CompanionAgentProvider(emitter);
-      try {
-        activeProviderDisposable = vscode.chat.registerCustomAgentProvider(candidateProvider);
-      } catch {
-        candidateProvider.dispose();
-        return inspectHostGuard({
-          remoteAuthority: readHostRemoteAuthority(vscode.env),
-          workspaceTrusted: vscode.workspace.isTrusted,
-          hasProposal: false
-        });
+      let proposalSupported = false;
+      if (typeof vscode.chat?.registerCustomAgentProvider === 'function') {
+        try {
+          activeProviderDisposable = vscode.chat.registerCustomAgentProvider({
+            onDidChangeCustomAgents: candidateProvider.onDidChangeCustomAgents,
+            provideCustomAgents: (
+              ctxOrToken?: vscode.CancellationToken | Record<string, unknown>,
+              token?: vscode.CancellationToken
+            ) => {
+              if (typeof vscode.workspace.getConfiguration === 'function') {
+                const pluginLocs = vscode.workspace.getConfiguration('chat').get<Record<string, boolean>>('pluginLocations');
+                if (pluginLocs && Object.values(pluginLocs).some(Boolean)) {
+                  return [];
+                }
+              }
+              return candidateProvider.provideCustomAgents(ctxOrToken, token);
+            }
+          });
+          proposalSupported = true;
+          context.subscriptions.push(activeProviderDisposable);
+        } catch {
+          proposalSupported = false;
+        }
       }
       activeProvider = candidateProvider;
-      context.subscriptions.push(activeProviderDisposable);
       context.subscriptions.push(activeProvider);
+      return Object.freeze({
+        qualified: true,
+        authority: 'local-file',
+        remoteAuthority: null,
+        workspaceTrusted: true,
+        proposalSupported
+      });
     }
-    return guard;
+    return Object.freeze({
+      qualified: true,
+      authority: 'local-file',
+      remoteAuthority: null,
+      workspaceTrusted: true,
+      proposalSupported: activeProviderDisposable !== null
+    });
   }
 
   function dispose(): void {

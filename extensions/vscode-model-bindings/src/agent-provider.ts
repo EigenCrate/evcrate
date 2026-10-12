@@ -33,8 +33,17 @@ export class CompanionAgentProvider implements vscode.chat.ChatCustomAgentProvid
     return this._activeResources;
   }
 
-  provideCustomAgents(token: vscode.CancellationToken): vscode.chat.ChatResource[] {
-    if (this._disposed || token.isCancellationRequested) {
+  provideCustomAgents(
+    contextOrToken?: vscode.CancellationToken | Record<string, unknown>,
+    maybeToken?: vscode.CancellationToken
+  ): vscode.chat.ChatResource[] {
+    const cancelled =
+      (contextOrToken !== undefined &&
+        contextOrToken !== null &&
+        'isCancellationRequested' in contextOrToken &&
+        contextOrToken.isCancellationRequested === true) ||
+      maybeToken?.isCancellationRequested === true;
+    if (this._disposed || cancelled) {
       return [];
     }
     return this._activeResources.map((res) => ({ uri: res.uri }));

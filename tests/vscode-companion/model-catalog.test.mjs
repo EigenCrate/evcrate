@@ -103,16 +103,20 @@ test('buildCatalogSnapshot enforces max 2048 catalog bounds', () => {
   );
 });
 
-test('queryChatModelCatalog queries language model API', async () => {
+test('queryChatModelCatalog queries language model API, deduplicates shared selectors, and filters non-tool models', async () => {
   const mockLm = {
     async selectChatModels() {
       return [
-        { vendor: 'copilot', id: 'gpt-4o-mini', name: 'GPT-4o mini', family: 'gpt-4o', version: '1', maxInputTokens: 128000 }
+        { vendor: 'copilot', id: 'gpt-5.6-luna-a', name: 'GPT-5.6 Luna', capabilities: { supportsToolCalling: true } },
+        { vendor: 'copilot', id: 'gpt-5.6-luna-b', name: 'GPT-5.6 Luna', capabilities: { supportsToolCalling: true } },
+        { vendor: 'copilot', id: 'legacy-no-tools', name: 'Legacy No Tools', capabilities: { supportsToolCalling: false } }
       ];
     }
   };
   const snapshot = await queryChatModelCatalog(mockLm, 3);
   assert.equal(snapshot.revision, 3);
   assert.equal(snapshot.models.length, 1);
-  assert.equal(snapshot.models[0].selector, 'GPT-4o mini (copilot)');
+  assert.equal(snapshot.ambiguousCount, 0);
+  assert.equal(snapshot.models[0].selector, 'GPT-5.6 Luna (copilot)');
+  assert.equal(snapshot.models[0].isAmbiguous, false);
 });

@@ -136,10 +136,45 @@ export function buildCatalogSnapshot(
   });
 }
 
+function readSupportsToolCalling(m: unknown): boolean | undefined {
+  if (!isPlainObject(m) || !('capabilities' in m) || !isPlainObject(m.capabilities)) return undefined;
+  const val = m.capabilities.supportsToolCalling;
+  return typeof val === 'boolean' ? val : undefined;
+}
+
 export async function queryChatModelCatalog(
   lmApi: { selectChatModels(selector?: vscode.LanguageModelChatSelector): vscode.Thenable<vscode.LanguageModelChat[]> },
   revision = 1
 ): Promise<CatalogSnapshot> {
-  const models = await lmApi.selectChatModels();
-  return buildCatalogSnapshot(models, revision);
+  const rawModels = await lmApi.selectChatModels();
+  const hasToolCallingInfo = rawModels.some((m) => readSupportsToolCalling(m) === true);
+  const filtered = hasToolCallingInfo
+    ? rawModels.filter((m) => readSupportsToolCalling(m) !== false)
+    : [...rawModels];
+  const sorted = [...filtered].sort((a, b) => {
+    const av = typeof a?.vendor === 'string' ? a.vendor.trim() : '';
+    const bv = typeof b?.vendor === 'string' ? b.vendor.trim() : '';
+    const vCmp = av.localeCompare(bv, undefined, { sensitivity: 'base' });
+    if (vCmp !== 0) return vCmp;
+    const an = typeof a?.name === 'string' ? a.name.trim() : '';
+    const bn = typeof b?.name === 'string' ? b.name.trim() : '';
+    const nCmp = an.localeCompare(bn, undefined, { sensitivity: 'base' });
+    if (nCmp !== 0) return nCmp;
+    const ai = typeof a?.id === 'string' ? a.id.trim() : '';
+    const bi = typeof b?.id === 'string' ? b.id.trim() : '';
+    return ai.localeCompare(bi);
+  });
+  const seenSelectors = new Set<string>();
+  const deduped: vscode.LanguageModelChat[] = [];
+  for (const m of sorted) {
+    const v = typeof m?.vendor === 'string' ? m.vendor.trim().toLowerCase() : '';
+    const n = typeof m?.name === 'string' ? m.name.trim().toLowerCase() : '';
+    if (v && n) {
+      const key = `${v}\0${n}`;
+      if (seenSelectors.has(key)) continue;
+      seenSelectors.add(key);
+    }
+    deduped.push(m);
+  }
+  return buildCatalogSnapshot(deduped, revision);
 }

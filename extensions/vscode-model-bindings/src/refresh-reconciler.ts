@@ -40,6 +40,7 @@ export interface ReconcileEnvDeps {
   readonly disposeTemplateWatcher: () => void;
   readonly scheduleLockContentionRetry?: () => void;
   readonly isSuperseded: () => boolean;
+  readonly syncPluginAgentsDir?: boolean;
 }
 
 export function hasAnyConfiguredModelBinding(
@@ -142,7 +143,8 @@ export async function executeRefreshPass(state: ReconcileState, deps: ReconcileE
       pluginFsPath: installation.pluginFsPath, baseStorageFsPath: deps.baseStorageFsPath,
       rootIdentity: installation.rootIdentity, instanceUuid: deps.instanceUuid,
       generationId: state.currentGenerationId + 1, knownStagedGenerations: state.stagedByInventoryKey,
-      rootBindings: rootRes.bindings, userBindings: userRes.bindings, catalog: state.catalogSnapshot?.models ?? []
+      rootBindings: rootRes.bindings, userBindings: userRes.bindings, catalog: state.catalogSnapshot?.models ?? [],
+      syncPluginAgentsDir: deps.syncPluginAgentsDir
     });
     if (deps.isSuperseded()) return false;
     const staged = loadResult.staged;

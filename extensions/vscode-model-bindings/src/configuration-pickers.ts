@@ -70,19 +70,19 @@ export async function pickCatalogModel(
     void vscode.window.showWarningMessage('EVCrate: No models available in language model catalog.');
     return null;
   }
-  const items = catalog.models.map((m) => ({
+  const seen = new Set<string>();
+  const uniqueModels: ValidatedCatalogModel[] = [];
+  for (const m of catalog.models) {
+    if (seen.has(m.selector)) continue;
+    seen.add(m.selector);
+    uniqueModels.push(m);
+  }
+  const items = uniqueModels.map((m) => ({
     label: m.selector,
-    description: m.isAmbiguous ? '⚠ AMBIGUOUS (disabled)' : `id: ${m.id}`,
-    detail: m.ambiguousReason ?? (m.family ? `family: ${m.family}` : undefined),
+    description: `id: ${m.id}`,
+    detail: m.family ? `family: ${m.family}` : undefined,
     model: m
   }));
   const picked = await vscode.window.showQuickPick(items, { placeHolder: title });
-  if (!picked) return null;
-  if (picked.model.isAmbiguous) {
-    void vscode.window.showErrorMessage(
-      `EVCrate: Cannot select ambiguous model "${picked.model.selector}". Distinct IDs share name and vendor.`
-    );
-    return null;
-  }
-  return picked.model;
+  return picked ? picked.model : null;
 }

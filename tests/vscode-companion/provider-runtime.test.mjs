@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -135,6 +135,24 @@ test('generation-loader: loadAndStageGeneration validates paths, hashes, symlink
     });
     assert.equal(res2.staged, null);
     assert.equal(res2.contributedCount, 1);
+
+    // syncPluginAgentsDir materializes com.github.copilot/agents/*.agent.md
+    const resSync = loadAndStageGeneration({
+      pluginFsPath: pluginDir,
+      baseStorageFsPath: storageDir,
+      rootIdentity: 'file:///work/proj',
+      instanceUuid: '11111111-2222-4333-8444-555555555555',
+      generationId: 3,
+      syncPluginAgentsDir: true,
+      currentUsage: { activeInstanceGenerations: 1, activeInstanceBytes: 100, persistentAuthorityBytes: 100 }
+    });
+    assert.equal(resSync.contributedCount, 1);
+    const syncedAgentPath = join(pluginDir, 'com.github.copilot', 'agents', 'evc-planner.agent.md');
+    assert.ok(resSync.staged);
+    assert.equal(
+      readFileSync(syncedAgentPath, 'utf8').includes('name: evc-planner'),
+      true
+    );
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

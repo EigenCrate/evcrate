@@ -6,6 +6,7 @@ import { resolveEffectiveActorBinding, type CatalogModelDescriptor, type VscodeM
 import { parseActorCanonicalTier } from './binding-resolver.js';
 import { renderAgentTemplate, type RenderedAgentResult } from './agent-renderer.js';
 import { stageAgentGeneration, type StagedGenerationResult, type StorageBudgetUsage } from './resource-storage.js';
+import { syncPluginAgentsDirectory } from './plugin-agents-sync.js';
 
 export interface GenerationLoadResult {
   readonly staged: StagedGenerationResult | null;
@@ -66,6 +67,7 @@ export function loadAndStageGeneration(input: {
   readonly rootBindings?: VscodeModelBindingsV1 | null;
   readonly userBindings?: VscodeModelBindingsV1 | null;
   readonly catalog?: readonly CatalogModelDescriptor[] | null;
+  readonly syncPluginAgentsDir?: boolean;
 }): GenerationLoadResult {
   const manifestPath = join(input.pluginFsPath, 'evcrate', 'agent-intent.json');
   const manifestStat = lstatSync(manifestPath);
@@ -132,7 +134,7 @@ export function loadAndStageGeneration(input: {
         actorId, canonicalTier: tierResult.tier,
         rootBindings: input.rootBindings ?? null, userBindings: input.userBindings ?? null, catalog: input.catalog ?? []
       });
-      if (effective.status === 'withheld') {
+      if (effective.status === 'withheld' && !(input.syncPluginAgentsDir && effective.reason === 'TIER_UNBOUND')) {
         withheldReasons[actorId] = effective.reason ?? 'WITHHELD';
         continue;
       }
@@ -149,6 +151,7 @@ export function loadAndStageGeneration(input: {
   const templateInventorySha256 = sortedTemplateIds.length > 0 ? tplHashStream.digest('hex') : null;
   const frozenManifest = Object.freeze(manifestActors);
   const frozenWithheld = Object.freeze(withheldReasons);
+  if (input.syncPluginAgentsDir) syncPluginAgentsDirectory(input.pluginFsPath, [...renderedById.values()]);
   if (renderedById.size === 0) {
     return Object.freeze({
       staged: null, reusedExistingGeneration: false, contributedCount: 0,
