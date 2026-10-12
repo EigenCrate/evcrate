@@ -5,6 +5,17 @@
 **Updated:** 2026-10-12
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-12 — feat(vscode): implement companion provider runtime (Phase 04)
+
+- Resolved Phase 02 Review Cycle 2 contract items: idempotent canonical URI serialization across percent encoding/spaces/Unicode/Windows drives with control character rejection (`W-A`), extracted leaf module `binding-contracts.ts` eliminating circular value imports (`W-B`), and enforced `<=512` actor bounds, string length caps, and diagnostic coherence in `validateRuntimeDiagnosticsV1` (`W-C`).
+- Implemented guarded host activation in `extensions/vscode-model-bindings/src/{extension.ts,installation-roots.ts}` (`inspectHostGuard` checking workspace trust, proposal availability, and non-remote authority). Non-local remote authorities (`ssh-remote`, `dev-container`, `wsl`) and untrusted workspaces fail closed without silent fallback to local HOME.
+- Implemented candidate root resolution in `installation-roots.ts` enforcing strict precedence (`project > HOME`), directory discovery (`.evcrate-vscode/evcrate/agent-templates/` and `.evcrate-vscode/evcrate/agent-intent.json`), and approval filtering via workspace state.
+- Implemented secure generation loader in `generation-loader.ts` validating relative template paths (`validateSafeTemplatePath` preventing path traversal, symlink escape, and null-bytes), verifying SHA-256 integrity, enforcing size limits (`<= 256 KiB`), and isolating per-actor errors into `withheldReasons`. Computes stable template inventory SHA-256 for generation deduplication.
+- Implemented agent template renderer in `agent-renderer.ts` injecting validated model selectors into frontmatter, protecting code fences, preserving immutable intent body, omitted tools, arguments, and metadata, and rebasing relative references without modifying external URLs.
+- Implemented atomic generation staging in `resource-storage.ts` using `mkdtemp` and directory rename into extension storage, validating storage budgets (`STORAGE_AND_SOURCE_BOUNDS`).
+- Implemented single-instance `CompanionAgentProvider` in `agent-provider.ts` for VS Code's proposed `CustomAgentProvider` interface (`provideCustomAgents`), deduplicating change events on identical inventory and honoring cancellation tokens.
+- Added comprehensive companion behavior suites in `tests/vscode-companion/{prerequisites-regressions,provider-runtime,storage-and-provider}.test.mjs` (13/13 companion tests pass; 232/232 core adapter tests pass; Review Cycle 3 approved 7/10, 0 critical issues).
+
 ### 2026-10-12 — feat(vscode): immutable agent templates and truthful build intent (Phase 03)
 
 - Converted VS Code static agent projection to immutable templates at `.evcrate-vscode/evcrate/agent-templates/${name}.md` with disposition `immutable-template`; deleted all 17 static host-discovered agent files (`.evcrate-vscode/com.github.copilot/agents/*.agent.md`).

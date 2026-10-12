@@ -15,6 +15,8 @@ export const STORAGE_AND_SOURCE_BOUNDS = Object.freeze({
 const SHA256_HEX = /^[0-9a-f]{64}$/u;
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const ACTOR_ID_PATTERN = /^evc-[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const CONTROL_CHARS = /[\u0000-\u001F\u007F-\u009F]/u;
+const ENCODED_CONTROLS = /%(?:0[0-9a-f]|1[0-9a-f]|7f)/iu;
 
 export class CompanionContractError extends Error {
   readonly code: string;
@@ -45,50 +47,52 @@ export interface ValidatedLocalRootUri {
 export function validateLocalRootUri(input: string | LocalRootUriInput): ValidatedLocalRootUri {
   let scheme: string;
   let authority: string;
-  let rawPath: string;
-  let query = '';
-  let fragment = '';
+  let decodedPath: string;
   if (typeof input === 'string') {
+    if (CONTROL_CHARS.test(input) || ENCODED_CONTROLS.test(input)) {
+      throw new CompanionContractError('PATH_UNSAFE', 'URI must not contain control characters');
+    }
     const match = /^([A-Za-z][A-Za-z0-9+.-]*):\/\/([^/?#]*)([^?#]*)(?:\?([^#]*))?(?:#(.*))?$/u.exec(input);
     if (!match) throw new CompanionContractError('PATH_UNSAFE', `Malformed URI "${input}"`);
-    [, scheme, authority, rawPath, query = '', fragment = ''] = match;
+    const [, rawScheme, rawAuthority, rawPath, query = '', fragment = ''] = match;
+    if (query !== '' || fragment !== '' || /%(?:2f|5c|00)/iu.test(rawPath)) {
+      throw new CompanionContractError('PATH_UNSAFE', 'URI must not contain query, fragment, or encoded slash/NUL');
+    }
+    scheme = rawScheme;
+    authority = rawAuthority;
+    try {
+      decodedPath = decodeURIComponent(rawPath);
+    } catch {
+      throw new CompanionContractError('PATH_UNSAFE', 'Malformed percent-encoding in URI path');
+    }
   } else if (isPlainObject(input) && typeof input.scheme === 'string' && typeof input.path === 'string') {
+    if (CONTROL_CHARS.test(input.path) || ENCODED_CONTROLS.test(input.path)) {
+      throw new CompanionContractError('PATH_UNSAFE', 'URI must not contain control characters');
+    }
+    if ((input.query && input.query !== '') || (input.fragment && input.fragment !== '')) {
+      throw new CompanionContractError('PATH_UNSAFE', 'URI must not contain query or fragment');
+    }
     scheme = input.scheme;
     authority = typeof input.authority === 'string' ? input.authority : '';
-    rawPath = input.path;
-    query = typeof input.query === 'string' ? input.query : '';
-    fragment = typeof input.fragment === 'string' ? input.fragment : '';
+    decodedPath = input.path;
   } else {
     throw new CompanionContractError('CONTRACT_INVALID', 'Invalid URI input');
   }
   const normalizedScheme = scheme.toLowerCase();
   const normalizedAuthority = authority.toLowerCase() === 'localhost' ? '' : authority;
   if (normalizedScheme !== 'file' || normalizedAuthority !== '') {
-    throw new CompanionContractError(
-      'UNSUPPORTED_REMOTE_AUTHORITY',
-      `Unsupported scheme/authority "${scheme}://${authority}"; only local file:// roots are supported`
-    );
+    throw new CompanionContractError('UNSUPPORTED_REMOTE_AUTHORITY', `Unsupported scheme/authority "${scheme}://${authority}"; only local file:// roots are supported`);
   }
-  if (query !== '' || fragment !== '' || /%(?:2f|5c|00)/iu.test(rawPath)) {
-    throw new CompanionContractError('PATH_UNSAFE', 'URI must not contain query, fragment, or encoded slash/NUL');
-  }
-  let decodedPath: string;
-  try {
-    decodedPath = decodeURIComponent(rawPath);
-  } catch {
-    throw new CompanionContractError('PATH_UNSAFE', 'Malformed percent-encoding in URI path');
-  }
-  if (decodedPath.includes('\0') || decodedPath.includes('\\') || !decodedPath.startsWith('/') || decodedPath.includes('//')) {
-    throw new CompanionContractError('PATH_UNSAFE', `URI path "${rawPath}" must be normalized absolute POSIX path`);
+  if (CONTROL_CHARS.test(decodedPath) || decodedPath.includes('\\') || !decodedPath.startsWith('/') || decodedPath.includes('//')) {
+    throw new CompanionContractError('PATH_UNSAFE', `URI path "${decodedPath}" must be normalized absolute POSIX path`);
   }
   if (decodedPath.split('/').some((seg) => seg === '.' || seg === '..')) {
-    throw new CompanionContractError('PATH_UNSAFE', `URI path "${rawPath}" contains dot traversal segments`);
+    throw new CompanionContractError('PATH_UNSAFE', `URI path "${decodedPath}" contains dot traversal segments`);
   }
-  const foldedDrive = /^\/[A-Za-z]:(?:\/|$)/u.test(decodedPath)
-    ? `/${decodedPath[1].toLowerCase()}${decodedPath.slice(2)}`
-    : decodedPath;
+  const foldedDrive = /^\/[A-Za-z]:(?:\/|$)/u.test(decodedPath) ? `/${decodedPath[1].toLowerCase()}${decodedPath.slice(2)}` : decodedPath;
   const trimmedPath = foldedDrive.length > 1 && foldedDrive.endsWith('/') ? foldedDrive.slice(0, -1) : foldedDrive;
-  return Object.freeze({ scheme: 'file', authority: '', path: trimmedPath, rootIdentity: `file://${trimmedPath}` });
+  const encodedPath = trimmedPath.replace(/[%?#]/gu, (ch) => (ch === '%' ? '%25' : ch === '?' ? '%3F' : '%23'));
+  return Object.freeze({ scheme: 'file', authority: '', path: trimmedPath, rootIdentity: `file://${encodedPath}` });
 }
 
 export interface CandidateInstallationRoot {

@@ -2,6 +2,7 @@ import {
   ACTOR_ID_PATTERN,
   CompanionContractError,
   SHA256_HEX,
+  STORAGE_AND_SOURCE_BOUNDS,
   UUID_V4,
   VSCODE_RUNTIME_DIAGNOSTICS_SCHEMA_V1,
   isPlainObject,
@@ -14,7 +15,7 @@ import {
   type CanonicalModelTier,
   type EffectiveActorBindingResult,
   type EffectiveBindingSource
-} from './contracts.js';
+} from './binding-contracts.js';
 
 export interface VscodeRuntimeDiagnosticsV1 {
   readonly schema: typeof VSCODE_RUNTIME_DIAGNOSTICS_SCHEMA_V1;
@@ -87,11 +88,20 @@ export function validateRuntimeDiagnosticsV1(input: unknown): VscodeRuntimeDiagn
   ) {
     throw new CompanionContractError('HASH_MISMATCH', 'Invalid diagnostics templateInventorySha256');
   }
-  if (typeof input.cachedSelectionNotice !== 'string' || input.cachedSelectionNotice.trim() === '' || !isPlainObject(input.actors)) {
+  if (
+    typeof input.cachedSelectionNotice !== 'string'
+    || input.cachedSelectionNotice.trim() === ''
+    || input.cachedSelectionNotice.length > 2048
+    || !isPlainObject(input.actors)
+  ) {
     throw new CompanionContractError('CONTRACT_INVALID', 'Invalid diagnostics cachedSelectionNotice or actors');
   }
+  const actorEntries = Object.entries(input.actors);
+  if (actorEntries.length > STORAGE_AND_SOURCE_BOUNDS.maxActorsPerRoot) {
+    throw new CompanionContractError('BOUNDS_EXCEEDED', 'Diagnostics actor count exceeds 512 bound');
+  }
   const actors: Record<string, EffectiveActorBindingResult & { readonly hostObservedModel: string | null }> = {};
-  for (const [actorId, d] of Object.entries(input.actors)) {
+  for (const [actorId, d] of actorEntries) {
     if (
       actorId.length > 64
       || !ACTOR_ID_PATTERN.test(actorId)
@@ -109,16 +119,28 @@ export function validateRuntimeDiagnosticsV1(input: unknown): VscodeRuntimeDiagn
     }
     if (
       !('hostObservedModel' in d)
-      || (d.hostObservedModel !== null && (typeof d.hostObservedModel !== 'string' || d.hostObservedModel.trim() === ''))
+      || (d.hostObservedModel !== null && (typeof d.hostObservedModel !== 'string' || d.hostObservedModel.trim() === '' || d.hostObservedModel.length > 512))
     ) {
       throw new CompanionContractError('CONTRACT_INVALID', `Actor diagnostic "${actorId}" must separately label hostObservedModel`);
     }
     if (
-      (d.renderedSelector !== null && (typeof d.renderedSelector !== 'string' || d.renderedSelector.trim() === ''))
+      (d.renderedSelector !== null && (typeof d.renderedSelector !== 'string' || d.renderedSelector.trim() === '' || d.renderedSelector.length > 512))
       || (d.status !== 'contributed' && d.status !== 'withheld')
-      || (d.reason !== undefined && (typeof d.reason !== 'string' || d.reason.trim() === ''))
+      || (d.reason !== undefined && (typeof d.reason !== 'string' || d.reason.trim() === '' || d.reason.length > 1024))
     ) {
       throw new CompanionContractError('CONTRACT_INVALID', `Invalid selector, status, or reason for "${actorId}"`);
+    }
+    if (d.status === 'withheld') {
+      if (d.reason === undefined || d.renderedSelector !== null) {
+        throw new CompanionContractError('CONTRACT_INVALID', `Withheld actor "${actorId}" requires reason and null renderedSelector`);
+      }
+    } else if (
+      d.renderedSelector === null
+      && d.effectiveSource !== 'canonical.inherit'
+      && d.effectiveSource !== 'root.actor'
+      && d.effectiveSource !== 'user.actor'
+    ) {
+      throw new CompanionContractError('CONTRACT_INVALID', `Contributed actor "${actorId}" without selector must be an inherit source`);
     }
     const selectedModel = d.selectedModel === null ? null : validateModelIdentity(d.selectedModel, `diagnostics.actors.${actorId}`);
     actors[actorId] = Object.freeze({
