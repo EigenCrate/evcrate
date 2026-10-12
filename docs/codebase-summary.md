@@ -20,7 +20,7 @@ source tree. The TypeScript CLI is the package control plane.
 | `src/` | TypeScript control plane | Primary package implementation. |
 | `scripts/` | Generation, package, release, benchmark (`benchmark-build-generation.mjs`), and TypeScript incremental build tooling (`build-typescript.mjs`, `typescript-build-cache.mjs`, `typescript-build-receipt.mjs`) | Follow each script's declared authority; generated outputs are not edited by hand. |
 | `tests/` | Contract and behavior suites | Focused regression and integration tests, not live vendor qualification. |
-| `ext/snyk-expert/` | Standalone common `.agents` extension package | Author standalone installer, common `.agents` bundle (`snyk-expert`, `snyk-fix`, `snyk-cli`, `dependency-upgrade-review`), tests, and planned `cmd-snyk-remediate`; maintained outside canonical target projections. |
+| `ext/snyk-expert/` | Standalone common `.agents` extension package | Author standalone installer, common `.agents` bundle (`snyk-expert`, `snyk-fix`, `snyk-cli`, `dependency-upgrade-review`, and main-owned coordinator `cmd-snyk-remediate` authored in Phase 04; `lib/inventory.js` registration pending Phase 05), and package tests; maintained outside canonical target projections. |
 | `docs/`, `plans/` | Maintained documentation and work plans | See the documentation map below. |
 
 The persisted target IDs are `claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. Standalone Gemini is retired, not Antigravity's vendor HOME directory. Codex owns `.agents/skills`; Antigravity owns exact `.agents` hook/rule leaves. `vscode` uses a separate local-build adapter route; generated outputs and manifests are build artifacts.
