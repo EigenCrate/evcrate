@@ -24,9 +24,9 @@ Explicitly load the installed specialist and selected skill references in the ex
 The installer needs trusted exclusive destination ownership. Collision/symlink defenses apply during preflight, not as an adversarial race-proof filesystem boundary. The package README and `docs/usage.md` document the current `.agents` contract.
 
 
-## Bounded remediation cycles — Phase 02 contracts complete
+## Bounded remediation cycles — Phase 03 specialist and skill cutover complete
 
-A general remediation cycle extension is planned in [plans/261012-1944-general-snyk-remediation-cycles/plan.md](../plans/261012-1944-general-snyk-remediation-cycles/plan.md) to add a command-style skill (`.agents/skills/cmd-snyk-remediate/SKILL.md`) to `ext/snyk-expert/`. Phase 02 reference contracts are completed in the maintained references [`finding-and-owner-contract.md`](../ext/snyk-expert/.agents/skills/snyk-fix/references/finding-and-owner-contract.md) and [`verification-and-results.md`](../ext/snyk-expert/.agents/skills/snyk-fix/references/verification-and-results.md). The current installed inventory remains limited to the three existing task skills; entrypoint/command integration (Phases 03–06) and live operational qualification (Phase 07) remain pending.
+A general remediation cycle extension is planned in [plans/261012-1944-general-snyk-remediation-cycles/plan.md](../plans/261012-1944-general-snyk-remediation-cycles/plan.md) to add a command-style skill (`.agents/skills/cmd-snyk-remediate/SKILL.md`) to `ext/snyk-expert/`. Phase 02 reference contracts are completed in the maintained references [`finding-and-owner-contract.md`](../ext/snyk-expert/.agents/skills/snyk-fix/references/finding-and-owner-contract.md) and [`verification-and-results.md`](../ext/snyk-expert/.agents/skills/snyk-fix/references/verification-and-results.md). Phase 03 specialist and skill cutover is complete across `snyk-expert.md`, `snyk-fix`, `snyk-cli`, and `dependency-upgrade-review`. The current installed inventory remains limited to the three existing task skills; command coordinator loop (`cmd-snyk-remediate`, Phase 04), delivery scenarios (Phase 05), integration review (Phase 06), and live operational qualification (Phase 07) remain pending.
 
 ### Pre-edit concrete procedure binding & ecosystem-neutral evaluation
 
@@ -120,4 +120,16 @@ Default raw scans and run ledgers to an operator-bound private ignored directory
 - Defined every-attempt observation ledger across all original findings, separate post-only findings provenance, and procedure learning observations with inert sanitized UNTRUSTED candidate note.
 - Defined Main-owned terminal review in reference contracts (`local verification complete; Snyk verification pending`); entrypoint integration remains pending.
 - Evidence: [Phase 02 plan](../plans/261012-1944-general-snyk-remediation-cycles/phase-02-procedure-and-ledger-contracts.md), updated references in `ext/snyk-expert/.agents/skills/snyk-fix/references/`, review verdict PASS (8.5/10).
-- Status: Phase 02 reference contracts complete; entrypoint/command integration (Phases 03–06) and live operational qualification (Phase 07) remain pending.
+- Status at Phase 02 close: Phase 02 reference contracts complete; specialist cutover (Phase 03), command integration (Phases 04–06), and live operational qualification (Phase 07) follow.
+
+## Change record — 2026-10-12 (Phase 03 — Specialist and skill cutover)
+
+- Completed Phase 03 specialist and skill cutover of General Snyk remediation cycles at 2026-10-12T22:02:47+07:00 (plan records review approved 8/10; 53/53 package tests passing across 8 suites; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-03-specialist-and-skill-cutover.md`).
+- Specialist and fix cutover: bound one-set execution per mutating invocation with retained $N$, incrementing `attempts_started` once before first mutation; specialist hands off `local verification complete; Snyk verification pending` to Main with native graph/build/test evidence upon successful checks, while failed local checks return partial or stopped evidence; Main retains exclusive ownership of live Snyk scans and terminal review.
+- Neutral pre-edit procedure evaluation: replaced blanket unsupported-ecosystem stops with a neutral 6-point pre-edit procedure evaluation table; managers with complete official support and execution authorization run under existing authority without hardcoded allowlists.
+- Read-only zero target writes: analyze and upgrade-review instructions prohibit target edits, dependency mutations, and private evidence writes in those modes.
+- Bound evidence storage & safe pause: the `snyk-cli` skill instructions require a main-bound private ignored target-contained destination and mandate pausing on unauthorized, unignored, tracked, or coverage-affecting storage without silent external fallbacks.
+- Safe CLI troubleshooting: added proxy vs CA trust diagnostics (npm cafile, Node extra CA, standalone store distinct) with strict prohibition on TLS verification bypass.
+- Preserved concrete safeguards: retained all Node.js/TypeScript (lockfile, peer, workspace, engines, compiler) and Maven/Spring (profiles, BOMs, reactor) safeguards in specialized remediation references.
+- Test verification: 53/53 package tests pass across 8 suites in `ext/snyk-expert/tests/`, including 14 workflow-contract tests in `ext/snyk-expert/tests/workflow-qualification.test.mjs`; live authenticated Snyk qualification and runtime remediation remain scheduled for Phase 07.
+- Status: Specialist and skill cutover complete; command coordinator loop (`cmd-snyk-remediate`, Phase 04), delivery scenarios (Phase 05), integration review (Phase 06), and live operational qualification (Phase 07) remain pending.

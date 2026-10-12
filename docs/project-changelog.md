@@ -3,7 +3,20 @@
 ## Unreleased
 
 **Updated:** 2026-10-12
-**Status:** Core package release history; General Snyk remediation cycles Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+**Status:** Core package release history; General Snyk remediation cycles Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-12 — feat(snyk): specialist and skill cutover for bounded remediation cycles (Phase 03)
+
+- Completed Phase 03 specialist and skill cutover of General Snyk remediation cycles at 2026-10-12T22:02:47+07:00 (plan records review approved 8/10; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-03-specialist-and-skill-cutover.md`).
+- One-set execution per mutating invocation: bound single coherent set execution with retained $N$, incrementing `attempts_started` once before first mutation with zero refunds on failure or rollback.
+- Local verification handoff to Main: specialist and fix skills return `local verification complete; Snyk verification pending` with native graph, build, and test evidence upon successful checks, while failed local checks return partial or stopped evidence; Main retains exclusive ownership of live Snyk scans and terminal review.
+- Neutral pre-edit procedure evaluation table: replaced blanket unsupported-ecosystem stops across all entrypoints and references with a neutral 6-point pre-edit procedure evaluation table; managers with complete official support and execution authorization run under existing authority without hardcoded ecosystem allowlists.
+- Zero target writes in analyze and upgrade-review: analyze and upgrade-review instructions prohibit target edits, dependency mutations, and private evidence writes in those modes.
+- Bound private ignored evidence storage: the `snyk-cli` skill instructions require a main-bound private ignored target-contained destination and mandate pausing on unauthorized, unignored, tracked, or coverage-affecting storage without silent fallback.
+- Safe CLI troubleshooting: added proxy vs CA trust diagnostics (npm cafile, Node extra CA, standalone store distinct) strictly prohibiting TLS bypass.
+- Preserved concrete safeguards: retained all Node.js/TypeScript (lockfile, peer, engines, compiler) and Maven/Spring (BOMs, profiles, reactor) safeguards in specialized remediation references.
+- Package test verification: 53/53 package tests pass across 8 suites in `ext/snyk-expert/tests/`, including 14 workflow-contract tests in `ext/snyk-expert/tests/workflow-qualification.test.mjs`; live authenticated Snyk qualification and runtime remediation remain scheduled for Phase 07.
+- Boundary: Specialist and skill cutover complete; command coordinator loop (`cmd-snyk-remediate`, Phase 04), delivery scenarios (Phase 05), integration review (Phase 06), and live operational qualification (Phase 07) remain scheduled for subsequent phases.
 
 ### 2026-10-12 — feat(snyk): establish general procedure and lossless ledger contracts (Phase 02)
 
@@ -756,26 +769,6 @@
   rows. This deterministic host-independent evidence makes no runtime support claim.
 - Handoff advanced to Phase 06 — semantic-release candidate, receipt, and
   publisher.
-
-### 2026-09-14 — feat(release): deterministic Windows fixture and predecessor resolver (Phase 04)
-
-**Status:** Phase 04 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
-**Plan:** [Phase 04 plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md)
-**Evidence:** [Cycle 2 tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md)
-and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md).
-
-- Factored shared fixture record ordering, controller/build-manifest digests, real
-  installer bytes, and fixed timestamp metadata; `buildWindowsTestReleaseSet`
-  now uses `buildReleaseArchives` and emits exactly four Windows assets.
-- Added bounded stable-release enumeration and exact-label/canonical-name
-  predecessor resolution. Bootstrap uses verified `1.0.0`/`v1.0.0` bytes with
-  lowercase `a`×40 identity only before qualification history; latest stable is
-  mandatory afterward, with no older/bootstrap fallback.
-- Added private staged streaming downloads with cross-origin token stripping,
-  bounded error/stream bytes, pre/post-promotion exact-four verification, strict
-  CLI flags, and cleanup of partial output on failure.
-- Focused Phase 04, release, and Linux installer suites pass 39/39 (100%).
-  This deterministic Linux evidence does not qualify native Windows runtime.
 
 ### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
 

@@ -13,7 +13,11 @@ describe('Snyk Expert - Workflow Qualification Scenarios & Boundaries', () => {
   const nodeRemediationPath = path.join(PACKAGE_ROOT, '.agents', 'skills', 'snyk-fix', 'references', 'node-typescript-remediation.md');
   const reviewSkillPath = path.join(PACKAGE_ROOT, '.agents', 'skills', 'dependency-upgrade-review', 'SKILL.md');
   const compatibilityPath = path.join(PACKAGE_ROOT, '.agents', 'skills', 'dependency-upgrade-review', 'references', 'compatibility-evidence.md');
-
+  const expertPath = path.join(PACKAGE_ROOT, '.agents', 'agents', 'snyk-expert.md');
+  const cliSkillPath = path.join(PACKAGE_ROOT, '.agents', 'skills', 'snyk-cli', 'SKILL.md');
+  const cliWorkflowPath = path.join(PACKAGE_ROOT, '.agents', 'skills', 'snyk-cli', 'references', 'cli-workflow.md');
+  const mavenRemediationPath = path.join(PACKAGE_ROOT, '.agents', 'skills', 'snyk-fix', 'references', 'maven-spring-remediation.md');
+  const reviewOutputPath = path.join(PACKAGE_ROOT, '.agents', 'skills', 'dependency-upgrade-review', 'references', 'review-output.md');
   test('evals.json exists and contains well-formed qualification scenarios', () => {
     assert.ok(fs.existsSync(evalsPath), 'evals.json must exist');
     const content = JSON.parse(fs.readFileSync(evalsPath, 'utf8'));
@@ -116,5 +120,64 @@ describe('Snyk Expert - Workflow Qualification Scenarios & Boundaries', () => {
     const compatibility = fs.readFileSync(compatibilityPath, 'utf8');
     assert.ok(compatibility.includes('Coupled tool suites and testing frameworks'));
     assert.ok(compatibility.includes('Package scripts and lifecycle hook side effects'));
+  });
+
+  test('specialist and fix skills enforce one-set execution, neutral procedure gate, and live scan handoff to main', () => {
+    const expert = fs.readFileSync(expertPath, 'utf8');
+    assert.ok(expert.includes('local verification complete; Snyk verification pending'));
+    assert.ok(expert.includes('Execute exactly ONE coherent owner set per mutating specialist invocation'));
+    assert.ok(expert.includes('pre-edit procedure evaluation table'));
+    assert.ok(expert.includes('Analysis performs zero target writes'));
+    assert.ok(expert.includes('Main alone owns authentic same-scope live Snyk rescans'));
+    assert.ok(!expert.includes('other ecosystems remain blocked'));
+
+    const fixSkill = fs.readFileSync(fixSkillPath, 'utf8');
+    assert.ok(fixSkill.includes('local verification complete; Snyk verification pending'));
+    assert.ok(fixSkill.includes('Execute exactly ONE coherent owner set per invocation'));
+    assert.ok(fixSkill.includes('zero target edits, including eligible proposals'));
+    assert.ok(fixSkill.includes('Do not write evidence into the target or run commands that mutate it (including creating or writing to private evidence directories inside the target)'));
+    assert.ok(fixSkill.includes('Specialist never declares terminal `fixed` or overall `completed` on local evidence alone'));
+  });
+
+  test('cli skill and workflow enforce safe storage binding, unsafe-storage pause, and safe troubleshooting', () => {
+    const cliSkill = fs.readFileSync(cliSkillPath, 'utf8');
+    assert.ok(cliSkill.includes('main\'s exact private ignored target-contained destination'));
+    assert.ok(cliSkill.includes('Unsafe storage pauses artifact-producing execution'));
+    assert.ok(cliSkill.includes('NODE_TLS_REJECT_UNAUTHORIZED=0'));
+    assert.ok(cliSkill.includes('distinguishing proxy from CA trust without TLS bypass'));
+
+    const cliWorkflow = fs.readFileSync(cliWorkflowPath, 'utf8');
+    assert.ok(cliWorkflow.includes('Safe CLI troubleshooting'));
+    assert.ok(cliWorkflow.includes('HTTP_PROXY'));
+    assert.ok(cliWorkflow.includes('NODE_EXTRA_CA_CERTS'));
+    assert.ok(cliWorkflow.includes('Other supported ecosystems and package managers'));
+    assert.ok(cliWorkflow.includes('main\'s exact private ignored target-contained destination binding'));
+    assert.ok(cliWorkflow.includes('Unsafe storage pauses artifact-producing execution immediately'));
+  });
+
+  test('node and maven remediation references enforce one-set execution and handoff to main for live scan', () => {
+    const nodeRemediation = fs.readFileSync(nodeRemediationPath, 'utf8');
+    assert.ok(nodeRemediation.includes('Execute exactly ONE coherent owner set per mutating specialist invocation'));
+    assert.ok(nodeRemediation.includes('local verification complete; Snyk verification pending'));
+    assert.ok(nodeRemediation.includes('Main alone owns authentic baseline and post-remediation live Snyk scanning'));
+
+    const mavenRemediation = fs.readFileSync(mavenRemediationPath, 'utf8');
+    assert.ok(mavenRemediation.includes('Apply exactly ONE coherent owner set per mutating specialist invocation'));
+    assert.ok(mavenRemediation.includes('local verification complete; Snyk verification pending'));
+    assert.ok(mavenRemediation.includes('Main alone owns authentic baseline and post-remediation live Snyk scanning'));
+  });
+
+  test('dependency-upgrade-review references enforce zero target writes and generic compatibility dimensions', () => {
+    const reviewSkill = fs.readFileSync(reviewSkillPath, 'utf8');
+    assert.ok(reviewSkill.includes('Zero target writes'));
+    assert.ok(reviewSkill.includes('pre-edit procedure table'));
+
+    const compatibility = fs.readFileSync(compatibilityPath, 'utf8');
+    assert.ok(compatibility.includes('The review is strictly read-only: zero target writes'));
+    assert.ok(compatibility.includes('Generic cross-ecosystem compatibility dimensions'));
+
+    const reviewOutput = fs.readFileSync(reviewOutputPath, 'utf8');
+    assert.ok(reviewOutput.includes('zero target writes across all modes'));
+    assert.ok(reviewOutput.includes('Live Snyk rescan verification belongs to main session'));
   });
 });

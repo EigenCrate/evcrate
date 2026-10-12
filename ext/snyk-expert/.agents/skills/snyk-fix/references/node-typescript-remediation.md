@@ -195,12 +195,12 @@ Consume a read-only assessment through [Dependency Upgrade Review](../../depende
    - `remediate`: Apply only if proposal is assessed `eligible` under current user policy and ecosystem procedure is validated.
    - `approved-remediate`: Eligible sets retain their own gates; gated intent additionally requires exact human decision/source, proposal/intent hashes, full current baseline, covered paths, and conditions from the finding contract. Human approval binds strictly to the exact owner set and current baseline; approval for one owner pair (e.g. Vitest/coverage) cannot supply a missing procedure, cannot extend to other owners, and is voided if the baseline drifts. Rebinding approval requires presenting the updated baseline to the user and collecting a fresh, exact human decision for changed gated work—never mechanically synthesizing or rehashing prior approvals.
 4. **Coherent edit execution**:
+   - Execute exactly ONE coherent owner set per mutating specialist invocation with retained N/count.
    - Apply manifest edits to target `package.json` (root or workspace).
    - Execute authorized package manager update command within authorized boundary to synchronize the lockfile.
    - Never edit lockfiles by hand.
    - Record owned hunks and before/after SHA-256 hashes of `package.json` and lockfile.
    - Recheck baseline before any subsequent change set.
-
 ## 8. Verification, typechecking, build and concrete runtime probes
 
 After modifying manifests and updating the lockfile, run verification:
@@ -228,12 +228,12 @@ After modifying manifests and updating the lockfile, run verification:
    - *Native addon probe*: If the package contains native bindings, verify native library initialization without `ERR_DLOPEN_FAILED`.
    - *Behavioral probe*: Execute application paths utilizing the upgraded library and assert expected behavior.
 5. **Probe failure stop**: If typecheck, build, tests, or runtime probes fail, **STOP (`partial`)**. Record failure details; initiate selective rollback of only owned edits if authorized.
-
+6. **Local verification handoff**: When graph inspection, local compiler typecheck, build, regression tests, and runtime probes succeed, specialist hands off to main with `local verification complete; Snyk verification pending`, returning the updated baseline identity, covered paths, and required post-scan command expectations. Specialist does not redundantly execute the live Snyk rescan.
 ## 9. Snyk scan invocation, manifest/workspace commands, and coverage gates
 
-General Snyk CLI acquisition, operator authorization, authentication (browser OAuth, CI tokens), global flags, and baseline artifact conventions are defined in [Snyk CLI execution workflow](../../snyk-cli/references/cli-workflow.md). This section provides the concrete manifest and workspace scanning commands and mandatory coverage gates for Node.js and TypeScript repositories.
+General Snyk CLI acquisition, operator authorization, authentication (browser OAuth, CI tokens), global flags, and baseline artifact conventions are defined in [Snyk CLI execution workflow](../../snyk-cli/references/cli-workflow.md). Main alone owns authentic baseline and post-remediation live Snyk scanning. This section provides the concrete manifest and workspace scanning command templates and mandatory coverage gates that main executes and against which specialist proposals are validated.
 
-Run baseline and post-remediation scans with identical scope:
+Main executes baseline and post-remediation scans with identical scope:
 
 ### Command templates
 - **Shell schema**: `snyk test <captured-scope-options> --json-file-output="<safe-artifact>"`; replace each placeholder with separately quoted authorized literal arguments.
@@ -302,3 +302,4 @@ Before crediting any scan result as valid evidence, evaluate these mandatory cov
 | Local compiler / tsc missing | Stop typecheck; do not run unpinned `npx` | Verify local devDependencies install or obtain explicit compiler execution authority |
 | Graph / typecheck / build / test / runtime failure | Stop dependent sets; `partial`, findings remaining/unverified as evidenced | Diagnose, preserve outputs and new risks; rollback only safely authorized owned hunks |
 | Scanner failure (exit 2, 3, or workspace error) | Record failed / incomplete evidence; `partial` | Diagnose scanner error / flags; do not credit failed scan as fixed findings |
+| Local verification passed, pending live scan | Handoff to main; `local verification complete; Snyk verification pending` | Main executes authentic same-scope live Snyk rescan before any terminal completion |
