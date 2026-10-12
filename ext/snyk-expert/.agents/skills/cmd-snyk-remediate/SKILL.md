@@ -103,6 +103,23 @@ Follow the exact stage transitions defined in the design contract. Skills define
 - **Specialist handoff boundary:** Specialist never runs the post-remediation live Snyk scan and never declares a finding `fixed` or overall status `completed`.
   - When all required local checks pass, return observed local diffs/checks, resulting baseline identity, planned/executed command records, procedure-learning observations, and the exact handoff status: `local verification complete; Snyk verification pending`.
   - If any required graph, build, test, or consumer probe check fails, stop the ordinary loop immediately and return `partial` with stopped state and failure evidence—never pending-success wording.
+- **Mandatory Main-owned failed-attempt finalization branch:**
+  If Step 4 tool execution or any Step 5 native verification check (graph, build, test, or consumer probe) fails:
+  1. Main **immediately appends** one observation row for **every** original source record from the immutable first-scan inventory into the every-attempt observation ledger, using the exact ledger table columns:
+     - `Attempt #`: consumed attempt count (`attempts_started`).
+     - `Source record identity`: original source finding identity.
+     - `All occurrence / path references`: all ordered occurrence links.
+     - `Baseline observation`: original scan-zero presence (`present-at-baseline`, `not-reproduced-at-baseline`, etc.).
+     - `Post-scan observation`: `failed/unavailable`.
+     - `Graph & consumer check`: `failed` for findings in the attempted coherent owner set; `not-applicable` (or `omitted`) for unattempted findings.
+     - `Disposition`: `unverified` for findings in the attempted coherent owner set; `remaining` for unattempted findings. Never mark any finding `fixed`.
+     - `Evidence locator, hash & limits`: failure log/diagnostic locator, SHA-256 digest, and stop reason.
+  2. Main persists the failure evidence, actual modified/created paths, and concrete recovery requirements in `changed_paths_and_checks` within the private run record.
+  3. The attempt remains strictly consumed ($\text{attempts\_started}$ unchanged, zero refund). The run record retains an explicit unfinished recovery state: `in_flight_state: 'started'`, with `stop_reason: 'native-update-failed'` (if Step 4 tool failed) or `stop_reason: 'native-check-failed'` (if Step 5 verification failed).
+  4. Main halts the ordinary loop at `partial`. Re-running the same failed checks without code change is strictly prohibited (no blind/flaky retries without an attempt). Proceeding to another independent owner set is strictly prohibited while an attempt remains in an unfinished recovery state.
+  5. The failed attempt's `in_flight_state` transitions from `'started'` to `'finished'` only through one of two authorized recovery paths:
+     - **Operator-authorized selective rollback:** Operator authorizes rollback; Main reverses only proven owned inverse edits against recorded pre-attempt hashes, verifies restoration to the pre-attempt baseline tuple, records recovery evidence, and marks `in_flight_state: 'finished'`. (Rollback never refunds $N$).
+     - **Operator-authorized forward repair proposal:** Operator formulates a concrete forward repair proposal. Main marks the failed attempt `in_flight_state: 'finished'` (retaining failure/unverified history), captures the resulting baseline tuple, and initiates a **new counted attempt** ($\text{attempts\_started} + 1 \le N$) starting from Step 2 assessment, Step 3 pre-edit gate, and Step 4 persistence before mutating.
 
 ### Step 6 — Live final review (Main)
 
@@ -132,7 +149,10 @@ When Step 7 identifies a supported forward correction:
 
 ## Failure handling, recovery, and early stops
 
-- **Validation, runtime, or scanner failure:** Any required graph, build, test, consumer probe, scanner (`exit 2`/`3`), or project-coverage failure stops the ordinary remediation loop immediately and preserves the partial state (`partial`). Do not start another ordinary set, auto-edit test assertions, disable tests, or apply hidden suppressions.
+- **Validation, runtime, or scanner failure:** Any required graph, build, test, consumer probe, scanner (`exit 2`/`3`), or project-coverage failure stops the ordinary remediation loop immediately and preserves the partial state (`partial`).
+  - For Step 4 command or Step 5 verification failures: Main immediately executes the **mandatory failed-attempt finalization branch**, appending one observation row for every original source record (`Post-scan observation: failed/unavailable`; `Disposition: unverified` for attempted set and `remaining` for unattempted set; `Graph & consumer check: failed` for attempted set and `not-applicable` for unattempted set), recording failure evidence and recovery requirements in the durable run record, keeping the attempt consumed in an unfinished recovery state (`in_flight_state: 'started'`, with `stop_reason: 'native-update-failed'` or `'native-check-failed'`), and strictly prohibiting selecting another owner set until authorized rollback or a new counted forward repair attempt begins.
+  - For Step 6 live scanner failures (`exit 2`/`3`) or expected project omissions: Main appends observation rows with `Post-scan observation: failed/unavailable`, `Disposition: unverified`, marks `in_flight_state: 'finished'`, sets `stop_reason: 'scanner-failed'` or `'coverage-incomplete'`, and stops the loop at `partial`.
+  - Re-running failed checks or scans without state change, auto-editing test assertions, disabling tests, or applying hidden suppressions is strictly prohibited.
 - **Diagnostic scans after failure:** A post-failure diagnostic scan may run only if a concrete safe non-mutating path and explicit scan execution authority are bound. A clean diagnostic scan **never** clears failed native checks, marks findings `fixed`, or resumes the ordinary loop; overall status remains `partial`.
 - **Safe selective inverse rollback:** Owned inverse rollback requires explicit operator authority, verified match against recorded post-attempt hashes, and exact hunk-level reversal that preserves all pre-existing or concurrent user modifications ([Verification, results and rollback reference](../snyk-fix/references/verification-and-results.md)). Never run `git reset --hard`, `git checkout -- .`, `git clean`, or broad file overwrites. Rollback is recorded recovery of the consumed attempt—it **never** refunds or resets `attempts_started`, and any subsequent scan after rollback must refresh evidence before claiming terminal status. A forward repair or correction after failure/rollback requires a separate supported proposal, gate, and remaining attempt budget ($+1$).
 - **Early stop conditions:** Stop immediately and report exact residual rows and next owner action upon:

@@ -118,4 +118,24 @@ describe('Snyk Expert - Evaluation Catalog & Acceptance Specifications', () => {
     assert.ok(allAssertions.some(a => a.toLowerCase().includes('ancestor') || a.toLowerCase().includes('containment')),
       'SNYK-035 assertions must enforce access-controlled ancestor/leaf containment');
   });
+
+  test('failed remediation attempts specify mandatory ledger finalization and recovery boundaries', () => {
+    const content = JSON.parse(fs.readFileSync(evalsPath, 'utf8'));
+    const failureCases = content.evals.filter(e =>
+      e.expected_output.toLowerCase().includes('failed-attempt finalization')
+    );
+    assert.ok(failureCases.length >= 1, 'must include at least 1 failed-attempt ledger finalization scenario');
+    for (const item of failureCases) {
+      assert.ok(item.expected_output.includes('failed/unavailable'),
+        `scenario ${item.id} must specify failed/unavailable post-scan observation`);
+      assert.ok(item.expected_output.includes('unverified'),
+        `scenario ${item.id} must specify unverified disposition`);
+      assert.ok(item.expected_output.includes('native-check-failed'),
+        `scenario ${item.id} must specify native-check-failed stop_reason`);
+      assert.ok(item.assertions.some(a => a.toLowerCase().includes('every original')),
+        `scenario ${item.id} must assert ledger rows for every original record`);
+      assert.ok(item.assertions.some(a => a.toLowerCase().includes('prohibit') || a.toLowerCase().includes('another owner')),
+        `scenario ${item.id} must assert prohibition on advancing to another owner set`);
+    }
+  });
 });

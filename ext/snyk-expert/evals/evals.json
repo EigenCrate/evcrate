@@ -639,6 +639,20 @@
         "Prohibits automatic runtime mutation of installed .agents/ skills or recipe execution.",
         "Ensures normal run completion does not depend on promotion, and N is never refunded."
       ]
+    },
+    {
+      "id": 50,
+      "acceptance_id": "SNYK-030",
+      "evidence_class": "Operational",
+      "prerequisites": "Target: project workspace with consumed attempt 1. Authority: Main coordinator ledger manager. Evidence: native unit tests failed following dependency update in attempt 1.",
+      "prompt": "Prerequisites: Attempt 1 modified dependencies; local unit tests fail. Authority: Main coordinator ledger finalization. Stimulus: Local unit tests fail during Step 5 verification after updating a dependency in attempt 1. Coordinator must finalize the attempt and record observations before halting.",
+      "expected_output": "Main executes the mandatory failed-attempt finalization branch: appends one observation row for every original source record from scan-zero inventory, recording Post-scan observation as failed/unavailable, Graph & consumer check as failed for attempted findings (not-applicable for unattempted), and Disposition as unverified for attempted findings (remaining for unattempted); persists failure logs, modified paths, and recovery requirements in run record; retains attempt consumption (attempts_started=1, no refund) with in_flight_state 'started' and stop_reason 'native-check-failed'; halts ordinary loop with status partial; and strictly prohibits selecting or proceeding to another owner set until authorized rollback or a new counted forward repair attempt begins.",
+      "assertions": [
+        "Appends observation row for every original inventory record upon verification failure.",
+        "Records post-scan observation as failed/unavailable and disposition as unverified for attempted set.",
+        "Retains consumed attempt count without refund in unfinished recovery state with stop_reason native-check-failed.",
+        "Prohibits proceeding to another owner set until authorized rollback or a new counted forward repair attempt begins."
+      ]
     }
   ]
 }

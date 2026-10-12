@@ -73,7 +73,7 @@ The run record maintains durable state across actor handoffs, pauses, and contex
 
 1. **Counting point & durable persistence:** Increment `attempts_started` once and durably record the attempt-start record (attempt number, proposal identity, material intent hash, pre-attempt baseline tuple, and `started` marker) in the run record immediately before the first authorized operation capable of changing dependency inputs or resolution state (including native update commands, resolution, or mutating scanners/resolvers) within a coherent authorized attempt. Inability to durably retain or persist the incremented count halts writes immediately.
 2. **Subsequent commands:** Subsequent commands within the same reviewed one-set procedure do not increment the count again.
-3. **No refunds:** Tool failures, syntax errors, native update failures, and authorized inverse rollbacks never refund an attempt count.
+3. **No refunds & failed-attempt accounting:** Tool failures, syntax errors, native update failures, and authorized inverse rollbacks never refund an attempt count. When an attempt fails, Main executes the mandatory failed-attempt finalization branch: appends observations for all original findings with `failed/unavailable` or `unverified` status, records failure diagnostics and modified paths in `changed_paths_and_checks`, and preserves the attempt count with `in_flight_state: 'started'` and `stop_reason: 'native-check-failed'`. Proceeding to another owner set is strictly prohibited until forward verification passes or authorized rollback completes.
 4. **Pause/resume & crash recovery safety:** Pre-write pauses, approval waits, and context restarts consume zero attempts ($0$) and preserve the same run record, bound $N$, and `attempts_started`. The `in_flight_state` transitions from `idle` to `started` upon recording the attempt-start record, and to `finished` only after that attempt's verification or selective rollback completes. On resume, compare current baseline to the captured pre-attempt baseline tuple; treat any unexplained drift or unfinished attempt marker as stop-and-recover, never as a fresh attempt.
 5. **Missing history blocks:** Unknown or missing attempt history blocks further dependency writes until resolved.
 6. **Budget increase & intake validation:** Missing, zero, negative, fractional, or non-integer text $N$ must be obtained explicitly from the operator before edits; no arbitrary default, cap, or silent unlimited run. If the operator explicitly increases $N$ in the same retained record, existing run history and `attempts_started` are retained; no automatic reset or fresh session to bypass limits.
@@ -130,6 +130,14 @@ Maintain one row per source finding identity (not merely advisory alias), retain
 ### Every-attempt append-only observation ledger
 
 After EVERY attempt (attempt $1 \dots N$), append one observation row for EVERY original source record from the immutable first-scan inventory in [Finding and owner contract](finding-and-owner-contract.md), including unchanged, unattempted, gated, rejected, failed, or unavailable rows. Retain links to ALL ordered occurrences. Aggregate counts are strictly supplementary; counts never substitute for rows.
+
+- **Mandatory failed-attempt observation recording:** When an attempt fails during native update, graph inspection, build/test, or consumer probes (Step 4/5), Main must still append an observation row for every original finding from the first-scan inventory before halting execution. For each row:
+  - `Baseline observation`: Retains scan-zero presence (`present-at-baseline`, `not-reproduced-at-baseline`, etc.).
+  - `Post-scan observation`: Marked `failed/unavailable` (or `unverified`).
+  - `Graph & consumer check`: Marked `failed` (recording the failing check/exit).
+  - `Disposition`: Marked `unverified` (or `remaining`). Never credited as `fixed`.
+  - `Evidence locator`: Points to failure log/output locator, hash, and stop reason.
+  Failure never permits omitting ledger rows or skipping attempt accounting.
 
 | Attempt # | Source record identity | All occurrence / path references | Baseline observation | Post-scan observation | Graph & consumer check | Disposition | Evidence locator, hash & limits |
 |---|---|---|---|---|---|---|---|
