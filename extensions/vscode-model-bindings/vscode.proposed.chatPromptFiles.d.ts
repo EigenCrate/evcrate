@@ -60,6 +60,7 @@ declare module 'vscode' {
     readonly globalStorageUri: Uri;
     readonly storageUri?: Uri;
     readonly globalState: Memento;
+    readonly workspaceState: Memento;
   }
 
   export namespace commands {

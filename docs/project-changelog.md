@@ -5,6 +5,15 @@
 **Updated:** 2026-10-12
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-12 — feat(vscode): implement runtime tiers, actor overrides, and picker commands (Phase 05)
+
+- Implemented runtime model catalog querying in `extensions/vscode-model-bindings/src/model-catalog.ts` via `vscode.lm.selectChatModels` (`queryChatModelCatalog`), validating entries (`validateCatalogEntry`), formatting selectors as `<name> (<vendor>)`, detecting ambiguous selectors (`findAmbiguousSelectors`), and compiling frozen snapshots (`buildCatalogSnapshot`) without inference probes or preferred-model heuristics.
+- Implemented scoped versioned binding store in `binding-store.ts` (`ScopedBindingStore`), managing partitioned user defaults (`globalState`) and installation-scoped root workspace overrides (`workspaceState`), validating schema bounds (`validateBindingsV1` <= 64 KiB), checking CAS revisions, and rejecting unsupported remote authorities (`UNSUPPORTED_REMOTE_AUTHORITY`).
+- Implemented pure inventory resolver in `binding-resolver.ts` (`resolveInventoryBindings`) enforcing strict precedence layering (`root.actor > user.actor > canonical.inherit > root.tier > user.tier > unresolved`), omitting frontmatter `model` selector for inherit actors unless explicitly overridden, validating catalog availability, and isolating withheld reasons.
+- Implemented QuickPick configuration UX and commands in `configuration-pickers.ts`, `configuration-commands.ts`, `clear-commands.ts`, and `command-registration.ts` (`evcrate.configureAgentModels`, `evcrate.configureActorModel`, `evcrate.clearModelBindings`, `evcrate.showModelBindings`, `evcrate.selectInstallation`).
+- Integrated dynamic provider refresh in `extension.ts` and `generation-loader.ts` with catalog change subscriptions (`vscode.lm.onDidChangeChatModels`), single-flight debounced refreshes, and fail-closed handling for corrupt states.
+- Verified test suites in `tests/vscode-companion/` (34/34 companion tests pass, 232/232 core adapter tests pass; Review Cycle 2 approved 8/10, 0 critical issues; user approved). Live native editor qualification remains deferred to Phase 09 per user gate amendment.
+
 ### 2026-10-12 — feat(vscode): implement companion provider runtime (Phase 04)
 
 - Resolved Phase 02 Review Cycle 2 contract items: idempotent canonical URI serialization across percent encoding/spaces/Unicode/Windows drives with control character rejection (`W-A`), extracted leaf module `binding-contracts.ts` eliminating circular value imports (`W-B`), and enforced `<=512` actor bounds, string length caps, and diagnostic coherence in `validateRuntimeDiagnosticsV1` (`W-C`).

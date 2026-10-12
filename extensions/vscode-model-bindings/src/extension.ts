@@ -1,61 +1,44 @@
 import { randomUUID } from 'node:crypto';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import * as vscode from 'vscode';
-import { inspectHostGuard, resolveCandidateRoots, inspectCandidateRoot, type HostGuardStatus } from './installation-roots.js';
+import { resolveCandidateRoots } from './installation-roots.js';
 import { loadAndStageGeneration } from './generation-loader.js';
-import { CompanionAgentProvider, type AgentResourceDescriptor } from './agent-provider.js';
+import { type AgentResourceDescriptor } from './agent-provider.js';
+import { ScopedBindingStore } from './binding-store.js';
+import { queryChatModelCatalog, type CatalogSnapshot } from './model-catalog.js';
+import { getApprovedRoots } from './installation-commands.js';
+import { registerAllCommands } from './command-registration.js';
+import { createProviderManager, type ProviderManager } from './provider-registration.js';
 
-let activeProvider: CompanionAgentProvider | null = null;
-let activeProviderDisposable: vscode.Disposable | null = null;
+const providerManager: ProviderManager = createProviderManager();
 let activeInstanceUuid: string = randomUUID();
-let currentGenerationId = 0;
-let activeInventoryKey: string | null = null;
-let activeInstanceGenerationsCount = 0;
-let activeInstanceBytesTotal = 0;
+let currentGenerationId = 0, activeInventoryKey: string | null = null;
+let activeInstanceGenerationsCount = 0, activeInstanceBytesTotal = 0;
+let currentResolvedRootIdentity: string | null = null, currentPluginFsPath: string | null = null;
+let catalogSnapshot: CatalogSnapshot | null = null, catalogSubscribed = false;
+let activeRefreshPromise: Promise<boolean> | null = null, pendingRefreshRequested = false;
 
-function getApprovedRoots(context: vscode.ExtensionContext): Set<string> {
-  const saved = context.globalState.get<readonly string[]>('evcrate.approvedRoots') ?? [];
-  return new Set<string>(saved);
+function ensureCatalogSubscribed(context: vscode.ExtensionContext): void {
+  if (catalogSubscribed) return;
+  catalogSubscribed = true;
+  context.subscriptions.push(
+    vscode.lm.onDidChangeChatModels(() => {
+      void queryChatModelCatalog(vscode.lm)
+        .then((snap) => {
+          catalogSnapshot = snap;
+          void refreshActiveGeneration(context);
+        })
+        .catch(() => {});
+    })
+  );
 }
 
-function withdrawAndReset(): void {
-  activeInventoryKey = null;
-  activeProvider?.withdrawInventory();
-}
-
-export function tryRegisterProvider(context: vscode.ExtensionContext): HostGuardStatus {
-  const guard = inspectHostGuard({
-    remoteAuthority: vscode.env.remoteAuthority,
-    workspaceTrusted: vscode.workspace.isTrusted,
-    hasProposal: typeof vscode.chat?.registerCustomAgentProvider === 'function'
-  });
-  if (!guard.qualified) {
-    if (activeProviderDisposable) {
-      activeProviderDisposable.dispose();
-      activeProviderDisposable = null;
-    }
-    if (activeProvider) {
-      activeProvider.dispose();
-      activeProvider = null;
-    }
-    return guard;
-  }
-  if (!activeProvider) {
-    const emitter = new vscode.EventEmitter<void>();
-    activeProvider = new CompanionAgentProvider(emitter);
-    activeProviderDisposable = vscode.chat.registerCustomAgentProvider(activeProvider);
-    context.subscriptions.push(activeProviderDisposable);
-    context.subscriptions.push(activeProvider);
-  }
-  return guard;
-}
-
-export async function refreshActiveGeneration(context: vscode.ExtensionContext): Promise<boolean> {
+async function doRefreshActiveGeneration(context: vscode.ExtensionContext): Promise<boolean> {
   try {
-    const guard = tryRegisterProvider(context);
+    const guard = providerManager.tryRegister(context);
+    const activeProvider = providerManager.getActiveProvider();
     if (!guard.qualified || !activeProvider) {
-      withdrawAndReset();
+      activeInventoryKey = null;
+      providerManager.withdrawAndReset();
       return false;
     }
     const folderPaths = vscode.workspace.workspaceFolders?.map((f) => f.uri.fsPath) ?? [];
@@ -71,8 +54,35 @@ export async function refreshActiveGeneration(context: vscode.ExtensionContext):
         remoteAuthority: guard.remoteAuthority
       });
     } catch {
-      withdrawAndReset();
+      activeInventoryKey = null;
+      providerManager.withdrawAndReset();
       return false;
+    }
+    currentResolvedRootIdentity = installation.rootIdentity;
+    currentPluginFsPath = installation.pluginFsPath;
+
+    const store = new ScopedBindingStore(context.globalState, context.workspaceState, vscode.env.remoteAuthority);
+    const userRes = store.getUserBindings();
+    if (!userRes.ok) {
+      activeInventoryKey = null;
+      providerManager.withdrawAndReset();
+      void vscode.window.showErrorMessage(`EVCrate: User model bindings corrupt: ${userRes.error.message}`);
+      return false;
+    }
+    const rootRes = store.getRootBindings(installation.rootIdentity);
+    if (!rootRes.ok) {
+      activeInventoryKey = null;
+      providerManager.withdrawAndReset();
+      void vscode.window.showErrorMessage(`EVCrate: Root model bindings corrupt: ${rootRes.error.message}`);
+      return false;
+    }
+    const hasBindings = Boolean(
+      (userRes.bindings && Object.keys(userRes.bindings.tiers).length > 0) ||
+      (rootRes.bindings && Object.keys(rootRes.bindings.tiers).length > 0)
+    );
+    if (hasBindings && !catalogSnapshot) {
+      ensureCatalogSubscribed(context);
+      try { catalogSnapshot = await queryChatModelCatalog(vscode.lm); } catch {}
     }
     const baseStorage = context.storageUri?.fsPath ?? context.globalStorageUri.fsPath;
     const loadResult = loadAndStageGeneration({
@@ -86,14 +96,18 @@ export async function refreshActiveGeneration(context: vscode.ExtensionContext):
         activeInstanceGenerations: activeInstanceGenerationsCount,
         activeInstanceBytes: activeInstanceBytesTotal,
         persistentAuthorityBytes: activeInstanceBytesTotal
-      }
+      },
+      rootBindings: rootRes.bindings,
+      userBindings: userRes.bindings,
+      catalog: catalogSnapshot?.models ?? []
     });
-    if (loadResult.staged) {
+    const staged = loadResult.staged;
+    if (staged && activeProvider) {
       currentGenerationId += 1;
       activeInstanceGenerationsCount += 1;
-      activeInstanceBytesTotal += loadResult.staged.totalBytes;
+      activeInstanceBytesTotal += staged.totalBytes;
       activeInventoryKey = loadResult.inventoryKey;
-      const resources: AgentResourceDescriptor[] = Object.entries(loadResult.staged.publishedActorFiles).map(([id, filePath]) => ({
+      const resources: AgentResourceDescriptor[] = Object.entries(staged.publishedActorFiles).map(([id, filePath]) => ({
         actorId: id,
         uri: vscode.Uri.file(filePath),
         fsPath: filePath
@@ -101,14 +115,35 @@ export async function refreshActiveGeneration(context: vscode.ExtensionContext):
       return activeProvider.updateInventory(resources);
     }
     if (loadResult.contributedCount === 0) {
-      withdrawAndReset();
+      activeInventoryKey = null;
+      providerManager.withdrawAndReset();
       return false;
     }
     return false;
   } catch {
-    withdrawAndReset();
+    activeInventoryKey = null;
+    providerManager.withdrawAndReset();
     return false;
   }
+}
+
+export async function refreshActiveGeneration(context: vscode.ExtensionContext): Promise<boolean> {
+  if (activeRefreshPromise) {
+    pendingRefreshRequested = true;
+    return activeRefreshPromise;
+  }
+  activeRefreshPromise = (async () => {
+    try {
+      return await doRefreshActiveGeneration(context);
+    } finally {
+      activeRefreshPromise = null;
+      if (pendingRefreshRequested) {
+        pendingRefreshRequested = false;
+        void refreshActiveGeneration(context);
+      }
+    }
+  })();
+  return activeRefreshPromise;
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -117,63 +152,39 @@ export function activate(context: vscode.ExtensionContext): void {
   activeInventoryKey = null;
   activeInstanceGenerationsCount = 0;
   activeInstanceBytesTotal = 0;
+  currentResolvedRootIdentity = null;
+  currentPluginFsPath = null;
+  catalogSnapshot = null;
+  catalogSubscribed = false;
 
-  tryRegisterProvider(context);
+  providerManager.tryRegister(context);
   void refreshActiveGeneration(context);
 
   context.subscriptions.push(
     vscode.workspace.onDidGrantWorkspaceTrust(() => { void refreshActiveGeneration(context); }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => { void refreshActiveGeneration(context); }),
-    vscode.commands.registerCommand('evcrate.selectInstallation', async () => {
-      const folderPaths = vscode.workspace.workspaceFolders?.map((f) => f.uri.fsPath) ?? [];
-      const candidates = folderPaths.map((p) => inspectCandidateRoot(p, false, true)).filter((c) => c.present && c.valid);
-      const homePath = join(homedir(), '.evcrate-vscode');
-      const homeCand = inspectCandidateRoot(homePath, false, false);
-      if (homeCand.present && homeCand.valid) candidates.push(homeCand);
-
-      if (candidates.length === 0) {
-        void vscode.window.showWarningMessage('EVCrate: No valid installations found in workspace or HOME');
-        return;
-      }
-      const items = candidates.map((c) => ({
-        label: typeof c.uri === 'string' ? c.uri : c.uri.path,
-        description: typeof c.uri === 'string' && c.uri.includes('.evcrate-vscode') ? 'Project installation' : 'HOME installation'
-      }));
-      const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Select EVCrate installation root to approve and activate' });
-      if (picked) {
-        const approved = getApprovedRoots(context);
-        approved.add(picked.label);
-        await context.globalState.update('evcrate.approvedRoots', [...approved]);
-        await context.globalState.update('evcrate.selectedRootIdentity', picked.label);
-        await refreshActiveGeneration(context);
-        void vscode.window.showInformationMessage(`EVCrate: Activated root "${picked.label}"`);
-      }
-    }),
-    vscode.commands.registerCommand('evcrate.showModelBindings', async () => {
-      const count = activeProvider?.currentResources.length ?? 0;
-      void vscode.window.showInformationMessage(`EVCrate: Active (Instance: ${activeInstanceUuid}, Generation: ${currentGenerationId}, Actors: ${count})`);
-    }),
-    vscode.commands.registerCommand('evcrate.configureAgentModels', async () => {
-      void vscode.window.showInformationMessage('EVCrate: Configure Agent Model Tiers (runtime model picker)');
-    }),
-    vscode.commands.registerCommand('evcrate.configureActorModel', async () => {
-      void vscode.window.showInformationMessage('EVCrate: Configure Actor Model Override');
-    }),
-    vscode.commands.registerCommand('evcrate.clearModelBindings', async () => {
-      await refreshActiveGeneration(context);
-      void vscode.window.showInformationMessage('EVCrate: Model bindings reset');
+    ...registerAllCommands(context, {
+      getCurrentRootIdentity: () => currentResolvedRootIdentity,
+      getPluginFsPath: () => currentPluginFsPath,
+      refreshActiveGeneration: () => refreshActiveGeneration(context),
+      queryAndRefresh: async () => {
+        catalogSnapshot = await queryChatModelCatalog(vscode.lm);
+        return refreshActiveGeneration(context);
+      },
+      getActiveProvider: () => providerManager.getActiveProvider(),
+      getInstanceUuid: () => activeInstanceUuid,
+      getGenerationId: () => currentGenerationId,
+      getCatalogSnapshot: () => catalogSnapshot,
+      ensureCatalogSubscribed: () => ensureCatalogSubscribed(context)
     })
   );
 }
 
 export function deactivate(): void {
-  withdrawAndReset();
-  if (activeProviderDisposable) {
-    activeProviderDisposable.dispose();
-    activeProviderDisposable = null;
-  }
-  if (activeProvider) {
-    activeProvider.dispose();
-    activeProvider = null;
-  }
+  activeInventoryKey = null;
+  providerManager.dispose();
+  currentResolvedRootIdentity = null;
+  currentPluginFsPath = null;
+  catalogSnapshot = null;
+  catalogSubscribed = false;
 }

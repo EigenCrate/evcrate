@@ -8,9 +8,14 @@ import {
   STORAGE_AND_SOURCE_BOUNDS,
   isPlainObject
 } from './runtime-contracts.js';
+import {
+  resolveEffectiveActorBinding,
+  type CatalogModelDescriptor,
+  type VscodeModelBindingsV1
+} from './binding-contracts.js';
+import { parseActorCanonicalTier } from './binding-resolver.js';
 import { renderAgentTemplate, type RenderedAgentResult } from './agent-renderer.js';
 import { stageAgentGeneration, type StagedGenerationResult } from './resource-storage.js';
-
 export interface GenerationLoadResult {
   readonly staged: StagedGenerationResult | null;
   readonly contributedCount: number;
@@ -43,6 +48,9 @@ export function loadAndStageGeneration(input: {
   readonly generationId: number;
   readonly activeInventoryKey?: string | null;
   readonly currentUsage: { activeInstanceGenerations: number; activeInstanceBytes: number; persistentAuthorityBytes: number };
+  readonly rootBindings?: VscodeModelBindingsV1 | null;
+  readonly userBindings?: VscodeModelBindingsV1 | null;
+  readonly catalog?: readonly CatalogModelDescriptor[] | null;
 }): GenerationLoadResult {
   const manifestPath = join(input.pluginFsPath, 'evcrate', 'agent-intent.json');
   const manifestRaw: unknown = JSON.parse(readFileSync(manifestPath, 'utf8'));
@@ -85,8 +93,27 @@ export function loadAndStageGeneration(input: {
         withheldReasons[actorId] = 'HASH_MISMATCH';
         continue;
       }
+      const tierResult = parseActorCanonicalTier(rawEntry.intent);
+      if (!tierResult.ok) {
+        withheldReasons[actorId] = tierResult.reason;
+        continue;
+      }
+      const effective = resolveEffectiveActorBinding({
+        actorId,
+        canonicalTier: tierResult.tier,
+        rootBindings: input.rootBindings ?? null,
+        userBindings: input.userBindings ?? null,
+        catalog: input.catalog ?? []
+      });
+      if (effective.status === 'withheld') {
+        withheldReasons[actorId] = effective.reason ?? 'WITHHELD';
+        continue;
+      }
       const rendered = renderAgentTemplate({
-        actorId, templateContent: tplContent, modelSelector: null, pluginFsPath: input.pluginFsPath
+        actorId,
+        templateContent: tplContent,
+        modelSelector: effective.renderedSelector,
+        pluginFsPath: input.pluginFsPath
       });
       renderedList.push(rendered);
     } catch (err: unknown) {
