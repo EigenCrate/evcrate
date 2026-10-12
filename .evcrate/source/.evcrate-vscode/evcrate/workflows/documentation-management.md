@@ -14,13 +14,13 @@
 - **Weekly Reviews**: Update progress percentages and milestone statuses
 
 ### Documentation Triggers
-The `evc-project-manager` agent MUST update these documents (for unsealed, authorized deliverables) when:
+The `evc-project-manager` agent MUST update these documents when:
 - A development phase status changes (e.g., from "In Progress" to "Complete")
 - Major features are implemented or released
 - Significant bugs are resolved or security patches applied
 - Project timeline or scope adjustments are made
 - External dependencies or breaking changes occur
-*(Note: Protected historical plan, phase, evidence, roadmap and selected-index identities remain immutable; the parent reconciles status through authorized uncaptured administrative outputs.)*
+
 ### Update Protocol
 1. **Before Updates**: Always read current roadmap and changelog status
 2. **During Updates**: Maintain version consistency and proper formatting
@@ -66,11 +66,6 @@ plans/
 - List each phase with status/progress
 - Link to detailed phase files
 - Key dependencies
-- **Plan progress & reconciliation**: Follow neutral [Plan progress and phase reconciliation](./plan-progress.md).
-  - Sealed plan/phase/evidence/index identities remain protected; history grants no new write authority.
-  - Parent alone publishes immutable completion receipts outside capture and updates uncaptured `<plan-dir>/progress.md`; if a destination is already captured, stop publication rather than altering protection.
-  - Ordinary unprotected plans retain normal `plan.md` tracking after required approval/validation; new ordinary phases on protected plans use expressly ordinary approval/validation receipts. Never invent progress links or historical completion.
-  - Child documentation writers follow exact parent-authorized writable/protected paths and return terminal reports; settle and validate all authorized finalization before reporting completion.
 ##### Phase Files (phase-XX-name.md)
 Fully respect the `./.evcrate-vscode/evcrate/workflows/development-rules.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/development-rules.md` (the published install) file.
 Each phase file should contain:

@@ -208,7 +208,7 @@ function createLocalReleaseMirror(options = {}) {
     throw new Error(`createLocalReleaseMirror requires valid branch name: ${JSON.stringify(branch)}`);
   }
 
-  const configuredBranches = options.configuredBranches || ['main', 'next'];
+  const configuredBranches = options.configuredBranches || ['main'];
   const configuredList = Array.isArray(configuredBranches) ? configuredBranches : [configuredBranches];
   const configuredBranchNames = [];
   for (const item of configuredList) {

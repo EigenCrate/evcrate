@@ -14,7 +14,7 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 - Documentation management: @evcrate/workflows/documentation-management.md (local .copilot/evcrate/workflows/documentation-management.md; otherwise read ~/.copilot/evcrate/workflows/documentation-management.md (the published install))
 - And other workflows: @evcrate/workflows/* (local .copilot/evcrate/workflows/*; otherwise read ~/.copilot/evcrate/workflows/* (the published install))
 
-Resolve required workflow resources from `./.copilot/evcrate/workflows/<name>` when present; otherwise use the published `~/.copilot/evcrate/workflows/<name>`. This shared lookup includes `plan-progress.md` and `advisory-interview.md`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read only workflows required by the current task.
+Resolve required workflow resources from `./.copilot/evcrate/workflows/<name>` when present; otherwise use the published `~/.copilot/evcrate/workflows/<name>`. Missing or unreadable required resources stop execution. Workflow navigation is not a read-all instruction; read only workflows required by the current task.
 
 ## Subagent Completion Contract
 

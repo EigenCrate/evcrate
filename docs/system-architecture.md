@@ -1,7 +1,9 @@
 # System Architecture
 
-**Status:** Core architecture for the harness-only cutover; Phase 09 records integrated companion qualification and isolated Windows host checks, while interactive Copilot Chat qualification remains blocked.
-**Windows support:** Installer lifecycle and clean-install `version --json` remain the general package boundary. Phase 09 qualifies only the isolated companion scenarios recorded below, not broad Windows runtime parity.
+**Baseline:** `evcrate@3.0.0` (private Node/TypeScript package, Node `>=22.19.0`).
+**Target Topology:** `3.0.0` (stable on `main`).
+**Status:** Core architecture for the completed advisor subsystem retirement and 7-target harness-only cutover; Phase 09 records integrated companion qualification and isolated Windows host checks, while interactive Copilot Chat qualification remains blocked.
+**Windows support:** Standalone installer lifecycle and clean-install `version --json` remain the general package boundary. Phase 09 qualifies only the isolated companion scenarios recorded below, not broad Windows runtime parity.
 **Updated:** 2026-10-12
 
 **Authority:** TypeScript control plane and canonical harness resources.
@@ -10,23 +12,22 @@ This document is the central authority for distribution, wire contracts, context
 admission, isolation, and publication. The [codebase summary](./codebase-summary.md)
 provides the source map; the [project overview and PDR](./project-overview-pdr.md)
 turns these contracts into requirements.
-
 ## Advisor subsystem retirement boundary
 
 **Status:** Completed in repository cutover (2026-10-11); live vendor/native-host qualification remains separate.
-Keep `/evc-cmd-advise` as a multi-turn main-session interview with ordinary raw task
-arguments. Preserve generic JSON/resource/publication contracts, target context/privacy
-guards, user-owned settings/history/state, and immutable historical records.
+The advisor subsystem, `advisory-interview.md`, `plan-progress.md`, and `/evc-cmd-advise`
+are retired across all 69 canonical commands. Preserve generic JSON/resource/publication
+contracts, target context/privacy guards, user-owned settings/history/state, and immutable historical records.
 BuildManifest v3, publication journal v4/marker v3, release metadata v2, and native
-context versions follow the [approved interface freeze](../plans/261011-0559-retire-advisor-subsystem/reports/interface-freeze.md)
-and [retirement design](../plans/261011-0559-retire-advisor-subsystem/design-contracts.md).
+context versions follow the approved advisor subsystem retirement interface freeze
+and retirement design contracts.
 Strict historical recovery remains bounded; ordinary harness publication leaves
 installed `.evcrate/bin` and user data untouched. No cleanup CLI, receipt/index,
 process scanner, or migration guide is added.
 
 ## 1. System shape
 
-EVCrate is a private npm package (`evcrate`, version `2.11.0`) for building and
+EVCrate is a private npm package (`evcrate`, version `3.0.0`) for building and
 publishing one canonical agent-harness source tree into seven persisted target
 projections (`claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`).
 Node `>=22.19.0` is the package engine. Its single npm CLI binary is
@@ -142,6 +143,48 @@ records local `/cmd-*` invocations; `replaceCommandInvocations` in
 `src/adapters/vscode/references.ts` rewrites `/evc-cmd-*` and `$evc-cmd-*` to
 `/cmd-*` and `$cmd-*`, including wildcard families such as `/evc-cmd-plan-x-*`.
 The shared canonical `ev-help.py` scans both `evc-cmd-*/SKILL.md` and `cmd-*/SKILL.md`.
+
+### Proposed VS Code runtime model bindings — planning only
+
+The [runtime-bindings design](../plans/261011-2349-vscode-runtime-model-bindings/design-contracts.md)
+and [implementation plan](../plans/261011-2349-vscode-runtime-model-bindings/plan.md)
+propose a private companion using proposed `chatPromptFiles`, not a shipped feature
+or Marketplace-compatible extension. Native feasibility is the first blocking gate:
+provider discovery, direct/subagent model selection, tool/delegation restrictions,
+plugin hook attribution, reference resolution and refresh must be observed before
+removing static actors.
+
+Canonical `evc-*` actors retain Claude tier intent. The proposed VS Code cutover
+publishes immutable converted templates/intent instead of simultaneously selectable
+static actors. A single companion registration owner derives concrete file resources
+under extension storage, outside publication hashes, from user-selected catalog
+identities. Actor specificity wins across scopes: a user-default actor override beats
+a root tier binding, and a root actor override beats that user override. Canonical
+inheritance stays omitted unless explicitly overridden. No inferred newest model, build-time catalog discovery,
+or silent static fallback. The `evc` plugin continues owning hooks/skills/workflows;
+cross-source attribution remains unqualified until native evidence establishes it.
+
+Required companion qualification is local project/HOME coexistence, multi-root and
+profiles only; SSH, dev-container and WSL are outside this deliverable, without
+changing unrelated baseline support. Cached agent selections may execute an unintended
+model until explicit reselection/reload. Native race and recovery evidence remains
+required; refreshed/reselected resources, trust, restrictions and hooks retain hard
+correctness gates. Storage remains bounded; measured caps and safe fully closed-editor
+manual cleanup are acceptable when automatic reclamation is unproven. Exhaustion
+blocks new derivation without deleting possibly referenced resources.
+
+The proposed VSIX is a hashed artifact within the VS Code harness binding, not
+new control-plane infrastructure or an eighth core release asset. Installation is
+a consented CLI post-action after committed publication, outside transaction rollback.
+Editor/profile selection, extension disabled state and proposal enablement are separate
+boundaries. No automatic `argv.json` edits, editor restart, all-profile installation,
+or advisor-controller resurrection. The existing baseline above remains authoritative
+until this pending plan passes its implementation and qualification gates.
+Explicitly requested failed or manual-setup-required installation returns exit 5,
+preserving committed publication stdout and separate companion-status stderr;
+no rollback or blind publication retry. Each live qualification session requires
+explicit approval for the exact isolated profile/workspace, selected models and
+invocation scope, separate from installation and proposed-API authorization.
 
 ### Snyk specialist composition: local porting boundary
 
@@ -309,13 +352,10 @@ Target manifests support declared overlay files (`overlay_root` in `.evcrate/tar
 
 <a id="42-release-workflow-trust-boundary-phases-0710"></a>
 ### 4.3 Release workflow trust boundary (Phases 07–10)
-.github/workflows/release.yml implements `release-candidate` →
-`windows-qualification` → `publish`.
+`.github/workflows/release.yml` implements `release-candidate` → `publish`.
 - The producer is read-only/non-canceling, keeps Ubuntu/Node 24.21.0 gates, uploads
   only for `has_release=true`, and routes bytes by exact `artifact_id`.
-- The matrix is `windows-2025` x64, `fail-fast: false`, four PowerShell/Node rows
-  without checkout/npm; any non-success blocks publication.
-- `publish` is the sole writer after matrix success, checks out the producer SHA,
+- `publish` is the sole writer after `release-candidate` success, checks out the producer SHA,
   copies the release candidate assets, re-verifies receipt/hash/run identity, and
   checks the exact seven core release files. It does not install the plugin SDK,
   build a plugin package, or attach plugin tarballs.
@@ -324,8 +364,8 @@ Target manifests support declared overlay files (`overlay_root` in `.evcrate/tar
 
 <a id="43-unprivileged-windows-pr-smoke-phase-08"></a>
 ### 4.4 Unprivileged Windows PR smoke (Phase 08)
-.github/workflows/windows-smoke.yml triggers only `pull_request` and manual dispatch; `contents: read` plus canceling concurrency keep PR execution unprivileged.
-- On `windows-2025` x64 with Node `22.19.0`, it runs `npm ci` after pinned checkout/setup-node actions.
+`.github/workflows/windows-smoke.yml` triggers only `pull_request` and manual dispatch; `contents: read` plus canceling concurrency keep PR execution unprivileged.
+- On `windows-2025` x64 with Node `24.21.0` and PowerShell 7 (`pwsh.exe`), it runs `npm ci` after pinned checkout/setup-node actions.
 - It reads the checked-in version and current 40-hex SHA, builds diagnostic fixture assets with `--allow-fixture-identity`, verifies exact-seven files, and invokes the same smoke harness with explicit `--powershell pwsh.exe`.
 - It has no secrets, write scope, upload, semantic-release, privileged follow-up, or release handoff; status is diagnostic only.
 - `.releaserc.json` uses exact post-qualification labels `Windows x64 Archive` and `Windows Installer Entrypoint (install.ps1)`; other asset paths/labels and prepare authority remain unchanged.
@@ -347,33 +387,19 @@ Pi uses `evcrate-pi-command-context` v2 with exact `protocol`, `version`, `sourc
 depth/count/cycle bounds, allowed-tool policy, child-start hook timing,
 installed-root containment, and privacy/scout hooks.
 
-`/evc-cmd-advise` is a main-session interview: one substantive question per turn,
-at most eight discovery questions and two reframe confirmation cycles. Explicit
-confirmation is required; silence/ambiguity is not confirmation. Cancellation,
-interruption, or `INTERVIEW_NOT_CONVERGED` produces no report or persisted answers.
-After confirmation, inspect repository-relative destination/ancestors under
-`plans/reports/` or an explicitly active plan's reports directory. Suggested/newest
-plans do not establish active authority. Reject traversal, symlinks, unsafe or
-nonregular destinations. Sanitize before writing, use a fresh no-clobber
-`advise-YYYYMMDD-HHMM-<uuid>.md`, bound UTF-8 to 32 KiB, reinspect/read back before linking.
-Required `##` headings: Reframed problem; Recommendation; Alternatives/tradeoffs;
-Risks; Assumptions/evidence gaps; Success checks; Next actions; Unresolved questions.
-Exclude credentials, page bodies, environment dumps, traces, and hidden reasoning.
-If safe path inspection/creation is unavailable, stop writing and state the limit;
-native tool procedures do not establish an OS sandbox or race-free enforcement.
 ### Normative command and resource naming convention
 
 Canonical commands are authored as flat files (`commands/evc-cmd-<segment>(-x-<segment>)*.md`)
 and agents as `agents/evc-<agent>.md`, governed by `src/adapters/resource-naming.ts` and
 enforced by `.evcrate/source/.claude/scripts/scan_commands.py`:
 
-- Canonical and non-VS Code slash command forms use `/evc-cmd-*` (e.g., `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`, `/evc-cmd-advise`). VS Code Local uses `/cmd-*` inside plugin `evc`, with host-qualified `/evc:cmd-*` invocation; the colon is host syntax, not part of a resource name.
+- Canonical and non-VS Code slash command forms use `/evc-cmd-*` (e.g., `/evc-cmd-code`, `/evc-cmd-cook`, `/evc-cmd-fix`). VS Code Local uses `/cmd-*` inside plugin `evc`, with host-qualified `/evc:cmd-*` invocation; the colon is host syntax, not part of a resource name.
 - Nested commands use reserved `-x-` path separator (e.g., `/evc-cmd-fix-x-hard`), reversible to semantic IDs (`fix/hard`).
 - Agents use `evc-*` (e.g., `evc-planner`, `evc-code-reviewer`). Copilot skills use `evc-<skill>` and styles use `evc-style-<style>`.
 - Specification: charset `^[a-z0-9]+(-[a-z0-9]+)*$`, length <= 64, no `_`, `:`, `--`. Semantic command IDs (`code/auto`) remain stable.
-- Canonical instructions are authored solely in `.evcrate/source/.claude/AGENTS.md`; root Codex `AGENTS.md` is generated.
+- Canonical target instructions are authored solely in `.evcrate/source/.claude/AGENTS.md`; `.evcrate/source/AGENTS.md` is generated Codex output.
 - Pre-upgrade ownership: stale recorded-owned harness files are pruned; untracked legacy leftovers are preserved/reported; unmanaged collisions refuse publication. Current schema-4 journals retain file-only `cleanup: "retired-binding"` for exact predecessor-owned paths. Historical journal v1/v2/v3 admission remains strict.
-- Release topology: prerelease channel `next` (`3.0.0-rc.N`); stable promotion on `main` (`3.0.0`) requires live GitHub verification of the protected `production` environment and an independent configured maintainer/admin review bound to the candidate's repository, release workflow, commit, run ID and first attempt. Approval JSON cannot authorize publication; stable reruns require a new workflow run. See [stable-release authorization](./code-standards.md#stable-release-authorization).
+- Release topology: canonical branch `main` (`3.0.0`); candidate builds run against a disposable local bare mirror and verify `candidate.json` and exact-seven asset digests in `publish-release.cjs` before publishing on `main` (prerelease candidates are retired; Windows qualification runs in PRs via `.github/workflows/windows-smoke.yml`). See [release candidate and publication verification](./code-standards.md#release-candidate-and-publication-verification).
 ## 6. Verification and support boundary
 
 Repository build, regeneration, Linux installer lifecycle/verification, and automated
@@ -469,8 +495,13 @@ Its native `TreeDataProvider` in `extensions/vscode-model-bindings/src/sidebar-t
 
 ## Related documents
 
+- [Agent guidance](../AGENTS.md)
 - [Project overview and PDR](./project-overview-pdr.md)
 - [Code standards](./code-standards.md)
 - [Codebase summary](./codebase-summary.md)
 - [Project roadmap](./project-roadmap.md)
 - [Project changelog](./project-changelog.md)
+- [Project changelog archive](./project-changelog-archive.md)
+- [Pi-native migration](./pi-native-migration.md)
+- [Snyk specialist guide](./snyk-expert-cli.md)
+- [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md)

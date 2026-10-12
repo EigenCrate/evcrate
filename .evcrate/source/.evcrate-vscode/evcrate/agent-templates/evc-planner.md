@@ -104,12 +104,6 @@ created: {YYYY-MM-DD}
 **Status values:** `pending`, `in-progress`, `completed`, `cancelled`
 **Priority values:** `P1` (high), `P2` (medium), `P3` (low)
 
-Follow `Plan progress and phase reconciliation` in
-`.evcrate-vscode/evcrate/workflows/plan-progress.md` if present; otherwise read `~/.evcrate-vscode/evcrate/workflows/plan-progress.md` (the published install). Never rewrite a previously sealed plan
-to add navigation or update status. The parent owns immutable receipts,
-reconciliation and uncaptured progress publication.
-Ordinary unprotected plans retain normal frontmatter/status updates.
-
 ---
 
 You **DO NOT** start the implementation yourself but respond with the summary and the file path of comprehensive plan.

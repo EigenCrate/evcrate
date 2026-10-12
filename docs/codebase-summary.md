@@ -1,23 +1,22 @@
 # Codebase Summary
 
 **Maintained:** 2026-10-12
-**Source:** Canonical resources and TypeScript control-plane contracts for the completed advisor subsystem retirement, VS Code `evc`/`cmd-*` mapping, and Phase 09 integrated companion qualification; interactive Copilot Chat qualification remains blocked.
-**Package:** Private npm package `evcrate` 2.11.0; Node `>=22.19.0`.
+**Source:** Canonical resources and TypeScript control-plane contracts for the 3.0.0 release on `main`, including completed advisor subsystem retirement cutover, VS Code `evc`/`cmd-*` container mapping, and Phase 09 integrated companion qualification; interactive Copilot Chat qualification remains blocked.
+**Package:** Private npm package `evcrate` 3.0.0; Node `>=22.19.0`.
 Single binary: `evcrate` (`dist/cli/evcrate.js`).
 **Qualification:** Automated/package checks and isolated Windows VS Code 1.140.0 host receipts N-01–N-03 pass for their recorded scenarios. Interactive GUI and authenticated Copilot inference remain blocked. General Windows support stays limited to installer lifecycle and `version --json`; companion host evidence is tuple- and scenario-specific.
 
 EVCrate builds and publishes validated projections of one canonical agent-harness
 source tree. The TypeScript CLI is the package control plane.
-
 ## Source-of-truth map
 
 | Path | Role | Editing rule |
 |---|---|---|
-| `.evcrate/source/.claude/` | Canonical harness resources | Author 140 resources: 17 agents, 70 commands, 13 hooks, 34 skills, 6 workflows, including neutral `plan-progress.md` and the main-session interview. Do not hand-edit target copies. |
+| `.evcrate/source/.claude/` | Canonical harness resources | Author 138 resources: 17 agents, 69 commands, 13 hooks, 34 skills, 5 workflows. Do not hand-edit target copies. |
 | `.evcrate/targets/` | Schema-2 target manifests and overlay root (`.evcrate/targets/vscode/files/` containing generated companion VSIX/descriptor/receipt) | Change target policy; generated overlay companion artifacts update via build scripts, never hand-edited. |
 | `.evcrate/source/{.claude-projection,.agents/skills,.codex,.antigravity,.pi,.omp,.copilot}/` and declared native project documents | Generated target projections | Regenerate; never treat as authoring roots. |
 | `.evcrate/source/.evcrate-vscode/` | Generated VS Code Local plugin bundle | Regenerate from canonical resources and the `vscode` target manifest; do not hand-edit. |
-| `.evcrate/registry.json` | Schema-2 canonical resource records | Regenerate from the canonical 140-resource scan; distinct from target/build manifests. |
+| `.evcrate/registry.json` | Schema-2 canonical resource records | Regenerate from the canonical 137-resource scan; distinct from target/build manifests. |
 | `src/` | TypeScript control plane | Primary package implementation. |
 | `extensions/vscode-model-bindings/` | Standalone VS Code model-bindings companion extension package, runtime provider, renderer, staging storage, and pure contracts | Compiled in isolation from root `src/`; never import root `src/` or vice versa. |
 | `scripts/` | Generation, package, release, benchmark (`benchmark-build-generation.mjs`), companion extension packaging (`build-vscode-companion.mjs`, `verify-vscode-companion.mjs`), and TypeScript incremental build tooling (`build-typescript.mjs`, `typescript-build-cache.mjs`, `typescript-build-receipt.mjs`) | Follow each script's declared authority; generated outputs are not edited by hand. |
@@ -26,9 +25,9 @@ source tree. The TypeScript CLI is the package control plane.
 
 The persisted target IDs are `claude`, `codex`, `antigravity`, `pi`, `omp`, `copilot`, and `vscode`. Standalone Gemini is retired, not Antigravity's vendor HOME directory. Codex owns `.agents/skills`; Antigravity owns exact `.agents` hook/rule leaves. `vscode` uses a separate local-build adapter route; generated outputs and manifests are build artifacts.
 
-## TypeScript module map
+## TypeScript module map and exact exported symbols
 
-| Area | Responsibility | Representative files |
+| Area | Responsibility | Exact exported symbols |
 |---|---|---|
 | `src/protocol/` | Bounded JSON and versioned request/result contracts | `validation.ts`, `resource-payloads.ts`, `publication-payloads.ts` (`PUBLICATION_BINDING_ORDER`, `PREDECESSOR_BINDING_ORDER`, validated `legacyLeftovers`), `index.ts` |
 | `src/context/` | Immutable package, project, HOME, state, and target context | `invocation-context.ts`, `path-resolution.ts`, `target-registry.ts` |
@@ -44,7 +43,6 @@ The persisted target IDs are `claude`, `codex`, `antigravity`, `pi`, `omp`, `cop
 | `extensions/vscode-model-bindings/src/` | Companion extension runtime, root resolution, generation loader, template renderer, atomic staging storage and authority accounting, scoped template watcher, single-flight refresh reconciler/controller, provider registration, model catalog querying, scoped binding store, pure inventory resolver, QuickPick configuration commands, runtime diagnostics snapshot/display, and pure contracts | `extension.ts`, `installation-roots.ts`, `generation-loader.ts`, `agent-renderer.ts`, `resource-storage.ts`, `storage-accounting.ts`, `template-watcher.ts`, `refresh-reconciler.ts`, `refresh-controller.ts`, `agent-provider.ts`, `model-catalog.ts`, `binding-store.ts`, `binding-resolver.ts`, `configuration-commands.ts`, `configuration-pickers.ts`, `clear-commands.ts`, `command-registration.ts`, `diagnostics.ts`, `diagnostics-display.ts`, `provider-registration.ts`, `runtime-contracts.ts`, `binding-contracts.ts`, `diagnostics-contracts.ts`, `contracts.ts` |
 
 The CLI resolves context, validates one invocation, dispatches one operation, writes one validated result, and exits. It exposes version, resource/import operations, scopes/changes, and distribution build/check/publish/recover. There is no canonical root `distribute.py` runtime.
-
 ## Build, publication, and installer flow
 
 `npm run build` compiles the TypeScript control plane incrementally via `scripts/build-typescript.mjs -p tsconfig.json`. `npm run build:clean` uses `--clean`, invalidating `.tsbuildinfo` while preserving prior receipts for stale-output ownership cleanup. `npm run build:vscode-companion` compiles the companion extension to `.cache/` and emits deterministic VSIX/metadata to `.evcrate/targets/vscode/files/evcrate/companion/`. `npm run check:vscode-companion` verifies companion VSIX integrity and layout contracts in development or packed mode. Both are integrated into `npm run generate:all` and `prepack`. Distribution build/check creates, stages, and verifies target projections and strict BuildManifest v3.
@@ -283,11 +281,11 @@ transitions and downloads were integrated into the full matrix qualification in 
 ## Windows release candidate, qualification, and support cutover (Phases 05–10)
 - **Qualification harness (Phase 05)**: `tests/installers/windows-release-qualification.mjs` runs strict CLI/host/byte preflight, safe PowerShell/`cmd.exe` invocation, and smoke/full lifecycle/negative flows.
 - **Candidate & publisher (Phase 06)**: `run-release-candidate.cjs` uses a bare mirror and stages exact assets plus receipt; `publish-release.cjs` verifies receipt/hashes and copies only verified assets.
-- **Release workflow (Phase 07)**: `.github/workflows/release.yml` implements least-privilege producer (`contents: read`), 4-row matrix (`windows-2025` x64, Windows PowerShell 5.1 and PowerShell 7, Node 22.19.0 and 24.21.0), exact-ID handoff, and publisher (`contents: write`).
-- **PR smoke (Phase 08)**: `.github/workflows/windows-smoke.yml` provides unprivileged diagnostic smoke on Windows PowerShell 7 + Node 22.19.0 with fixture identities; `.releaserc.json` locks exact Windows labels.
+- **Release workflow (Phase 07)**: `.github/workflows/release.yml` implements least-privilege producer (`contents: read`), exact-ID handoff, and publisher (`contents: write`) directly after `release-candidate`.
+- **PR smoke (Phase 08)**: `.github/workflows/windows-smoke.yml` provides unprivileged diagnostic qualification on `windows-2025` x64 with PowerShell 7 (`pwsh.exe`) + Node 24.21.0 and fixture identities; `.releaserc.json` locks exact Windows labels.
 - **Integrated qualification (Phase 09)**: Proved full gate sequence, bare-mirror isolation, tamper rejection, 4-row matrix routing, irreversible predecessor transitions, rerun boundaries, and final seven-file byte identity.
 - **Support cutover (Phase 10)**: Updated `README.md` and core docs with bounded installer/version support and explicit runtime/desktop/signing exclusions.
-## Native command context and inline interview
+## Native command context
 
 OMP uses `evcrate_omp_command_context` v3 with exact protocol/version/source/command/context
 fields. Source is `native-user`; context is `project_root`, `command`, `work_target`,
@@ -301,14 +299,8 @@ Pi uses `evcrate-pi-command-context` v2 (`protocol`, `version`, `source`, `comma
 Installed-root containment, nesting/cycle/tool bounds, child-start, and privacy
 guards remain. Native execution and discovery are not inferred from generated files.
 
-`/evc-cmd-advise` uses `advise-inline/v1` semantics in the main session across seven
-targets: one substantive question per turn, up to eight discovery questions and
-two explicit reframe confirmation cycles. Only confirmed problems produce sanitized,
-no-clobber reports of at most 32 KiB under an explicitly active plan's reports
-directory or repository `plans/reports/`. Host path/create capabilities limit report
-safety; missing capability stops writing without a saved-report claim.
-See [architecture](./system-architecture.md#5-native-command-context-and-inline-interview)
-for exact header/report contracts.
+See [architecture](./system-architecture.md#5-native-command-context)
+for exact header contracts.
 
 ## Distribution publication rules
 
@@ -389,20 +381,22 @@ Phase 09 establishes cross-cutting test suites, golden contract regressions, and
 - **tmpfs concurrency protection (`--test-concurrency=1`):** Configured serial test execution in `package.json` for heavy workspace fixture suites (`test:publication`, `test:build-generation`, and `test:integration`), preventing out-of-memory and inode exhaustion on tmpfs mounts while maintaining full isolation.
 - **Buffer overrun protection (`maxBuffer`):** Updated `scripts/release/npm-runner.cjs` with a 64MB default `maxBuffer` in `execNpmSync` and `spawnNpmSync`, preventing `ENOBUFS` truncation during large `npm pack --dry-run --json` invocations.
 
-### Phase 10 documentation, changelog, and release promotion pipeline
+### Phase 10 documentation, changelog, and release pipeline
 
-Phase 10 cuts over maintained documentation, migration guidance, and the dual-branch prerelease/stable release pipeline:
-- **Prerelease and promotion release pipeline:** `.releaserc.json` configured with canonical branches `["main", {"name": "next", "channel": "next", "prerelease": "rc"}]`. Workflow `.github/workflows/release.yml` triggers pushes on both branches; stable publication verifies the actual GitHub `production` required-reviewer protections rather than treating an environment declaration as a review gate.
-- **Candidate mirror seeding & topology guards:** `scripts/release/run-release-candidate.cjs` seeds bare candidate mirrors with triggering branch at `sourceCommit`, seeds verified configured `main` (and `next`) refs from repository history, and pushes all local tags.
-- **Stable candidate authorization:** `scripts/release/github-approval.cjs` verifies the live canonical GitHub run, protected production environment, main-only branch policy, independent review history and actual reviewer maintain/admin permission. `publish-release.cjs` requires this authorization before stable publication, independently of receipt/assets and branch topology checks. Removed approval-file authorization; stable reruns fail closed because review history lacks attempt provenance.
+Phase 10 cuts over maintained documentation, migration guidance, and the stable `main` release pipeline:
+- **Stable release pipeline:** `.releaserc.json` configured with canonical branch `["main"]`. Workflow `.github/workflows/release.yml` triggers pushes on `main`, producing and verifying candidate artifacts on Linux before publishing automatically (`windows-smoke.yml` qualifies Windows in PRs on `windows-2025` with `pwsh.exe` and Node `24.21.0`).
+- **Candidate mirror seeding & topology guards:** `scripts/release/run-release-candidate.cjs` seeds bare candidate mirrors with `main` at `sourceCommit` and pushes all local tags. `scripts/release/publish-release.cjs` enforces `main`-only stable publication and rejects prerelease candidate versions.
 - **Normative documentation reconciliation:** Reconciled `README.md`, `code-standards.md`, `system-architecture.md`, `project-overview-pdr.md` (FR-12), `project-roadmap.md`, `pi-native-migration.md`, and `guide/SKILLS.md` covering universal `evc-cmd-*` / `evc-*` naming, single `AGENTS.md` authority, pre-upgrade customization backup warnings, and exact local-asset installer installation procedures.
 ## Documentation navigation
 
+- [Agent guidance](../AGENTS.md) — shared agent workflows and subagent completion contract.
 - [System architecture](./system-architecture.md) — central contracts.
 - [Project overview and PDR](./project-overview-pdr.md) — requirements.
 - [Code standards](./code-standards.md) — implementation rules.
 - [Project roadmap](./project-roadmap.md) — phases and gates.
 - [Project changelog](./project-changelog.md) — historical evidence.
 - [Project changelog archive](./project-changelog-archive.md) — older detail.
+- [Pi-native migration](./pi-native-migration.md) — Pi-specific projection/runtime notes.
+- [Snyk specialist guide](./snyk-expert-cli.md) — standalone common .agents bundle.
 - Canonical docs validator: [`validate-docs.cjs`](../.evcrate/source/.claude/scripts/validate-docs.cjs) searches hidden source, excludes heavy directories, and distinguishes incomplete searches from missing references.
 - [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md) — operational upgrade, backup, and collision safety guidance.

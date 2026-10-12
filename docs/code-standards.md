@@ -1,6 +1,8 @@
 # Code Standards and Codebase Structure
 
-**Status:** EVCrate core implementation standards for the completed advisor subsystem retirement cutover; live vendor/native-host qualification remains separate.
+**Baseline:** `evcrate@3.0.0` (private Node/TypeScript package, Node `>=22.19.0`).
+**Target Topology:** `3.0.0` (stable on `main`).
+**Status:** EVCrate core implementation standards for the completed advisor subsystem retirement cutover and 7-target unified naming; live vendor/native-host qualification remains separate.
 **Updated:** 2026-10-12
 **Applies to:** TypeScript control plane, canonical harness resources, generated projections, and publication tooling.
 **Windows release boundary:** Standalone installer lifecycle and clean-install `version --json` only; prior candidate evidence does not qualify the current package.
@@ -10,7 +12,6 @@
 This document states implementation rules. The [system architecture](./system-architecture.md)
 is the detailed contract authority; the [codebase summary](./codebase-summary.md)
 is the navigation map.
-
 ## Governing principles
 
 - **Correctness before optimization.** Prefer explicit validation and predictable
@@ -36,21 +37,15 @@ The following patterns are strictly prohibited across the codebase:
 - **No cross-volume atomicity fiction**: Stage on the selected destination volume. Reject cross-volume promotion; one scoped harness transaction is the atomicity boundary.
 - **No hand edits to generated files**: Never edit generated target projections, build manifests, or registries directly. Modify canonical sources and regenerate through established scripts.
 - **No cross-scope recovery search**: Recovery never crosses the requested publication scope. HOME recovery does not mutate project files; project recovery does not inspect or mutate HOME publication state or locks. HOME-derived storage for project-scoped durable state grants no cross-scope authority.
-- **Protected historical progress**: Inspect immutable in-repo receipts and sealed-path metadata without rewriting captured plan/phase/evidence/index identities. Parent alone publishes uncaptured progress/receipts; recorded completion and present freshness remain distinct.
 - **No legacy command or agent naming in maintained sources**: Canonical commands use `evc-cmd-*` (nested with `-x-`, length <= 64); VS Code Local alone projects `cmd-*` within plugin `evc`. Custom agents project `evc-*`, and Copilot skills project `evc-<skill>`. Never emit legacy resource names (`cmd_`, colons, underscores); VS Code's `/evc:cmd-*` qualifier is host syntax, not a resource name.
-- **Single AGENTS.md authoring authority**: Canonical instructions are authored strictly at `.evcrate/source/.claude/AGENTS.md`. Never author in root `AGENTS.md` (generated Codex output) or create repository-owned files named `CLAUDE.md`.
-- **Branch topology and release qualification**: Canonical release branches are `main` (stable) and `next` (prerelease `rc`). Stable publication always requires live, candidate-bound GitHub authorization; caller-authored approval files and environment flags cannot grant authorization.
+- **Single AGENTS.md authoring authority**: Canonical target instructions are authored strictly at `.evcrate/source/.claude/AGENTS.md`. Never hand-edit `.evcrate/source/AGENTS.md` (generated Codex output) or create repository-owned files named `CLAUDE.md`.
+- **Branch topology and release qualification**: Canonical release branch is `main` (stable). Candidate receipt and exact-seven asset verification are mandatory before publication; prerelease candidates are retired.
 
-### Stable-release authorization
+### Release candidate and publication verification
 
-- Configure `production` before stable publication: required human User reviewers with repository maintain/admin roles, prevent self-review, disable administrator bypass, and allow only the selected `main` branch (no tag policies or wildcards).
-- The publisher checks the live environment and branch-policy APIs, then verifies the candidate's canonical repository, source commit, release workflow path, run ID, and attempt against GitHub.
-- The workflow run's production review history must contain an approved review by a configured maintainer/admin distinct from both the actor and triggering actor. Record the actual reviewer and source API, not the initiating actor or a fabricated review timestamp.
-- Stable publication requires `GITHUB_TOKEN` or `GH_TOKEN` with access to run/review history, environment protections, branch policies, and collaborator permissions. API errors or unsupported protection shapes fail closed.
-- Review history cannot bind approvals to rerun attempts; stable reruns require a new workflow run. Offline stable publication is not supported. Prerelease publication does not require production approval.
-- `--approval`, `--approval-evidence`, `--require-approval`, and local approval-path/requirement environment variables are removed. Candidate receipt and asset-hash verification remain mandatory.
-- Live setup verified 2026-10-10: `production` reviewers `loidinhm31` and `quochuy-vo`, self-review prevented, admin bypass disabled, selected deployment branch `main`. The publisher rechecks these protections rather than trusting this documentation.
-- API contracts: [environment protections](https://docs.github.com/en/rest/deployments/environments) and [workflow review history](https://docs.github.com/en/rest/actions/workflow-runs#get-the-review-history-for-a-workflow-run).
+- `scripts/release/run-release-candidate.cjs` runs semantic-release against a disposable local bare mirror seeded at `sourceCommit` on `main`, verifies the exact-seven release assets, resolves the Windows predecessor, and stages `release-candidate/` (`candidate.json`, `assets/`, `predecessor/`, `qualification/`).
+- `.github/workflows/windows-smoke.yml` runs Windows PR qualification on `windows-2025` (`pwsh.exe` and Node `24.21.0`), while `.github/workflows/release.yml` proceeds directly from `release-candidate` to `publish` on `main`.
+- `scripts/release/publish-release.cjs` enforces `EVCRATE_RELEASE_ASSET_MODE=verify`, rejects prerelease versions and non-`main` branches, verifies `candidate.json` and all seven asset digests, prepares `dist/release`, and publishes the verified release on `main`.
 
 ## Repository structure and ownership
 
@@ -219,23 +214,26 @@ overlong values, traversal, symlinked ancestors, special entries, and invalid
 ownership. Use stable control-plane error codes and established exit mapping. Never
 return secrets, policy credentials, raw child output, raw filesystem implementation
 paths, or stack traces.
-### Control-plane error taxonomy
+### Control-plane error hierarchy and exit codes
 
-`ControlPlaneErrorCategory` is the stable public classification. Exit codes are
-grouped by category:
+`ControlPlaneErrorCategory` and `ControlPlaneErrorCode` define the public error model in `src/errors/control-plane-error.ts`. Exit codes are deterministically grouped:
 
-| Category | Exit code | Typical boundary |
-|---|---:|---|
-| `success` | 0 | Operation completed successfully. |
-| `usage`, `protocol` | 2 | CLI syntax or versioned request shape is invalid. |
-| `validation`, `path`, `capability` | 3 | Input, path, or requested capability is unsupported. |
-| `conflict` | 4 | A revision or ownership CAS check failed. |
-| `publication`, `rollback`, `recovery` | 5 | Publication transaction or recovery failed. |
-| `internal` | 6 | Unexpected failure; expose only the sanitized diagnostic. |
+| Error code | Category | Exit code | Message | Required action |
+|---|---|:---:|---|---|
+| `OK` | `success` | 0 | Success | No action required. |
+| `USAGE_INVALID` | `usage` | 2 | Usage is invalid | Use the documented command syntax. |
+| `PROTOCOL_INVALID` | `protocol` | 2 | Protocol is invalid | Provide one valid versioned protocol request. |
+| `VALIDATION_INVALID` | `validation` | 3 | Validation failed | Correct the invalid value and retry. |
+| `PATH_UNSAFE` | `path` | 3 | Path is unsafe | Use a safe path within the selected context. |
+| `CAPABILITY_UNSUPPORTED` | `capability` | 3 | Capability is unsupported | Select a supported target or capability. |
+| `CAS_CONFLICT` | `conflict` | 4 | Revision conflict | Refresh the current revision and preview again. |
+| `PUBLICATION_FAILED` | `publication` | 5 | Publication failed | Repair the publication state before retrying. |
+| `ROLLBACK_FAILED` | `rollback` | 5 | Rollback failed | Run recovery for the incomplete publication. |
+| `RECOVERY_FAILED` | `recovery` | 5 | Recovery failed | Resolve the recovery marker before retrying. |
+| `INTERNAL_ERROR` | `internal` | 6 | Internal error | Retry or inspect the bounded diagnostic. |
 
 Keep this mapping in `src/errors/control-plane-error.ts`; do not invent
 operation-specific exit codes at individual call sites.
-
 ## Manifest, registry, and resource standards
 
 ### Target manifests
@@ -497,7 +495,8 @@ before reporting success.
 
 ## References
 
-- [System architecture](./system-architecture.md), [Project overview and PDR](./project-overview-pdr.md), [Codebase summary](./codebase-summary.md).
+- [Agent guidance](../AGENTS.md), [System architecture](./system-architecture.md), [Project overview and PDR](./project-overview-pdr.md), [Codebase summary](./codebase-summary.md).
 - [Project roadmap](./project-roadmap.md), [Project changelog](./project-changelog.md), [Project changelog archive](./project-changelog-archive.md).
 - [Pre-Upgrade Backup & Leftover Guidance](./upgrade-backup-and-leftover-guidance.md).
 - [Pi-native migration](./pi-native-migration.md).
+- [Snyk specialist guide](./snyk-expert-cli.md).

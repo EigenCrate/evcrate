@@ -3,7 +3,7 @@
   "displayName": "EVCrate Runtime Model Bindings",
   "description": "Private companion extension providing user-controlled runtime model bindings for EVCrate VS Code custom agents.",
   "publisher": "eigencrate",
-  "version": "2.11.0",
+  "version": "3.0.0",
   "private": true,
   "license": "MIT",
   "engines": {
