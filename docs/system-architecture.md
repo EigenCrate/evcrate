@@ -198,12 +198,12 @@ Generation, resolved local links and constructed explicit-read procedure behavio
 
 ### Proposed standalone Snyk remediation cycles — planning only
 
-**Status:** Phases 01–04 complete (`cmd-snyk-remediate/SKILL.md` coordinator authored; Phase 05 installer inventory registration, Phase 06 integration review, and Phase 07 live operational qualification pending; heading retained for inbound anchor compatibility).
+**Status:** Phases 01–06 complete (`cmd-snyk-remediate/SKILL.md` coordinator authored, registered in installer inventory across 12 assets, evaluation catalog expanded to 49 scenarios, local integration review and corrections approved 9/10; Phase 07 live operational qualification pending; heading retained for inbound anchor compatibility).
 
 The [bounded-cycle plan](../plans/261012-1944-general-snyk-remediation-cycles/plan.md) (local planning reference; ignored artifacts must be preserved for handoff)
 targets only `ext/snyk-expert/`; the canonical porting boundary above remains
 unchanged. Authored command-style coordinator skill (Phase 04):
-`ext/snyk-expert/.agents/skills/cmd-snyk-remediate/SKILL.md` (registration in `ext/snyk-expert/lib/inventory.js` pending Phase 05). No executable orchestration runner, canonical command,
+`ext/snyk-expert/.agents/skills/cmd-snyk-remediate/SKILL.md` (registered in `ext/snyk-expert/lib/inventory.js` in Phase 05). No executable orchestration runner, canonical command,
 registry/projection change, or native host adapter.
 
 Main owns positive maximum N, durable attempt history, human decisions, ledger
@@ -226,7 +226,7 @@ each attempt appends observations for every original record. Post-only findings
 retain separate provenance. Scan reuse requires complete state/scope/policy and
 freshness comparability; terminal review observes the actual unchanged final
 state. Installer checks and prose fixtures do not establish live workflow proof.
-Installer inventory registration (Phase 05), local integration review (Phase 06), and live host/model/authenticated-scanner qualification (Phase 07) remain pending.
+Installer inventory registration (Phase 05) and local integration review and corrections (Phase 06) are complete; live host/model/authenticated-scanner qualification (Phase 07) remains pending.
 
 The [reconciled design contracts](../plans/261012-1944-general-snyk-remediation-cycles/design-contracts.md)
 keep supported other-manager execution normal and capture observed procedures
@@ -244,7 +244,7 @@ Proposed acceptance criteria and 36 acceptance cases (SNYK-001–036, spanning d
 [acceptance matrix](../plans/261012-1944-general-snyk-remediation-cycles/acceptance-matrix.md),
 and required live scanner, target, authentication, and environment conditions are inventoried
 in the [qualification prerequisites report](../plans/261012-1944-general-snyk-remediation-cycles/reports/qualification-prerequisites.md).
-Phases 01–04 are complete as of 2026-10-12T22:20:46+07:00 (contracts and prerequisites in Phase 01, procedure and lossless ledger references in Phase 02, specialist and task-skill cutover in Phase 03, and main-owned 8-stage coordinator `cmd-snyk-remediate/SKILL.md` with Step 8 post-review correction loop and observed procedure learning in Phase 04). Installer inventory registration and acceptance-scenario tests (Phase 05), local integration review (Phase 06), and live operational qualification (Phase 07) remain pending.
+Phases 01–06 are complete as of 2026-10-12T23:41:05+07:00 (contracts and prerequisites in Phase 01, procedure and lossless ledger references in Phase 02, specialist and task-skill cutover in Phase 03, and main-owned 8-stage coordinator `cmd-snyk-remediate/SKILL.md` with Step 8 post-review correction loop and observed procedure learning in Phase 04, inventory registration and 49 evaluation scenarios in Phase 05, and local integration review and corrections in Phase 06). Live operational qualification (Phase 07) remains pending.
 
 ## 3. TypeScript control plane
 

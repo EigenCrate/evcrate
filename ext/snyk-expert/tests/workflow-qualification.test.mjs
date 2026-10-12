@@ -87,10 +87,35 @@ describe('Snyk Expert - Evaluation Catalog & Acceptance Specifications', () => {
     const specCases = content.evals.filter(e => e.evidence_class === 'Specification');
     assert.ok(specCases.length > 0, 'Catalog must specify policy specification scenarios');
 
-    // Ensure prompts are substantive scenario stimuli beyond prerequisite declarations
+    // Ensure all scenario prompts contain an explicit stimulus section
     for (const item of content.evals) {
-      assert.ok(item.prompt.length > item.prerequisites.length,
-        `scenario ${item.id} prompt must contain substantive stimulus beyond prerequisite string`);
+      assert.ok(item.prompt.includes('Stimulus:'),
+        `scenario ${item.id} prompt must contain an explicit Stimulus section`);
     }
+  });
+
+  test('SNYK-035 storage boundary scenarios specify observable stop traces and access controls', () => {
+    const content = JSON.parse(fs.readFileSync(evalsPath, 'utf8'));
+    const snyk035Cases = content.evals.filter(e => e.acceptance_id === 'SNYK-035');
+    assert.ok(snyk035Cases.length >= 3, 'SNYK-035 must have at least 3 scenario specifications');
+
+    // Scenarios specifying storage rejection must specify contract trace fields: current_stage, stop_reason, next_action
+    const rejectionCases = snyk035Cases.filter(e => e.expected_output.toLowerCase().includes('pauses'));
+    assert.ok(rejectionCases.length >= 2, 'SNYK-035 must specify at least 2 storage pause/rejection scenarios');
+    for (const item of rejectionCases) {
+      assert.ok(item.expected_output.includes('stop_reason'),
+        `scenario ${item.id} must specify stop_reason in expected_output`);
+      assert.ok(item.expected_output.includes('current_stage'),
+        `scenario ${item.id} must specify current_stage in expected_output`);
+      assert.ok(item.expected_output.includes('next_action'),
+        `scenario ${item.id} must specify next_action in expected_output`);
+    }
+
+    // Verify access-control and single-writer assertions
+    const allAssertions = snyk035Cases.flatMap(e => e.assertions);
+    assert.ok(allAssertions.some(a => a.toLowerCase().includes('single writer') || a.toLowerCase().includes('single-writer')),
+      'SNYK-035 assertions must enforce exclusive single-writer ownership');
+    assert.ok(allAssertions.some(a => a.toLowerCase().includes('ancestor') || a.toLowerCase().includes('containment')),
+      'SNYK-035 assertions must enforce access-controlled ancestor/leaf containment');
   });
 });

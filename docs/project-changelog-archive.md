@@ -2,25 +2,60 @@
 
 Historical phase entries moved from [project-changelog.md](./project-changelog.md) to keep the maintained phase mirror below the repository's 800-line documentation limit. Paths and evidence are preserved; current Phase 09 milestone status remains in the main changelog.
 
+### 2026-09-15 — feat(ci): unprivileged Windows PR smoke and qualified asset labels (Phase 08)
+
+**Status:** Phase 08 DONE (2026-09-15; 100%).  
+**Plan:** [Phase 08 plan](../plans/260914-0636-windows-release-qualification/phase-08-unprivileged-windows-pr-smoke-and-labels.md)  
+**Evidence:** `tests/distribution/release-orchestration.test.mjs` (WRQ-042–044).
+
+- Added `.github/workflows/windows-smoke.yml`: `pull_request`/manual-only, read-only `contents`, canceling concurrency, `windows-2025` x64, Node `22.19.0`, pinned v4 actions, `npm ci`, checked-in version/SHA fixture build, exact-seven verify, and explicit `pwsh.exe` smoke harness.
+- Fixture identity uses `--allow-fixture-identity` and is diagnostic only: no secrets, write scope, upload, semantic-release, or privileged follow-up/handoff.
+- `.releaserc.json` now labels the Windows ZIP `Windows x64 Archive` and `install.ps1` `Windows Installer Entrypoint (install.ps1)`; other labels, paths/order, and prepare command remain unchanged.
+- WRQ-042 covers workflow isolation, WRQ-043 fixture/exact-seven/smoke wiring, and WRQ-044 exact labels plus preserved asset configuration. Native matrix, publication, and final byte proof remain Phase 09/operator gates.
+
+### 2026-09-15 — feat(ci): split release workflow into producer, matrix, and publisher (Phase 07)
+
+**Status:** Phase 07 DONE (2026-09-15; 100%); Cycle 2 review approved 10/10.  
+**Plan:** [Phase 07 plan](../plans/260914-0636-windows-release-qualification/phase-07-release-workflow-producer-matrix-publisher.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260915-0155-phase-07-cycle-2.md)
+
+- Replaced the monolithic release job with an unprivileged Ubuntu producer, a four-row `windows-2025` x64 qualification matrix, and a success-only publisher.
+- Producer gates remain ordered; release handoff uses one immutable artifact ID, receipt, and producer hashes. Matrix rows consume the artifact without checkout/npm.
+- Publisher is the sole writer, copies exactly seven assets, and runs semantic-release in verify mode. All eight action uses are pinned to full v4 SHAs.
+- Static YAML/permissions/action-pin/expression checks passed; release orchestration passed 12/12. Native Windows execution and live publication remain Phase 09/operator gates.
+
+### 2026-09-14 — feat(release): canonical semantic-release candidate, receipt, and publisher (Windows qualification Phase 06)
+
+**Status:** Phase 06 DONE (2026-09-14; 100%); Cycle 2 code review approved 10/10.  
+**Plan:** [Phase 06 plan](../plans/260914-0636-windows-release-qualification/phase-06-semantic-release-candidate-receipt-and-publisher.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2236-phase-06-cycle-2-release-orchestration.md)
+
+- Added the canonical candidate runner with strict `.releaserc.json` loading, disposable bare-mirror semantic-release execution, GitHub-plugin removal only, build-mode asset preparation, release-token stripping, clean checkout/source identity checks, exact seven/four staging, canonical `candidate.json`, atomic promotion, and exactly nine safe GitHub output scalars.
+- Added the verify-only publisher wrapper: receipt and hash preflight, exact assets-only `dist/release` copy, forced `EVCRATE_RELEASE_ASSET_MODE=verify`, canonical semantic-release invocation, and version/tag/source equality checks.
+- Bound `semantic-release`, `release:candidate`, `release:verify-assets`, `test:release`, and `test:installer:windows` in `package.json`; no new dependency or orchestration-only lockfile edit.
+- `release-orchestration.test.mjs` passes 12/12; `npm run test:release` passes 29/29; build and CLI help checks pass. Native Windows execution and live npm/GitHub publication remain downstream gates.
+
+### 2026-09-14 — feat(test): self-contained Windows qualification harness (Phase 05)
+
+**Status:** Phase 05 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.  
+**Plan:** [Phase 05 plan](../plans/260914-0636-windows-release-qualification/phase-05-self-contained-windows-qualification-harness.md)  
+**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2030-phase-05-self-contained-windows-qualification-harness-cycle-2.md)
+
+- Delivered the Node-builtins-only qualification CLI with strict host, receipt, and exact-byte preflight; safe PowerShell/`cmd.exe` runners; smoke/full lifecycle controllers; immutable-state and PATH observers; and isolated negative scenarios.
+- Scoped checks passed 60/60: distribution/harness 28/28, release artifacts 17/17, and Linux installer wildcard 15/15. Direct `--help` invocation exited 0, confirming the standalone entrypoint.
+- Native Windows smoke/full execution remains an explicit downstream Phase 09 evidence gate; Phase 07 workflow wiring is complete but does not execute hosted rows. This deterministic host-independent evidence makes no runtime support claim.
+- Handoff advanced to Phase 06 — semantic-release candidate, receipt, and publisher.
+
 ### 2026-09-14 — feat(release): deterministic Windows fixture and predecessor resolver (Phase 04)
 
 **Status:** Phase 04 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
 **Plan:** [Phase 04 plan](../plans/260914-0636-windows-release-qualification/phase-04-deterministic-windows-fixture-and-predecessor.md)
-**Evidence:** [Cycle 2 tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md)
-and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md).
+**Evidence:** [Cycle 2 tests](../plans/reports/tester-260914-1803-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md) and [Cycle 2 review](../plans/reports/code-review-260914-1805-phase-04-deterministic-windows-fixture-predecessor-cycle-2.md).
 
-- Factored shared fixture record ordering, controller/build-manifest digests, real
-  installer bytes, and fixed timestamp metadata; `buildWindowsTestReleaseSet`
-  now uses `buildReleaseArchives` and emits exactly four Windows assets.
-- Added bounded stable-release enumeration and exact-label/canonical-name
-  predecessor resolution. Bootstrap uses verified `1.0.0`/`v1.0.0` bytes with
-  lowercase `a`×40 identity only before qualification history; latest stable is
-  mandatory afterward, with no older/bootstrap fallback.
-- Added private staged streaming downloads with cross-origin token stripping,
-  bounded error/stream bytes, pre/post-promotion exact-four verification, strict
-  CLI flags, and cleanup of partial output on failure.
-- Focused Phase 04, release, and Linux installer suites pass 39/39 (100%).
-  This deterministic Linux evidence does not qualify native Windows runtime.
+- Factored shared fixture record ordering, controller/build-manifest digests, real installer bytes, and fixed timestamp metadata; `buildWindowsTestReleaseSet` now uses `buildReleaseArchives` and emits exactly four Windows assets.
+- Added bounded stable-release enumeration and exact-label/canonical-name predecessor resolution. Bootstrap uses verified `1.0.0`/`v1.0.0` bytes with lowercase `a`×40 identity only before qualification history; latest stable is mandatory afterward, with no older/bootstrap fallback.
+- Added private staged streaming downloads with cross-origin token stripping, bounded error/stream bytes, pre/post-promotion exact-four verification, strict CLI flags, and cleanup of partial output on failure.
+- Focused Phase 04, release, and Linux installer suites pass 39/39 (100%). This deterministic Linux evidence does not qualify native Windows runtime.
 
 ### 2026-09-13 — docs(distribution): post-verification operator and architecture documentation (Phase 09)
 
@@ -516,29 +551,16 @@ remain explicit operator gates.
   decision-alignment checks, evidence grounding, and destructive-command safety
   probes. The corpus is a synthetic baseline, not a live model-quality benchmark.
 
-#### Dedicated acceptance suites
+#### Dedicated acceptance suites (15/15 passed)
 
-| Suite | Cases | Observable coverage |
-|---|---:|---|
-| `phase10-controller-scenarios.test.mjs` | 7 | Primary success, fatal/malformed input, stream handling, unsupported route, cancellation, and child credential scrubbing |
-| `phase10-state-and-history.test.mjs` | 3 | Stale evidence, idempotent replay/history inspection, and dirty-user-baseline preservation |
-| `phase10-human-gate.test.mjs` | 1 | Three failed corrections enter `needs_human`; fourth remediation is denied |
-| `phase10-commands-and-evaluation.test.mjs` | 4 | Seven-target declarations, V2/`--advice` command contract, corpus pass, and adversarial counsel rejection |
-| **Dedicated total** | **15** | **15/15 passed** |
+- `phase10-controller-scenarios.test.mjs` (7 cases): Primary success, fatal/malformed input, stream handling, unsupported route, cancellation, child credential scrubbing.
+- `phase10-state-and-history.test.mjs` (3 cases): Stale evidence, idempotent replay/history inspection, dirty-user-baseline preservation.
+- `phase10-human-gate.test.mjs` (1 case): Three failed corrections enter `needs_human`; fourth remediation is denied.
+- `phase10-commands-and-evaluation.test.mjs` (4 cases): Seven-target declarations, V2/`--advice` command contract, corpus pass, adversarial counsel rejection.
 
-#### Deterministic evidence
+#### Deterministic evidence (272/272 passed; 100%)
 
-| Command or surface | Result |
-|---|---:|
-| `node --test tests/distribution/phase10-*.test.mjs` | 15/15 |
-| `node tests/advisor-controller/smoke-30s.cjs` | 1/1; 31.28s silent generation, one launch |
-| `npm run test:advisor-controller` | 204/204 |
-| `npm run test:adapters` | 24/24 |
-| `npm run release:check` | 29/29 controller files; closure verified |
-| `npm run test:installer:linux` | 15/15 |
-| `npm run test:cutover && npm run test:validation-rollout` | 13/13 |
-| **Deterministic total** | **272/272; 100%** |
-
+- Dedicated phase10 tests: 15/15; smoke-30s: 1/1 (31.28s silent generation, one launch); advisor-controller: 204/204; adapters: 24/24; release closure: 29/29 files; installer Linux: 15/15; cutover and rollout: 13/13.
 #### Explicit boundary
 
 - Deterministic tests verify repository contracts, state transitions, process
@@ -745,48 +767,23 @@ and a senior mentor challenge.
   requires a successful attempt's route effort to equal `receipt.effort`.
   `receiptV2` and the V2 builders enforce equality with the generated
   **ADVISOR_BUILD_IDENTITY**.
-- V2 controller envelopes preserve correlation/task/checkpoint identity,
-  revisions, checkpoint digest, receipt/build identity, attempt summaries, and
-  sanitized failures. V1 remains an explicit compatibility path; Phase 04
-  adds no retry or provider-switch behavior.
-- Evidence: 118/118 advisor-controller tests passed in approximately 7.3
-  seconds; `npm run build` and `npm run release:check` exited 0. Astra's
-  post-fix sign-off is 8/10; all four critical correspondence/RAW_STACK
-  issues are resolved. Sol mentor counsel records the Phase 05 preconditions.
-  No paid mentoring-quality claim is made.
+- V2 controller envelopes preserve correlation/task/checkpoint identity, revisions, checkpoint digest, receipt/build identity, attempt summaries, and sanitized failures. V1 remains an explicit compatibility path; Phase 04 adds no retry or provider-switch behavior.
+- Evidence: 118/118 advisor-controller tests passed in approximately 7.3 seconds; `npm run build` and `npm run release:check` exited 0. Astra's post-fix sign-off is 8/10; all four critical correspondence/RAW_STACK issues are resolved. Sol mentor counsel records the Phase 05 preconditions. No paid mentoring-quality claim is made.
 
 ### 2026-09-08 — feat(advisor): qualify adapters, enforce strict terminal parsing, and adapt generation limits (phase-03)
 
 **Status:** Complete (100%)  
 **Plan:** [Phase plan](../plans/260907-1208-advisor-mentoring-recovery-audit/phase-03-adapter-qualification-and-terminal-parsing.md)
 
-- Qualified the fixed Claude, Pi, OMP, and Codex adapter contracts for exact
-  model/effort routes, noninteractive isolated sessions, read-only/no-tool
-  controls, bounded machine-readable output, and typed failures. Antigravity
-  remains an explicit unavailable candidate rather than an inferred backend.
-- Claude now rejects nonempty `permission_denials`, tool/nonterminal stop reasons,
-  model drift, malformed result envelopes, and over-limit output.
-- Pi now requires strict user-then-assistant message sequencing, exact route and
-  workspace attestation, a settled terminal lifecycle, and
-  `stopReason: "stop"` before returning advice.
-- OMP now requires affirmative redacted usage readiness: a matching usable
-  report plus positive provider capacity. Its strict parser rejects tool
-  results, retries, unknown events, and undocumented `advisor_yielded`.
-- Codex now validates exact auth/model/effort capability probes and a complete
-  terminal JSONL thread/item lifecycle with no disallowed tool or side-effect
-  items.
-- All enabled adapters use `resolveInvocationLimits`; generation mode removes
-  `timeoutMs` while retaining bounded streams, output, termination, and warning
-  controls. Probes keep finite deadlines.
-- Focused Claude, Pi, OMP, fixture, runner, and controller coverage records the
-  rejection and generation-limit contracts without claiming live vendor or paid
-  route qualification.
-
+- Qualified the fixed Claude, Pi, OMP, and Codex adapter contracts for exact model/effort routes, noninteractive isolated sessions, read-only/no-tool controls, bounded machine-readable output, and typed failures. Antigravity remains an explicit unavailable candidate rather than an inferred backend.
+- Claude now rejects nonempty `permission_denials`, tool/nonterminal stop reasons, model drift, malformed result envelopes, and over-limit output.
+- Pi now requires strict user-then-assistant message sequencing, exact route and workspace attestation, a settled terminal lifecycle, and `stopReason: "stop"` before returning advice.
+- OMP now requires affirmative redacted usage readiness: a matching usable report plus positive provider capacity. Its strict parser rejects tool results, retries, unknown events, and undocumented `advisor_yielded`.
+- Codex now validates exact auth/model/effort capability probes and a complete terminal JSONL thread/item lifecycle with no disallowed tool or side-effect items.
+- All enabled adapters use `resolveInvocationLimits`; generation mode removes `timeoutMs` while retaining bounded streams, output, termination, and warning controls. Probes keep finite deadlines.
+- Focused Claude, Pi, OMP, fixture, runner, and controller coverage records the rejection and generation-limit contracts without claiming live vendor or paid route qualification.
 ## Current unresolved questions
 
-- Confirm whether this docs-facing changelog should remain the package's phase
-  mirror when a separate release authority is introduced.
-- Reconcile the historical 255/255 and 241/241 totals only if release documentation
-  needs one aggregate denominator; do not infer a new total from those records.
-- Decide where future source enforcement should validate the documented `cmd` prefix
-  without renaming existing canonical resources.
+- Confirm whether this docs-facing changelog should remain the package's phase mirror when a separate release authority is introduced.
+- Reconcile the historical 255/255 and 241/241 totals only if release documentation needs one aggregate denominator; do not infer a new total from those records.
+- Decide where future source enforcement should validate the documented `cmd` prefix without renaming existing canonical resources.

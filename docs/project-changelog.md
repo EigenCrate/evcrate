@@ -3,7 +3,14 @@
 ## Unreleased
 
 **Updated:** 2026-10-12
-**Status:** Core package release history; General Snyk remediation cycles Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+**Status:** Core package release history; General Snyk remediation cycles Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-12 — feat(snyk): local integration review and corrections (Phase 06)
+
+- Completed Phase 06 local integration review and corrections of General Snyk remediation cycles at 2026-10-12T23:41:05+07:00 (review 9/10 approved, 6/8 phases, 75% progress; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-06-integration-review-and-corrections.md`).
+- Reconciled Phase 05 review warnings W1, W2, W3: removed fragile length heuristics, enforced explicit `Stimulus:` checks across all 49 evaluation scenarios, and aligned SNYK-035 storage boundary specifications with contract trace vocabulary (`current_stage`, `stop_reason`, `next_action`, access-controlled ancestor/leaf containment, single-writer ownership).
+- Local integration verification: 46/46 package tests passing in `ext/snyk-expert`, 12/12 JS files syntax-verified via `node --check`, isolated direct install/dry-run sentinel preservation, 58/58 relative link resolution without repo escape, clean tarball packaging (24 assets) without test/report leakage, extracted package execution from unrelated cwd, and collision refusal preserving user modifications.
+- Operational boundary: local smoke and specifications verified; live authenticated Snyk scans and model/tool trace qualification remain Phase 07 gates.
 
 ### 2026-10-12 — feat(snyk): register coordinator in installer inventory and qualify delivery scenarios (Phase 05)
 
@@ -715,79 +722,10 @@
   package version `2.1.0`, Windows defaults, user PATH behavior, and project
   publication state.
 
-### 2026-09-15 — feat(ci): unprivileged Windows PR smoke and qualified asset labels (Phase 08)
+### 2026-09-14–2026-09-15 — feat(release): historical Windows qualification harness and CI workflow (Phases 05–08)
 
-**Status:** Phase 08 DONE (2026-09-15; 100%).  
-**Plan:** [Phase 08 plan](../plans/260914-0636-windows-release-qualification/phase-08-unprivileged-windows-pr-smoke-and-labels.md)  
-**Evidence:** `tests/distribution/release-orchestration.test.mjs` (WRQ-042–044).
-
-- Added `.github/workflows/windows-smoke.yml`: `pull_request`/manual-only, read-only
-  `contents`, canceling concurrency, `windows-2025` x64, Node `22.19.0`, pinned
-  v4 actions, `npm ci`, checked-in version/SHA fixture build, exact-seven verify,
-  and explicit `pwsh.exe` smoke harness.
-- Fixture identity uses `--allow-fixture-identity` and is diagnostic only: no
-  secrets, write scope, upload, semantic-release, or privileged follow-up/handoff.
-- `.releaserc.json` now labels the Windows ZIP `Windows x64 Archive` and
-  `install.ps1` `Windows Installer Entrypoint (install.ps1)`; other labels,
-  paths/order, and prepare command remain unchanged.
-- WRQ-042 covers workflow isolation, WRQ-043 fixture/exact-seven/smoke wiring,
-  and WRQ-044 exact labels plus preserved asset configuration. Native matrix,
-  publication, and final byte proof remain Phase 09/operator gates.
-
-### 2026-09-15 — feat(ci): split release workflow into producer, matrix, and publisher (Phase 07)
-
-**Status:** Phase 07 DONE (2026-09-15; 100%); Cycle 2 review approved 10/10.  
-**Plan:** [Phase 07 plan](../plans/260914-0636-windows-release-qualification/phase-07-release-workflow-producer-matrix-publisher.md)  
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260915-0155-phase-07-cycle-2.md)
-
-- Replaced the monolithic release job with an unprivileged Ubuntu producer, a
-  four-row `windows-2025` x64 qualification matrix, and a success-only publisher.
-- Producer gates remain ordered; release handoff uses one immutable artifact ID,
-  receipt, and producer hashes. Matrix rows consume the artifact without checkout/npm.
-- Publisher is the sole writer, copies exactly seven assets, and runs semantic-release
-  in verify mode. All eight action uses are pinned to full v4 SHAs.
-- Static YAML/permissions/action-pin/expression checks passed; release orchestration
-  passed 12/12. Native Windows execution and live publication remain Phase 09/operator gates.
-
-### 2026-09-14 — feat(release): canonical semantic-release candidate, receipt, and publisher (Windows qualification Phase 06)
-
-**Status:** Phase 06 DONE (2026-09-14; 100%); Cycle 2 code review approved 10/10.
-**Plan:** [Phase 06 plan](../plans/260914-0636-windows-release-qualification/phase-06-semantic-release-candidate-receipt-and-publisher.md)
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2236-phase-06-cycle-2-release-orchestration.md)
-
-- Added the canonical candidate runner with strict `.releaserc.json` loading,
-  disposable bare-mirror semantic-release execution, GitHub-plugin removal only,
-  build-mode asset preparation, release-token stripping, clean checkout/source
-  identity checks, exact seven/four staging, canonical `candidate.json`, atomic
-  promotion, and exactly nine safe GitHub output scalars.
-- Added the verify-only publisher wrapper: receipt and hash preflight, exact
-  assets-only `dist/release` copy, forced `EVCRATE_RELEASE_ASSET_MODE=verify`,
-  canonical semantic-release invocation, and version/tag/source equality checks.
-- Bound `semantic-release`, `release:candidate`, `release:verify-assets`,
-  `test:release`, and `test:installer:windows` in `package.json`; no new
-  dependency or orchestration-only lockfile edit.
-- `release-orchestration.test.mjs` passes 12/12; `npm run test:release` passes
-  29/29; build and CLI help checks pass. Native Windows execution and live
-  npm/GitHub publication remain downstream gates.
-
-### 2026-09-14 — feat(test): self-contained Windows qualification harness (Phase 05)
-
-**Status:** Phase 05 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
-**Plan:** [Phase 05 plan](../plans/260914-0636-windows-release-qualification/phase-05-self-contained-windows-qualification-harness.md)
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2030-phase-05-self-contained-windows-qualification-harness-cycle-2.md)
-
-- Delivered the Node-builtins-only qualification CLI with strict host,
-  receipt, and exact-byte preflight; safe PowerShell/`cmd.exe` runners;
-  smoke/full lifecycle controllers; immutable-state and PATH observers; and
-  isolated negative scenarios.
-- Scoped checks passed 60/60: distribution/harness 28/28, release artifacts
-  17/17, and Linux installer wildcard 15/15. Direct `--help` invocation
-  exited 0, confirming the standalone entrypoint.
-- Native Windows smoke/full execution remains an explicit downstream Phase 09
-  evidence gate; Phase 07 workflow wiring is complete but does not execute hosted
-  rows. This deterministic host-independent evidence makes no runtime support claim.
-- Handoff advanced to Phase 06 — semantic-release candidate, receipt, and
-  publisher.
+- Historical Windows qualification milestone: self-contained qualification harness (Phase 05), semantic-release candidate/publisher wrappers (Phase 06), split producer/matrix/publisher CI workflow (Phase 07), and unprivileged PR smoke workflow with qualified asset labels (Phase 08).
+- Retained evidence: release orchestration 12/12, `npm run test:release` 29/29, scoped harness checks 60/60. Detailed phase records preserved in [changelog archive](./project-changelog-archive.md).
 
 ### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
 
