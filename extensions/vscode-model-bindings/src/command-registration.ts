@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { CompanionAgentProvider } from './agent-provider.js';
+import type { RuntimeDiagnosticsReport } from './diagnostics.js';
 import type { CatalogSnapshot } from './model-catalog.js';
 import {
   handleConfigureAgentModels,
@@ -18,6 +19,7 @@ export interface CommandContextDeps {
   readonly getInstanceUuid: () => string;
   readonly getGenerationId: () => number;
   readonly getCatalogSnapshot: () => CatalogSnapshot | null;
+  readonly getLatestDiagnosticsReport?: () => RuntimeDiagnosticsReport | null;
   readonly ensureCatalogSubscribed: () => void;
 }
 
@@ -37,7 +39,8 @@ export function registerAllCommands(
         deps.getActiveProvider(),
         deps.getInstanceUuid(),
         deps.getGenerationId(),
-        deps.getCatalogSnapshot()
+        deps.getCatalogSnapshot(),
+        deps.getLatestDiagnosticsReport?.() ?? null
       )
     ),
     vscode.commands.registerCommand('evcrate.configureAgentModels', async () => {
