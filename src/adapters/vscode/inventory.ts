@@ -9,7 +9,7 @@ import type {
   VscodeStyleMapEntry,
   VscodeWorkflowMapEntry
 } from './names.js';
-import type { VscodeAgentAudit } from './agents.js';
+import type { VscodeAgentAuditEntryV2 } from './model-intent.js';
 import type { VscodeSkillsResult } from './skills.js';
 import type { VscodeHookAudit } from './hooks.js';
 
@@ -47,7 +47,7 @@ export function buildVscodeInventory(
   commandMap: Record<string, VscodeCommandMapEntry>,
   skillsResult: VscodeSkillsResult,
   agents: Record<string, VscodeAgentMapEntry>,
-  agentAudits: Record<string, VscodeAgentAudit>,
+  agentAudits: Record<string, VscodeAgentAuditEntryV2>,
   styles: Record<string, VscodeStyleMapEntry>,
   workflows: Record<string, VscodeWorkflowMapEntry>,
   hookAudit?: VscodeHookAudit
@@ -191,7 +191,12 @@ export function buildVscodeInventory(
 
   // 5. Agents (19)
   for (const [name, agent] of Object.entries(agents).sort(([a], [b]) => a.localeCompare(b))) {
-    add(`${sourcePrefix}agents/${agent.source}`, [agent.target], 'native');
+    add(
+      `${sourcePrefix}agents/${agent.source}`,
+      [agent.target],
+      agent.disposition,
+      'Canonical agent is projected as an immutable template for runtime companion model binding resolution.'
+    );
     resourceMap.push(Object.freeze({
       source: `agents/${agent.source}`,
       sourceSemanticId: agent.sourceSemanticId,
@@ -199,7 +204,7 @@ export function buildVscodeInventory(
       localName: agent.localName,
       targetName: agent.targetName,
       family: 'agent',
-      disposition: 'native'
+      disposition: agent.disposition
     }));
   }
 
@@ -364,6 +369,7 @@ export function buildVscodeInventory(
       skills: 'evcrate/skill-map.json',
       resources: 'evcrate/resource-name-map.json',
       agents: 'evcrate/agent-tool-audit.json',
+      intent: 'evcrate/agent-intent.json',
       directories: 'evcrate/directory-manifest.json',
       hooks: 'evcrate/hook-inventory.json'
     },

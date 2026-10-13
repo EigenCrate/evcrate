@@ -23,5 +23,7 @@ export * from './session-state.js';
 export * from './lifecycle-types.js';
 export * from './lifecycle.js';
 export * from './support.js';
-export * from './models.js';
+export * from './model-intent.js';
+export * from './companion-package-contracts.js';
+export * from './companion-cli-contracts.js';
 export * from './configuration.js';

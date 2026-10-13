@@ -1,0 +1,97 @@
+{
+  "name": "evcrate-model-bindings",
+  "displayName": "EVCrate Runtime Model Bindings",
+  "description": "Private companion extension providing user-controlled runtime model bindings for EVCrate VS Code custom agents.",
+  "publisher": "eigencrate",
+  "version": "3.0.0",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.0.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "enabledApiProposals": [
+    "chatPromptFiles"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Custom agent provider registration and installation root loading require a trusted local workspace."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "Only local file:// workspaces and authorities are supported; remote and virtual contexts fail closed."
+    }
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "evcrate-sidebar",
+          "title": "EVCrate",
+          "icon": "media/evcrate-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "evcrate-sidebar": [
+        {
+          "id": "evcrate.modelBindingsView",
+          "name": "Model Bindings"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "evcrate.configureAgentModels",
+        "title": "EVCrate: Configure Agent Model Tiers"
+      },
+      {
+        "command": "evcrate.configureActorModel",
+        "title": "EVCrate: Configure Actor Model Override"
+      },
+      {
+        "command": "evcrate.selectInstallation",
+        "title": "EVCrate: Select Installation Root"
+      },
+      {
+        "command": "evcrate.showModelBindings",
+        "title": "EVCrate: Show Model Bindings and Diagnostics"
+      },
+      {
+        "command": "evcrate.clearModelBindings",
+        "title": "EVCrate: Clear Model Bindings"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "evcrate.selectInstallation",
+          "when": "view == evcrate.modelBindingsView",
+          "group": "evcrate@1"
+        },
+        {
+          "command": "evcrate.configureAgentModels",
+          "when": "view == evcrate.modelBindingsView",
+          "group": "evcrate@2"
+        },
+        {
+          "command": "evcrate.clearModelBindings",
+          "when": "view == evcrate.modelBindingsView",
+          "group": "evcrate@3"
+        },
+        {
+          "command": "evcrate.showModelBindings",
+          "when": "view == evcrate.modelBindingsView",
+          "group": "evcrate@4"
+        }
+      ]
+    }
+  }
+}

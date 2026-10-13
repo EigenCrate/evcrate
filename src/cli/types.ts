@@ -15,6 +15,13 @@ export interface VscodeSettingsConsole {
   readonly confirm: (question: string, signal?: AbortSignal) => Promise<boolean>;
   readonly writeNotice?: (text: string) => void;
 }
+export interface VscodeCompanionConsole {
+  readonly isInputTTY?: boolean;
+  readonly isOutputTTY?: boolean;
+  readonly isErrorTTY?: boolean;
+  readonly confirm: (question: string, signal?: AbortSignal) => Promise<boolean>;
+  readonly writeStderr?: (text: string) => void;
+}
 
 
 export interface ProcessRunner {
@@ -40,6 +47,10 @@ export interface CliRuntime {
   readonly publicationOptions?: PublicationOptions;
   readonly engineSelectionOptions?: EngineSelectionOptions;
   readonly vscodeSettingsConsole?: VscodeSettingsConsole;
+  readonly vscodeCompanionConsole?: VscodeCompanionConsole;
+  readonly vscodeEditorExecutable?: string;
+  readonly extensionsDirectory?: string;
+  readonly userDataDirectory?: string;
   readonly platform?: NodeJS.Platform;
 }
 

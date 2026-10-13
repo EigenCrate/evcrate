@@ -2,7 +2,7 @@
 
 ## Bound the review
 
-Review only the supplied owner, exact current/candidate versions, covered consumers and proposed change. Do not find “the latest” release or turn a dependency upgrade into a framework migration. If inputs do not identify the proposal or affected consumers, preserve unknowns and return the exact missing input; no compatible conclusion from version digits.
+Review only the supplied owner, exact current/candidate versions, covered consumers and proposed change. Do not find “the latest” release or turn a dependency upgrade into a framework migration. If inputs do not identify the proposal or affected consumers, preserve unknowns and return the exact missing input; no compatible conclusion from version digits. The review is strictly read-only: zero target writes, including no creation of or writes to private evidence directories inside the target.
 
 The caller supplies canonical target root, HEAD, index/worktree manifest identities, relevant file hashes, modules/profiles, policy and allowed scope. Bind report/scan identities when relevant; an ordinary upgrade does not need a Snyk artifact. Recheck proposal-relevant identities at handoff. Drift invalidates the old assessment/approval, not the user's changes; never reset, overwrite or normalize target state.
 
@@ -52,6 +52,14 @@ Consume authorized file/graph/usage reads and supplied command evidence. Record 
 
 Unknown usage or unsupported/unreviewed combinations cannot yield `eligible`. Record exact impacted files/fields/consumers and potential wider consequences even when the proposal changes only one property. Never infer resolved versions from an edited BOM string.
 
+### Generic cross-ecosystem compatibility dimensions
+
+When assessing dependency upgrades in any supported ecosystem, evaluate these generic read-only dimensions:
+1. **Runtime and language bounds**: Check minimum and maximum language/runtime versions (e.g. Java JDK, Python, Go, Node), LTS status, and compiler target constraints against repository deployment environments.
+2. **Configuration and API changes**: Identify removed, deprecated, or renamed configuration keys, command-line flags, property names, and public API signatures across intermediate releases.
+3. **Binary, wire, and serialization formats**: Inspect changes in wire protocols, data serialization (e.g. JSON/YAML/Protobuf parsers), cryptographic providers/algorithms, and database schema conventions.
+4. **Licensing and governance**: Verify license continuity across intermediate candidate versions (e.g. permissive to copyleft, dual-licensing shifts, or proprietary restrictions).
+5. **Coupled components and plugins**: Identify tightly coupled dependencies, compiler plugins, or build tool extensions; verify upstream compatibility matrices before approving updates.
 ### Node.js and TypeScript compatibility dimensions
 
 When evaluating Node.js and TypeScript dependency changes, review these concrete read-only dimensions across package manifests, lockfiles, and compiler configurations:
@@ -75,7 +83,7 @@ When evaluating Node.js and TypeScript dependency changes, review these concrete
    - Verify Node-API (N-API) version compatibility against target Node.js runtime, as well as OS (`linux`, `darwin`, `win32`), libc (`glibc` vs `musl`), and CPU architecture (`x64`, `arm64`). Incompatible native bindings cause build failures or runtime dynamic link errors (`ERR_DLOPEN_FAILED`).
 6. **Coupled tool suites and testing frameworks**:
    - Inspect coordinated tooling pairs such as test runners and coverage providers (e.g. `vitest` and `@vitest/coverage-v8`), linter suites (`eslint` and `@typescript-eslint/*`), or framework build plugins.
-   - Upgrading one half of a coupled tool while leaving its companion on an incompatible major/minor line causes broken test reporters, provider mismatch errors, or runner failures.
+   - Upgrading one half of a coupled tool while leaving its companion on an incompatible major/minor line causes broken test reporters, provider mismatch errors, or runner failures. Review compatibility across both components: evidence-backed compatibility may permit updating one or require coordinated updates depending on upstream release metadata, peer constraints, and test suite requirements, rather than an uninspected blanket edit.
    - Versions in this documentation are illustrative; caller-supplied proposals remain exact. Derive runner and coverage compatibility from proposed releases' peer metadata, engine constraints, and upstream guidance rather than prescribing identical versions universally.
 7. **Licensing and major transitive dependency shifts**:
    - Check candidate license changes across intermediate versions (e.g. permissive MIT/Apache to copyleft or proprietary licenses).

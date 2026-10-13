@@ -3,7 +3,147 @@
 ## Unreleased
 
 **Updated:** 2026-10-13
-**Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+**Status:** Core package release history; General Sonar remediation cycles partial offline handoff (8/8 phases offline verified; live host unexercised); General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-13 — feat(snyk): usage documentation, ledger templates, and evidence-bound closeout (Phase 08)
+
+- Completed Phase 08 documentation and closeout of General Snyk remediation cycles: documentation deliverables complete; operational qualification blocked; end-to-end implementation incomplete pending operator prerequisites (plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-08-documentation-and-closeout.md`).
+- Reconciled installer syntax and safety boundaries: updated all installation documentation across `ext/snyk-expert/README.md`, `ext/snyk-expert/docs/usage.md`, and `docs/snyk-expert-cli.md` to `--target agents --directory <project-root>`; reconciled safety documentation to reflect process-level locking (`.install.lock`), pre-execution drift checks, staged temporary files with best-effort rollback, and the trusted exclusive writer boundary without claiming adversarial race-proof concurrency.
+- Documented 4-skill bundle and main-owned coordinator: documented the explicit 12-asset bundle with `cmd-snyk-remediate`, role ownership (Main owns budget, gates, live scans, terminal review; specialist owns single-set execution and local verification), host-neutral invocation, and honest explicit-read inline fallback mode.
+- Documented 8-stage review/correction loop and attempt accounting: detailed the full 8-stage sequence (Steps 1–8), restart-safe attempt counting ($N \ge 1$, increment before first dependency-input/resolution-capable operation including failing native updates, zero refunds, evidence-only writes at zero $N$, clean runs consuming zero attempts), and Step 8 post-review correction returning to Step 1 fresh changed-state scan without duplicate label-only scans.
+- Documented private target-contained evidence safeguards: formalized directory containment, access permissions, git-ignored untracked isolation, non-input/non-coverage verification, and immediate fail-closed pause on unsafe storage without silent external fallback.
+- Provided illustrative abbreviated ledger templates: documented structural templates for immutable first-scan source inventory (distinguishing report assertions from authentic scan-zero presence), occurrence ledger, every-attempt observation ledger tracking every original finding after every started attempt, separate post-only findings ledger, license decisions, and durable run record summary, linking authoritative lossless schemas in reference contracts.
+- Documented procedure learning and inert candidate recipes: codified append-only procedure learning observations within run records and inert sanitized `UNTRUSTED` candidate notes without automated runtime skill mutation or promotion prerequisites.
+- Mandatory failed-attempt ledger finalization: encoded explicit Main-owned branch appending observations for every original record upon Step 4/5 failure (`Post-scan observation: failed/unavailable`; `Disposition: unverified` for attempted set and `remaining` for unattempted set), persisting failure logs/recovery requirements, retaining consumed attempts with `in_flight_state: 'started'`, and prohibiting next-set selection until resolution; verified via evaluation scenario 50 and focused test.
+- Preserved truthful operational closeout boundary: documented delivery and specification completeness while maintaining that end-to-end operational qualification remains blocked pending operator provision of Phase 07 live prerequisites.
+
+### 2026-10-13 — test(snyk): evaluate live operational qualification prerequisites and deliver qualification index (Phase 07)
+
+- Delivered Phase 07 qualification index at [reports/qualification-index.md](../plans/261012-1944-general-snyk-remediation-cycles/reports/qualification-index.md) (plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-07-live-operational-qualification.md`).
+- Categorized all 36 acceptance cases into Delivery, Specification, and Operational evidence classes. Verified delivery case SNYK-002 (package layout, inventory, and collision refusal) passed; verified 35 specification-covered cases.
+- Recorded operational gate disposition: confirmed that live operational qualification requires real runtime host/model execution traces, native graph/consumer verification on isolated targets, and live authenticated same-scope Snyk scans. With Snyk CLI absent on `$PATH` (`PREREQ-05`), `SNYK_TOKEN` unverified/unset (`PREREQ-06`), isolated consuming targets unbound (`PREREQ-01..03`), target-contained evidence storage unbound (`PREREQ-08`), and network/registry access unvalidated (`PREREQ-07`), live operational cases (SNYK-001 partial, SNYK-003 through SNYK-031, SNYK-032a, SNYK-033 through SNYK-036) are recorded as **blocked on operator prerequisites**, and the conditional network troubleshooting branch of SNYK-032b is recorded as **unqualified**.
+- Preserved zero mocks or synthetic waivers: no mock scanner or synthetic token check substituted; operational gate remains strictly fail-closed pending operator provision of live prerequisites.
+
+### 2026-10-12 — feat(snyk): local integration review and corrections (Phase 06)
+
+- Completed Phase 06 local integration review and corrections of General Snyk remediation cycles at 2026-10-12T23:41:05+07:00 (review 9/10 approved, 6/8 phases, 75% progress; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-06-integration-review-and-corrections.md`).
+- Reconciled Phase 05 review warnings W1, W2, W3: removed fragile length heuristics, enforced explicit `Stimulus:` checks across all 49 evaluation scenarios, and aligned SNYK-035 storage boundary specifications with contract trace vocabulary (`current_stage`, `stop_reason`, `next_action`, access-controlled ancestor/leaf containment, single-writer ownership).
+- Local integration verification: 46/46 package tests passing in `ext/snyk-expert`, 12/12 JS files syntax-verified via `node --check`, isolated direct install/dry-run sentinel preservation, 58/58 relative link resolution without repo escape, clean tarball packaging (24 assets) without test/report leakage, extracted package execution from unrelated cwd, and collision refusal preserving user modifications.
+- Operational boundary: local smoke and specifications verified; live authenticated Snyk scans and model/tool trace qualification remain Phase 07 gates.
+
+### 2026-10-12 — feat(snyk): register coordinator in installer inventory and qualify delivery scenarios (Phase 05)
+
+- Completed Phase 05 delivery and acceptance scenarios of General Snyk remediation cycles at 2026-10-12T22:54:45+07:00 (5/8 phases complete, 62.5% progress; review approved 8.5/10 with 3 minor warnings noted for Phase 06 reconciliation; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-05-delivery-and-acceptance-scenarios.md`).
+- Registered `skills/cmd-snyk-remediate/SKILL.md` in `ext/snyk-expert/lib/inventory.js`: `ASSET_INVENTORY` now contains 12 explicit assets (`agents/snyk-expert.md`, `skills/cmd-snyk-remediate/SKILL.md`, and 10 task skill and reference documents).
+- Updated package scope description in `ext/snyk-expert/package.json` to reflect bounded remediation coordinator and ecosystem remediation scope.
+- Expanded evaluation catalog `ext/snyk-expert/evals/evals.json` to 49 scenarios covering all acceptance matrix IDs SNYK-001 through SNYK-036 across Delivery, Specification, and Operational evidence classes, including multi-variant scenario specifications for SNYK-035 (storage boundaries: safe target-contained append vs. unsafe/tracked/unignored storage pause) and SNYK-036 (procedure learning observations and inert sanitized UNTRUSTED candidate notes without automated skill mutation).
+- Hardened packaging and installer tests in `ext/snyk-expert/tests/cli-and-packaging.test.mjs`: verified asset uniqueness, verified new coordinator inclusion, verified pre-existing collision refusal preserving unrelated user sentinels while allowing authorized force replacement, and verified tarball packing, extraction, and installation execution from an unrelated cwd.
+- Refactored `ext/snyk-expert/tests/workflow-qualification.test.mjs`: removed fragile phrase-pinning tests asserting arbitrary prose fragments; retained structural schema checks verifying schema adherence, acceptance ID coverage, SNYK-035/036 variants, and evidence-class categorization, explicitly labeled as non-runtime specification evidence.
+- Verification & boundary: 49 eval scenarios structured, package installer and qualification suites updated (45/45 tests passing); static and delivery checks do not prove live coordinator runtime behavior or agent execution; integrated verification and code review scheduled for Phase 06, and live operational qualification scheduled for Phase 07.
+
+### 2026-10-12 — feat(snyk): author main-owned command coordinator and 8-stage correction loop (Phase 04)
+
+- Completed Phase 04 main-owned command and correction loop of General Snyk remediation cycles at 2026-10-12T22:20:46+07:00 (4/8 phases, 50% progress; review approved 8/10 with 6 non-blocking warnings noted for Phase 05/06 reconciliation; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-04-command-and-correction-loop.md`).
+- Authored `ext/snyk-expert/.agents/skills/cmd-snyk-remediate/SKILL.md`: portable main-session procedure coordinating bounded Snyk Open Source remediation cycles without an executable runner or assumed slash-command/subagent registration; binds canonical installed `.agents/` bundle root separately from `target_root` and specifies honest explicit-read inline fallback when native specialist registration is unavailable.
+- Bound intake, positive integer budget $N \ge 1$ with resume continuity, and private target-contained evidence storage before any artifact output (including initial baseline scan), keeping mutating initialization/scanner/resolver commands strictly non-exempt.
+- Encoded the 8-stage runtime sequence (Steps 1–8): Main live scan/refresh (Step 1), 6-point ecosystem-neutral pre-edit procedure binding and read-only `dependency-upgrade-review` (Step 2), Main pre-edit gate where `reject`/`revise` consume 0 attempts (Step 3), persisted `attempts_started + 1` and single-set application (Step 4), native local verification handoff `local verification complete; Snyk verification pending` (Step 5), Main live final review scan and append-only every-finding/post-only ledger reconciliation (Step 6), review decision (Step 7), and post-review corrections before rescan (Step 8 returning to Step 1 fresh changed-state scan to close the corrective attempt and transition to Step 7 without duplicate label-only scans).
+- Encoded append-only observed procedure learning in the private run record, inert sanitized `UNTRUSTED` candidate notes, and separate human-approved source-authoring maintenance proposals with zero runtime installed-skill mutation.
+- Verification & boundary: 25/25 relative links resolved in `cmd-snyk-remediate/SKILL.md` and 53/53 existing package tests passing across 8 suites (prior to Phase 05 `ext/snyk-expert/lib/inventory.js` registration and scenario expansion; static/test checks do not prove live coordinator runtime behavior); local integration review remains pending Phase 06 and live operational qualification pending Phase 07.
+
+### 2026-10-12 — feat(snyk): specialist and skill cutover for bounded remediation cycles (Phase 03)
+
+- Completed Phase 03 specialist and skill cutover of General Snyk remediation cycles at 2026-10-12T22:02:47+07:00 (plan records review approved 8/10; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-03-specialist-and-skill-cutover.md`).
+- One-set execution per mutating invocation: bound single coherent set execution with retained $N$, incrementing `attempts_started` once before first mutation with zero refunds on failure or rollback.
+- Local verification handoff to Main: specialist and fix skills return `local verification complete; Snyk verification pending` with native graph, build, and test evidence upon successful checks, while failed local checks return partial or stopped evidence; Main retains exclusive ownership of live Snyk scans and terminal review.
+- Neutral pre-edit procedure evaluation table: replaced blanket unsupported-ecosystem stops across all entrypoints and references with a neutral 6-point pre-edit procedure evaluation table; managers with complete official support and execution authorization run under existing authority without hardcoded ecosystem allowlists.
+- Zero target writes in analyze and upgrade-review: analyze and upgrade-review instructions prohibit target edits, dependency mutations, and private evidence writes in those modes.
+- Bound private ignored evidence storage: the `snyk-cli` skill instructions require a main-bound private ignored target-contained destination and mandate pausing on unauthorized, unignored, tracked, or coverage-affecting storage without silent fallback.
+- Safe CLI troubleshooting: added proxy vs CA trust diagnostics (npm cafile, Node extra CA, standalone store distinct) strictly prohibiting TLS bypass.
+- Preserved concrete safeguards: retained all Node.js/TypeScript (lockfile, peer, engines, compiler) and Maven/Spring (BOMs, profiles, reactor) safeguards in specialized remediation references.
+- Package test verification: 53/53 package tests pass across 8 suites in `ext/snyk-expert/tests/`, including 14 workflow-contract tests in `ext/snyk-expert/tests/workflow-qualification.test.mjs`; live authenticated Snyk qualification and runtime remediation remain scheduled for Phase 07.
+- Boundary: Specialist and skill cutover complete; command coordinator loop (`cmd-snyk-remediate`, Phase 04), delivery scenarios (Phase 05), integration review (Phase 06), and live operational qualification (Phase 07) remain scheduled for subsequent phases.
+
+### 2026-10-12 — feat(snyk): establish general procedure and lossless ledger contracts (Phase 02)
+
+- Completed Phase 02 reference-contract authoring of General Snyk remediation cycles at 2026-10-12T21:39:21+07:00 (review approved 8.5/10 with non-blocking W7 vocabulary follow-ups noted; plan reference: `plans/261012-1944-general-snyk-remediation-cycles/phase-02-procedure-and-ledger-contracts.md`, QA validation report: `plans/reports/qa-261012-2129-snyk-phase02-contracts-and-suite-validation.md`).
+- Pre-edit procedure table contract: specified neutral 6-point evaluation covering manager/version/runtime, official support/parser evidence, authored/effective controls, native inspection, exact invocation authority, and test/graph/consumer coverage before any dependency-changing edit.
+- Immutable source inventory & scan-zero authentic presence: established immutable first-scan source and duplicate occurrence tables in `finding-and-owner-contract.md`; distinct authentic scan-zero presence tracking prevents reconstructing missing originals from counts.
+- Restart-safe counting: specified durable run record in `verification-and-results.md` with positive integer $N \ge 1$ bound at intake, count incremented exactly once before first mutation, zero refunds on failure or rollback, pause/resume state preservation, and unknown count stop gates.
+- Private target-contained evidence storage: defined private target-contained evidence storage bindings with leaf/ancestor containment, strict permissions, git-ignored untracked isolation, affirmative non-input/non-coverage evidence, single writer, and fail-closed pause on unsafe storage without silent fallback.
+- Every-attempt observation ledger: specified full observation rows for all original findings across every attempt (including unattempted, unchanged, and failed rows).
+- Post-only provenance: established separate post-only inventory and provenance tracking, keeping advisory absence distinct from individual path disappearance and separating license evaluation from vulnerability remediation.
+- Procedure learning observations: added procedure learning observation fields within run records capturing planned/executed commands, side effects, and environment limits with inert sanitized UNTRUSTED candidate notes without automatic source-skill mutation.
+- Live scan terminal review ownership: assigned live scanner execution and terminal review post-scan ownership directly to Main in the common references (`snyk test` and live reconciliation), keeping actor scope strictly bound to local inspection and native verification.
+- Boundary: Phase 02 establishes reference contract specifications; executable specialist/skill cutover, Main loop, and live authenticated qualification remain scheduled for subsequent phases.
+
+### 2026-10-12 — test(vscode): integrated contract and isolated host qualification (Phase 09)
+**Status:** Package gates and isolated Windows VS Code 1.140.0 receipts N-01–N-03 pass; interactive GUI and authenticated inference remain blocked. [Integrated report](../plans/261011-2349-vscode-runtime-model-bindings/reports/integrated-qualification.md) · [Native receipts](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-qualification.md).
+- **Candidate:** VSIX SHA-256 `833e982d1cb08139e4df4a4891a4622d5f001076ab55a66a77f80f70f449cc89`; buildIdentity `68a82c4549d3b68a8cab7b73b3252a46d195d87634e8a08023af64d1119bb965`.
+- **N-01:** Disposable user-data/extensions install and reprobe pass; same-version identity mismatch requires exit-5 manual setup while committed stdout is preserved.
+- **N-02:** Isolated Extension Host exercised five commands, 17 actors and precedence; `hostObservedModel` stayed null.
+- **N-03:** All eight hook events pass; malformed calls fail closed; scout and privacy behavior observed.
+- **Runtime:** Windows `code.cmd` resolves to `Code.exe` + `cli.js`; companion fixes cover drive-path roots, remote-authority fallback, proposal-disabled registration, frozen exports and atomic watcher swaps.
+- **Automated gates:** Scoped QA suites passed 211/211 (`tester-261012-2000-phase-09-integrated-qualification.md`: companion+VSIX 54/54, adapters 98/98, CLI 48/48, integration 6/6, VS Code publication 5/5), plus separate manifest-reuse (6/6) and private release artifacts (18/18) runs. `test:vscode-companion` is wired into `npm test` (full monolithic `npm test` and four medium review follow-ups remain open).
+- **Sidebar tree view:** Added the `EVCrate` Activity Bar icon (`evcrate-sidebar`, `media/evcrate-icon.svg`) and native Sidebar `TreeDataProvider` (`evcrate.modelBindingsView`, `EvcrateSidebarTreeProvider`); `sidebar-snapshot.ts` captures row state and `scripts/vscode-companion-media.mjs` validates/packages SVG media. Tier/actor rows invoke targeted configuration commands.
+  Final VSIX SHA-256: `033f0b54466af9ba0ea4828c692cb7538bfbc14ba4c6389b7b2b236d93f4ff5a`; `buildIdentity`: `3285fa1e52d6f500095506b3c5b007828cac7646ed27e5aad3c52491aa58fdbe`; automated tests passed `163/163`. Automated verification is distinct from live interactive host UI checks; those remain unclaimed.
+- **Boundary:** Interactive picker/Chat, authenticated inference, child model, live selection recovery and Linux GUI remain blocked; no broad Windows-support or rollout claim.
+
+### 2026-10-12 — feat(cli): consented postpublish VS Code companion installation (Phase 08)
+
+- Added consented postpublish installation via `--install-vscode-companion` / `--no-install-vscode-companion`, with `--vscode-editor` and profile selection, pre-mutation validation, post-commit execution and fail-safe noninteractive behavior.
+- Verified committed VSIX identity and installation reprobe; preserves publication stdout on install failure, emits an `install-notice-v1` stderr notice and shows proposed-API enablement guidance. Live native install smoke moved to Phase 09.
+
+### 2026-10-12 — feat(distribution): hashed VSIX, snapshot overlay, and build integration (Phase 07)
+
+- Added deterministic offline VSIX build, target overlay, strict packed/development verifier, and release packaging bound to companion closure and byte parity.
+- Verified distribution and snapshot-staging suites (82/82); packed install smoke moved to Phase 09.
+
+### 2026-10-12 — feat(vscode): refresh, immutable generations, and runtime diagnostics (Phase 06)
+
+- Added coalesced revisioned refresh, scoped atomic-swap template watching with fallback polling, and persistent authority storage with lockfile protection.
+- Added `evcrate.vscode.showDiagnostics` Markdown/JSON report and verified companion tests (41/41) plus adapter tests (98/98).
+
+### 2026-10-12 — feat(vscode): implement runtime tiers, actor overrides, and picker commands (Phase 05)
+
+- Implemented runtime model catalog querying in `extensions/vscode-model-bindings/src/model-catalog.ts` via `vscode.lm.selectChatModels` (`queryChatModelCatalog`), validating entries (`validateCatalogEntry`), formatting selectors as `<name> (<vendor>)`, detecting ambiguous selectors (`findAmbiguousSelectors`), and compiling frozen snapshots (`buildCatalogSnapshot`) without inference probes or preferred-model heuristics.
+- Implemented scoped versioned binding store in `binding-store.ts` (`ScopedBindingStore`), managing partitioned user defaults (`globalState`) and installation-scoped root workspace overrides (`workspaceState`), validating schema bounds (`validateBindingsV1` <= 64 KiB), checking CAS revisions, and rejecting unsupported remote authorities (`UNSUPPORTED_REMOTE_AUTHORITY`).
+- Implemented pure inventory resolver in `binding-resolver.ts` (`resolveInventoryBindings`) enforcing strict precedence layering (`root.actor > user.actor > canonical.inherit > root.tier > user.tier > unresolved`), omitting frontmatter `model` selector for inherit actors unless explicitly overridden, validating catalog availability, and isolating withheld reasons.
+- Implemented QuickPick configuration UX and commands in `configuration-pickers.ts`, `configuration-commands.ts`, `clear-commands.ts`, and `command-registration.ts` (`evcrate.configureAgentModels`, `evcrate.configureActorModel`, `evcrate.clearModelBindings`, `evcrate.showModelBindings`, `evcrate.selectInstallation`).
+- Integrated dynamic provider refresh in `extension.ts` and `generation-loader.ts` with catalog change subscriptions (`vscode.lm.onDidChangeChatModels`), single-flight debounced refreshes, and fail-closed handling for corrupt states.
+- Verified test suites in `tests/vscode-companion/` (34/34 companion tests pass, 232/232 core adapter tests pass; Review Cycle 2 approved 8/10, 0 critical issues; user approved). Live native editor qualification remains deferred to Phase 09 per user gate amendment.
+
+### 2026-10-12 — feat(vscode): implement companion provider runtime (Phase 04)
+
+- Resolved Phase 02 Review Cycle 2 contract items: idempotent canonical URI serialization across percent encoding/spaces/Unicode/Windows drives with control character rejection (`W-A`), extracted leaf module `binding-contracts.ts` eliminating circular value imports (`W-B`), and enforced `<=512` actor bounds, string length caps, and diagnostic coherence in `validateRuntimeDiagnosticsV1` (`W-C`).
+- Implemented guarded host activation in `extensions/vscode-model-bindings/src/{extension.ts,installation-roots.ts}` (`inspectHostGuard` checking workspace trust, proposal availability, and non-remote authority). Non-local remote authorities (`ssh-remote`, `dev-container`, `wsl`) and untrusted workspaces fail closed without silent fallback to local HOME.
+- Implemented candidate root resolution in `installation-roots.ts` enforcing strict precedence (`project > HOME`), directory discovery (`.evcrate-vscode/evcrate/agent-templates/` and `.evcrate-vscode/evcrate/agent-intent.json`), and approval filtering via workspace state.
+- Implemented secure generation loader in `generation-loader.ts` validating relative template paths (`validateSafeTemplatePath` preventing path traversal, symlink escape, and null-bytes), verifying SHA-256 integrity, enforcing size limits (`<= 256 KiB`), and isolating per-actor errors into `withheldReasons`. Computes stable template inventory SHA-256 for generation deduplication.
+- Implemented agent template renderer in `agent-renderer.ts` injecting validated model selectors into frontmatter, protecting code fences, preserving immutable intent body, omitted tools, arguments, and metadata, and rebasing relative references without modifying external URLs.
+- Implemented atomic generation staging in `resource-storage.ts` using `mkdtemp` and directory rename into extension storage, validating storage budgets (`STORAGE_AND_SOURCE_BOUNDS`).
+- Implemented single-instance `CompanionAgentProvider` in `agent-provider.ts` for VS Code's proposed `CustomAgentProvider` interface (`provideCustomAgents`), deduplicating change events on identical inventory and honoring cancellation tokens.
+- Added comprehensive companion behavior suites in `tests/vscode-companion/{prerequisites-regressions,provider-runtime,storage-and-provider}.test.mjs` (13/13 companion tests pass; 232/232 core adapter tests pass; Review Cycle 3 approved 7/10, 0 critical issues).
+
+### 2026-10-12 — feat(vscode): immutable agent templates and truthful build intent (Phase 03)
+
+- Converted VS Code static agent projection to immutable templates at `.evcrate-vscode/evcrate/agent-templates/${name}.md` with disposition `immutable-template`; deleted all 17 static host-discovered agent files (`.evcrate-vscode/com.github.copilot/agents/*.agent.md`).
+- Stripped actionable `model` frontmatter key from emitted templates while preserving tools, arguments, description, `user-invocable`, and supporting references.
+- Emitted deterministic `evcrate/agent-intent.json` manifest (`evcrate-vscode-agent-intent-v1`) capturing canonical tier intent (`canonicalTier`), template path, SHA-256 digest, source path, and supporting reference base for all 17 canonical actors.
+- Upgraded tool audit artifact `evcrate/agent-tool-audit.json` to schema v2 (`evcrate-vscode-agent-tool-audit-v2`), recording immutable-template disposition and canonical tier intent with zero falsified effective model claims.
+- Deleted obsolete `src/adapters/vscode/models.ts` (`VSCODE_LOCAL_MODEL_MAP`, `resolveLocalModel`, `buildVscodeModelMap`) and generated `evcrate/model-map.json` without compatibility shims.
+- Updated `src/adapters/vscode/{names,inventory,configuration-activation-guide,adapter,metadata,index}.ts`, `src/adapters/projection-utils.ts`, target manifest `.evcrate/targets/vscode/manifest.json`, projection inventory `evcrate/projection-inventory.json`, and activation guide `evcrate/examples/activation-guide.md`.
+- Updated test suites in `tests/adapters/vscode-configuration.test.mjs` and `tests/adapters/vscode-resource-projection.test.mjs` (665 passed, 0 failed, 1 skipped; user approved).
+
+### 2026-10-12 — feat(vscode): implement runtime model bindings contracts and ownership boundaries (Phase 02)
+
+- Implemented pure contract and validation modules under `src/adapters/vscode/{model-intent.ts,companion-package-contracts.ts,companion-cli-contracts.ts}` (`evcrate-vscode-agent-intent-v1`, `evcrate-vscode-agent-tool-audit-v2`, `evcrate-vscode-companion-descriptor-v1`, `evcrate-vscode-companion-source-receipt-v1`, `evcrate-vscode-companion-install-v1`, `verifyCompanionLayoutContract`, `validateCompanionCliOptions`) and standalone extension workspace `extensions/vscode-model-bindings/{package.json,tsconfig.json,vscode.proposed.chatPromptFiles.d.ts,src/runtime-contracts.ts,src/diagnostics-contracts.ts,src/contracts.ts}` (`evcrate-vscode-bindings-v1`, `evcrate-vscode-runtime-bindings-v1`, `validateLocalRootUri`, `resolveInstallationRoot`, `resolveEffectiveActorBinding`, `STORAGE_AND_SOURCE_BOUNDS`).
+- Verified standalone extension and root compilation plus boundary suites in `tests/vscode-companion/contracts.test.mjs` (4/4 companion contract tests + 97/97 VS Code adapter tests = 101/101 passing; Review Cycle 2 approved 8.5/10, 0 critical issues; [interface-freeze.md](../plans/261011-2349-vscode-runtime-model-bindings/reports/interface-freeze.md)).
+- Existing static VS Code projection (`.evcrate/source/.evcrate-vscode/**`) and core CLI runtime closure remain untouched until Phase 03/07/08 cutover; live native editor qualification remains deferred to Phase 09 real-case verification per the explicit 2026-10-12 user gate amendment.
+
+### 2026-10-12 — docs(vscode): native feasibility evaluation for runtime model bindings companion (Phase 01)
+
+- Evaluated proposed `chatPromptFiles` API (`registerCustomAgentProvider`) for private companion model bindings on Linux x86_64 host (pinned candidate VS Code 1.140.0 commit `07f806f999227108933c2e30515b26eecc1fda74`).
+- Offline spike test harness passed 10/10 checks as documented in [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md) and [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md). Validated selector formatting, ambiguity rejection (`SELECTOR_AMBIGUOUS`), precedence layering, fail-closed remote authority rejection (`vscode-remote://`, `wsl://`), local file URI acceptance, simulated generation retention bounds, frontmatter contracts, simulated in-turn generation immutability, and storage isolation. Temporary spike removed; artifact packaging and digest recorded in report.
+- Native runtime qualification gates remain deferred to Phase 09 real-case verification per the explicit 2026-10-12 user gate amendment ([interface-freeze.md](../plans/261011-2349-vscode-runtime-model-bindings/reports/interface-freeze.md)); existing static projection remains unchanged.
 
 ### 2026-10-13 — docs(sonar): historical-report review, documentation, and partial offline handoff (Phase 08)
 
@@ -612,175 +752,31 @@
   as a release asset.
 - Handoff: **Phase 09 — Focused qualification and performance benchmark**.
 
-### 2026-09-19 — feat(viewer): complete React Explorer and view architecture (Phase 07)
+### 2026-09-19 — feat(viewer): historical React Explorer and view architecture (Phase 07)
 
-**Status:** Phase 07 DONE (2026-09-19; 100%); code review approved **10/10**.  
-**Plan:** [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md)  
-**Evidence:** [viewer validation](../plans/reports/tester-260918-2352-phase-07-viewer-architecture-validation.md); [architecture review](../plans/reports/code-review-260918-2359-phase-07-react-explorer.md)
+- Added private static React explorer under `viewer/src/` with unified reducer, tab navigation, and telemetry-free view contracts. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 
-- Added the private static React explorer under `viewer/src/`: one reducer
-  state machine, explicit File System Access pick/refresh/cancel controls,
-  router-free `#overview`, `#history`, `#configuration`, and `#evaluations`
-  views, and local responsive styling.
-- Overview renders honest n/N/excluded ratios, missingness, latency, attempts,
-  completeness, and limitations. History provides frozen filters, 100-row
-  paging, and lazy inert detail. Configuration separates current policy from
-  historical route/prompt/build comparisons. Evaluations group exact comparable
-  digests, preserve human/automated provenance, and mask candidates until reveal.
-- Handles remain in refs; scans are generation-fenced; failed/cancelled/
-  incomplete refresh retains stale snapshots. No raw HTML, active record links,
-  network calls, model execution, persistence, grading, or external assets.
-- Verification: **28/28 tests passed** (22 viewer state/view tests + 6 metrics
-  tests), strict viewer typecheck/build passed with **zero TypeScript diagnostics**,
-  and every viewer module remains under 200 LOC.
-- **Canonical advisor mentoring verification:** **PASS** against the canonical
-  `.claude/workflows/advisor-mentoring.md` contract; the viewer remains a
-  validated data consumer and does not invoke model/checkpoint flows or claim
-  mentor quality.
-- Handoff: **Phase 08 — Packaging, CSP, preview, and release inventory**.
+### 2026-09-18 — feat(advisor): historical browser traversal, metrics CLI, and counsel evaluation (Phases 04–06)
 
-### 2026-09-18 — feat(advisor): complete counsel evaluation protocol and fixtures (Phase 06)
+- Completed read-only browser history traversal scanner (Phase 05), metrics CLI operation (Phase 04), and counsel evaluation protocol fixtures (Phase 06). Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 
-**Status:** Phase 06 DONE (2026-09-18; 100%); Cycle 2 review approved 10/10.  
-**Plan:** [Phase 06 plan](../plans/260917-2308-advisor-visual-metrics/phase-06-counsel-evaluation-protocol-and-fixtures.md)  
-**Evidence:** [Cycle 2 validation](../plans/reports/tester-260918-1733-phase06-cycle2-validation.md); [Cycle 2 review](../plans/reports/code-review-260918-1736-phase-06-counsel-evaluation-cycle-2.md)
+### 2026-09-18 — feat(advisor): historical checkpoint digest, metrics kernel, and controller closure (Phases 02–03)
 
-- Added public `evcrate-advisor-counsel-evaluation` v1 types/facade, strict nested validation, canonical rubric/input SHA-256 checks, immutable documents, response/score invariants, and digest/provenance-separated aggregation.
-- Added explicit read-only browser multi-file evaluation reader with bounded 8 MiB files, per-file statuses, and no persistence, execution, grading, or history-metrics path.
-- Added `valid-mixed`, digest-mismatch, invalid-observations, and oracle-free nine-case fixtures derived from corpus inputs without `expected_mentor_response`.
-- Verification: **87/87 tests passed** across protocol, viewer, metrics, parity, and distribution suites; build, viewer typecheck, and release-check passed; review **10/10**.
-- Controller closure remains 33 files and unchanged. Handoff: **Phase 07 — React explorer and view architecture**.
-
-### 2026-09-18 — feat(advisor): complete browser history traversal and scanner (Phase 05)
-
-**Status:** Phase 05 DONE (2026-09-18; 100%); Cycle 2 review approved 9.8/10.  
-**Plan:** [Phase 05 plan](../plans/260917-2308-advisor-visual-metrics/phase-05-browser-history-traversal-and-scanner.md)  
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260918-1353-phase-05-browser-history-traversal-cycle-2.md); [suite validation](../plans/reports/tester-260918-1350-phase05-suite-validation.md)
-
-- Completed explicit read-only File System Access selection, deterministic three-level history traversal, bounded four-read scanning, strict record/digest validation, sanitized diagnostics, and duplicate resolution.
-- Completed atomic generation replacement with stale retention for incomplete/cancelled/denied scans, plus read-only policy inspection with legacy-v1 migration-required state.
-- Focused proof passed: viewer 24/24, advisor metrics 6/6, and contract parity 4/4 (34/34 total); all Phase 05 modules remain under 200 lines.
-- Handoff advanced to Phase 06 — Counsel evaluation protocol and fixtures.
-
-### 2026-09-18 — feat(advisor): integrate history metrics CLI (Phase 04)
-
-**Status:** Phase 04 DONE (2026-09-18; 100%); Cycle 2 review approved 10/10.  
-**Plan:** [Phase 04 plan](../plans/260917-2308-advisor-visual-metrics/phase-04-history-metrics-cli-integration.md)  
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260918-1243-phase-04-history-metrics-cli-integration-cycle-2.md)
-
-- Added the read-only `history metrics` CLI operation with exact request/result
-  envelopes, current-project/task scope, bounded unlocked collection, and
-  sanitized deterministic diagnostics.
-- Reused the finalized Phase 02 normalization and metrics kernel without
-  controller-local formulas; invalid, missing, unknown, and conflicting records
-  remain distinct and reconcile with scan accounting.
-- Focused proof passed: 26/26 history CLI/store/metrics tests, 6/6 advisor-metrics
-  tests, and 11/11 controller-closure tests; existing history operations remain
-  unchanged. Phase 05 is next: browser history traversal and scanner.
-
-### 2026-09-18 — feat(advisor): complete checkpoint digest, metrics kernel, and generated CJS adapters (Phase 02)
-
-**Status:** Phase 02 DONE (2026-09-18; 100%); review approved 10/10.  
-**Plan:** [Phase 02 plan](../plans/260917-2308-advisor-visual-metrics/phase-02-checkpoint-digest-metrics-kernel-and-generated-cjs-adapters.md)  
-**Evidence:** [Phase 02 re-review](../plans/reports/code-review-260918-0244-phase02-re-review.md)
-
-- Completed the portable deterministic metrics kernel, exact history filters/formulas,
-  frozen results, duplicate exclusion, diagnostics, completeness, and limitation codes.
-- Preserved order-sensitive checkpoint digest bytes and proved Node/Web Crypto parity;
-  converted the CJS contract and policy validators to generated-runtime adapters while
-  retaining required exports and boundary error codes.
-- Registered the generated four-file runtime closure in the 33-file controller
-  inventory. Focused proof passed: protocol 31/31, metrics 5/5, parity 4/4,
-  advisor-controller 206/206, distribution check/build `status: "ok"`, and build.
-
-### 2026-09-18 — test(advisor): close controller closure and installer inventory parity (Phase 03)
-
-**Status:** Phase 03 DONE (2026-09-18; 100%); review approved 10/10.  
-**Plan:** [Phase 03 plan](../plans/260917-2308-advisor-visual-metrics/phase-03-controller-closure-and-inventory-migration.md)  
-**Evidence:** [Closure parity evidence](../plans/reports/evidence-260918-1140-phase-03-33-file-closure-parity.json); [code review](../plans/reports/code-review-260918-1136-phase-03-controller-closure-inventory-migration.md)
-
-- `install.sh` and `install.ps1` now carry the exact 33-file code-point-sorted
-  controller inventory, including the four generated runtime modules.
-- `tests/manifests/distribution-manifests.test.mjs` asserts exact count/hash parity
-  and rejects an extra `viewer.js` or a foreign `require('lodash')`.
-- Evidence records sequence-identical authority/generated/installer lists, 81
-  validation checks, and zero failures. Historical dated 29/29 evidence remains
-  unchanged; Phase 04 is complete and Phase 05 is next: browser history traversal
-  and scanner.
+- Completed the portable deterministic metrics kernel, exact history filters/formulas, and registered the generated four-file runtime closure in the 33-file controller inventory; focused test suites passed. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 
 ### 2026-09-15 — docs(release): complete Windows qualification and bounded support cutover (Phases 09–10)
 
-**Status:** Phases 09–10 DONE (10/10 Windows qualification phases; 100%; completed 2026-09-15).  
-**Plan:** [Windows qualification master plan](../plans/260914-0636-windows-release-qualification/plan.md)  
-**Evidence:** [Phase 09 integrated qualification](../plans/reports/tester-260915-1119-phase-09-integrated-qualification.md), [Phase 09 suite validation](../plans/reports/tester-260915-1119-phase-09-suite-validation.md), and [Phase 10 support cutover](../plans/260914-0636-windows-release-qualification/phase-10-post-proof-documentation-and-support-cutover.md)
+- Completed the hosted `windows-2025` x64 matrix for PowerShell 5.1/7 and Node `22.19.0`/`24.21.0` for standalone installer lifecycle (`install`, `repair`, `upgrade`, `rollback`, `uninstall`) and `version --json`.
+- Bounded support covers standalone installer and version reporting only. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
+### 2026-09-14–2026-09-15 — feat(release): historical Windows qualification harness and CI workflow (Phases 05–08)
 
-- Completed the hosted `windows-2025` x64 matrix for PowerShell 5.1/7 and Node
-  `22.19.0`/`24.21.0`, with standalone installer lifecycle (`install`,
-  repeat-install, `repair`, upgrade, `rollback`, `uninstall`) and `version --json`
-  qualification.
-- Bounded support now covers the standalone installer and version reporting only.
-  `publish`, `health`, advisor execution, live vendor qualification, and production
-  HOME publication remain Linux-only or operator-gated.
-- Reconciled README and architecture, standards, PDR, and roadmap documentation with
-  package version `2.1.0`, Windows defaults, user PATH behavior, and project
-  publication state.
+- Historical Windows qualification milestone: self-contained qualification harness (Phase 05), semantic-release candidate/publisher wrappers (Phase 06), split producer/matrix/publisher CI workflow (Phase 07), and unprivileged PR smoke workflow with qualified asset labels (Phase 08).
+- Retained evidence: release orchestration 12/12, `npm run test:release` 29/29, scoped harness checks 60/60. Detailed phase records preserved in [changelog archive](./project-changelog-archive.md).
 
-### 2026-09-15 — feat(ci): unprivileged Windows PR smoke and qualified asset labels (Phase 08)
+### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
 
-**Status:** Phase 08 DONE (2026-09-15; 100%).  
-**Plan:** [Phase 08 plan](../plans/260914-0636-windows-release-qualification/phase-08-unprivileged-windows-pr-smoke-and-labels.md)  
-**Evidence:** `tests/distribution/release-orchestration.test.mjs` (WRQ-042–044).
-
-- Added `.github/workflows/windows-smoke.yml`: `pull_request`/manual-only, read-only
-  `contents`, canceling concurrency, `windows-2025` x64, Node `22.19.0`, pinned
-  v4 actions, `npm ci`, checked-in version/SHA fixture build, exact-seven verify,
-  and explicit `pwsh.exe` smoke harness.
-- Fixture identity uses `--allow-fixture-identity` and is diagnostic only: no
-  secrets, write scope, upload, semantic-release, or privileged follow-up/handoff.
-- `.releaserc.json` now labels the Windows ZIP `Windows x64 Archive` and
-  `install.ps1` `Windows Installer Entrypoint (install.ps1)`; other labels,
-  paths/order, and prepare command remain unchanged.
-- WRQ-042 covers workflow isolation, WRQ-043 fixture/exact-seven/smoke wiring,
-  and WRQ-044 exact labels plus preserved asset configuration. Native matrix,
-  publication, and final byte proof remain Phase 09/operator gates.
-
-### 2026-09-15 — feat(ci): split release workflow into producer, matrix, and publisher (Phase 07)
-
-**Status:** Phase 07 DONE (2026-09-15; 100%); Cycle 2 review approved 10/10.  
-**Plan:** [Phase 07 plan](../plans/260914-0636-windows-release-qualification/phase-07-release-workflow-producer-matrix-publisher.md)  
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260915-0155-phase-07-cycle-2.md)
-
-- Replaced the monolithic release job with an unprivileged Ubuntu producer, a
-  four-row `windows-2025` x64 qualification matrix, and a success-only publisher.
-- Producer gates remain ordered; release handoff uses one immutable artifact ID,
-  receipt, and producer hashes. Matrix rows consume the artifact without checkout/npm.
-- Publisher is the sole writer, copies exactly seven assets, and runs semantic-release
-  in verify mode. All eight action uses are pinned to full v4 SHAs.
-- Static YAML/permissions/action-pin/expression checks passed; release orchestration
-  passed 12/12. Native Windows execution and live publication remain Phase 09/operator gates.
-
-### 2026-09-14 — feat(release): canonical semantic-release candidate, receipt, and publisher (Windows qualification Phase 06)
-
-**Status:** Phase 06 DONE (2026-09-14; 100%); Cycle 2 code review approved 10/10.
-**Plan:** [Phase 06 plan](../plans/260914-0636-windows-release-qualification/phase-06-semantic-release-candidate-receipt-and-publisher.md)
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2236-phase-06-cycle-2-release-orchestration.md)
-
-- Added the canonical candidate runner with strict `.releaserc.json` loading,
-  disposable bare-mirror semantic-release execution, GitHub-plugin removal only,
-  build-mode asset preparation, release-token stripping, clean checkout/source
-  identity checks, exact seven/four staging, canonical `candidate.json`, atomic
-  promotion, and exactly nine safe GitHub output scalars.
-- Added the verify-only publisher wrapper: receipt and hash preflight, exact
-  assets-only `dist/release` copy, forced `EVCRATE_RELEASE_ASSET_MODE=verify`,
-  canonical semantic-release invocation, and version/tag/source equality checks.
-- Bound `semantic-release`, `release:candidate`, `release:verify-assets`,
-  `test:release`, and `test:installer:windows` in `package.json`; no new
-  dependency or orchestration-only lockfile edit.
-- `release-orchestration.test.mjs` passes 12/12; `npm run test:release` passes
-  29/29; build and CLI help checks pass. Native Windows execution and live
-  npm/GitHub publication remain downstream gates.
-
+- Scope distribution baseline: scalar `--scope home|project`, normalized project descriptors and identity hashing, runtime closures, single-snapshot planning, generic transaction engine, schema-2 state migration/recovery, and contract proofs across all targets.
+- Retained evidence: `npm run build`, `npm run test:publication`, `npm run test:integration`, and all target manifests green. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 ## Historical entries
 
-Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md).
-The current changelog remains the maintained phase mirror for the active milestone.
+Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md); this document remains the maintained phase mirror for the active milestone.

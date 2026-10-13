@@ -69,8 +69,7 @@ Consume a read-only assessment through [Dependency Upgrade Review](../../depende
    - `analyze`: Stop before write; output read-only proposal.
    - `remediate`: Apply only if proposal is assessed `eligible` under current user policy.
    - `approved-remediate`: Eligible sets retain their own gates; gated intent additionally requires exact human decision/source, proposal/intent hashes, full current baseline, covered paths and conditions from the finding contract. Approval never supplies a missing artifact or permission.
-3. **Coherent change set**: Apply one owner set including required coupled changes; do not claim filesystem atomicity across files. Preserve user changes and record owned hunks/before/after hashes. Recheck baseline before every subsequent set.
-
+3. **Coherent change set**: Apply exactly ONE coherent owner set per mutating specialist invocation with retained N/count, including required coupled changes; do not claim filesystem atomicity across files. Preserve user changes and record owned hunks/before/after hashes. Recheck baseline before every subsequent set.
 ## 8. Verification and concrete runtime probes
 
 After modifying manifests, run verification:
@@ -81,10 +80,13 @@ After modifying manifests, run verification:
    - *Logging probe*: Select used logging paths/configuration/appenders from repository evidence; assert actual emitted content/routing/behavior, not just startup. Bind expected observations before execution.
    - *Crypto probe*: Select application-used signing/verification, provider, certificate/PKIX, keystore or TLS behavior; assert concrete expected outcomes. Examples are not a requirement to invent unused probes.
 4. **Probe failure stop**: If tests or runtime probes fail, **STOP (`partial`)**. Record failure details; initiate selective rollback of only owned edits if authorized.
+5. **Local verification handoff**: When effective graph check, target verification (`./mvnw verify`), and runtime probes succeed, specialist hands off to main with `local verification complete; Snyk verification pending`, returning the updated baseline identity, covered paths, and required post-scan command expectations. Specialist does not redundantly execute the live Snyk rescan.
 
 ## 9. Snyk scan invocation and limitations
 
-Run baseline and post-remediation scans with identical scope:
+General Snyk CLI acquisition, operator authorization, authentication, global flags, and baseline artifact conventions are defined in [Snyk CLI execution workflow](../../snyk-cli/references/cli-workflow.md). Main alone owns authentic baseline and post-remediation live Snyk scanning. This section provides the concrete aggregate and module scanning command templates and coverage gates that main executes and against which specialist proposals are validated.
+
+Main executes baseline and post-remediation scans with identical scope:
 
 ### Command template
 - **Shell schema**: `snyk test <captured-scope-options> --json-file-output="<safe-artifact>" -- <captured-maven-options>`; replace each placeholder with separately quoted authorized literal arguments.
@@ -113,3 +115,4 @@ Run baseline and post-remediation scans with identical scope:
 | Incompatible/unknown coupling | Defer exact proposal; preserve blocker and human-gate reasons | Establish supported artifacts/impact and exact decision where gated |
 | Exact gated proposal lacks approval | No gated write; `needs-approval` only before required execution, otherwise `partial` with next approval action | Main collects exact current-baseline human decision |
 | Graph/build/test/runtime/scan failure | Stop dependent sets; `partial`, findings remaining/unverified as evidenced | Diagnose, preserve outputs and new risks; rollback only safely authorized owned hunks |
+| Local verification passed, pending live scan | Handoff to main; `local verification complete; Snyk verification pending` | Main executes authentic same-scope live Snyk rescan before any terminal completion |

@@ -1,3 +1,113 @@
+## [3.0.0](https://github.com/EigenCrate/evcrate/compare/v2.11.0...v3.0.0) (2026-10-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* retire advisor subsystem and retain inline advise (#29)
+* **vscode:** Copilot and VS Code command and agent resources use canonical evc-* identities; Copilot ordinary skills and styles use evc-* prefixes without compatibility aliases.
+
+* test(adapters): guard advisor activation semantic command identities
+
+* refactor(source,adapters)!: cut over canonical instructions to AGENTS.md across all targets
+
+* chore(distribution): regenerate all 7 target projections, manifests, and registry with unified naming
+
+* feat(distribution)!: prune obsolete owned artifacts and report untracked legacy leftovers
+* **vscode:** Hard cutover to unified evc-* naming deletes obsolete owned commands, agents, and instruction documents upon publication upgrade. Untracked legacy artifacts are preserved and reported in legacyLeftovers. Universal collision refusal rejects unmanaged collisions at migrated destinations.
+
+* docs: update codebase summary maintained header for phase 08
+
+* test(distribution): update test contracts, golden fixtures, and concurrency protection for phase 09
+
+* docs(release)!: cut over documentation, changelog, and dual-branch release pipeline for phase 10
+
+* test(distribution): add cross-harness smoke verification harness and candidate qualification matrix for phase 11
+
+* test(distribution): reconcile smoke report generator with 82/82 check accounting and traceability matrix
+
+* test(distribution): add Phase 11 qualification traceability evidence artifact
+
+* test(distribution): sanitize regression suite key in phase11-traceability-evidence.json
+
+* test(distribution): update qualification status and recommendation in smoke report generator
+
+* fix(distribution): enforce stable approval evidence and preserve layout validity during retired gemini cleanup
+
+- Enforce unconditional maintainer approval evidence for stable releases in publish-release.cjs and release.yml
+- Order branch topology check before approval verification in publish-release.cjs
+- Decouple retired-binding pruning from active target bindingOrder and changes in publication-plan.ts
+- Enable retired-binding reconciliation in HOME scope during harness phase
+- Scan predecessor .gemini root for untracked legacy leftovers under antigravity target in legacy-leftovers.ts
+- Add regression tests covering project/HOME predecessor Gemini transitions and stable approval verification
+
+* fix(distribution): recover retired gemini cleanup and enforce live github approval
+
+- Add schema-3 `cleanup: "retired-binding"` journal operations authorized against recorded predecessor ownership
+- Decouple retired deletion operations from active targets and binding order during rollback and recovery
+- Replace local approval JSON with live GitHub REST verification of production protections, review history, and reviewer permissions
+- Fail closed on missing/unprotected environments, self-review, absent review, or rerun attempts
+- Update architecture, release, and upgrade documentation
+* **adapters:** Copilot and VS Code command and agent resources use canonical evc-* identities; Copilot ordinary skills and styles use evc-* prefixes without compatibility aliases.
+
+* test(adapters): guard advisor activation semantic command identities
+
+* refactor(source,adapters)!: cut over canonical instructions to AGENTS.md across all targets
+
+* chore(distribution): regenerate all 7 target projections, manifests, and registry with unified naming
+
+* feat(distribution)!: prune obsolete owned artifacts and report untracked legacy leftovers
+* **adapters:** Hard cutover to unified evc-* naming deletes obsolete owned commands, agents, and instruction documents upon publication upgrade. Untracked legacy artifacts are preserved and reported in legacyLeftovers. Universal collision refusal rejects unmanaged collisions at migrated destinations.
+
+* test(distribution): reconcile smoke report generator with 82/82 check accounting and traceability matrix
+
+* test(distribution): add qualification traceability evidence artifact
+
+* test(distribution): update qualification status and recommendation in smoke report generator
+
+* fix(distribution): enforce stable approval evidence and preserve layout validity during retired gemini cleanup
+
+- Enforce unconditional maintainer approval evidence for stable releases in publish-release.cjs and release.yml
+- Order branch topology check before approval verification in publish-release.cjs
+- Decouple retired-binding pruning from active target bindingOrder and changes in publication-plan.ts
+- Enable retired-binding reconciliation in HOME scope during harness phase
+- Scan predecessor .gemini root for untracked legacy leftovers under antigravity target in legacy-leftovers.ts
+- Add regression tests covering project/HOME predecessor Gemini transitions and stable approval verification
+
+* fix(distribution): recover retired gemini cleanup and enforce live github approval
+
+- Add schema-3 `cleanup: "retired-binding"` journal operations authorized against recorded predecessor ownership
+- Decouple retired deletion operations from active targets and binding order during rollback and recovery
+- Replace local approval JSON with live GitHub REST verification of production protections, review history, and reviewer permissions
+- Fail closed on missing/unprotected environments, self-review, absent review, or rerun attempts
+- Update architecture, release, and upgrade documentation
+
+### 🚀 Features
+
+* **adapters:** unify command and agent naming and cut over to canonical AGENTS.md ([#24](https://github.com/EigenCrate/evcrate/issues/24)) ([36c68bb](https://github.com/EigenCrate/evcrate/commit/36c68bb4fd11327769adc7d836900436b2042165))
+* **snyk-expert:** align installer target/directory contract and add node/typescript workflow qualification ([#32](https://github.com/EigenCrate/evcrate/issues/32)) ([720307a](https://github.com/EigenCrate/evcrate/commit/720307afab9a0dcd2e4e3bdbf9e29cf7f8426c15))
+* **sonarqube:** add sonarqube test quality skill and offline report converter ([#25](https://github.com/EigenCrate/evcrate/issues/25)) ([1948a08](https://github.com/EigenCrate/evcrate/commit/1948a080fe830c2069acb06c1896b06ffe1f2889))
+* **vscode:** add WebFetch and NotebookEdit native tool mappings and runtime normalization ([#27](https://github.com/EigenCrate/evcrate/issues/27)) ([3691457](https://github.com/EigenCrate/evcrate/commit/3691457383a7795e4b309d640bdbe28b8f5334f9))
+* **vscode:** use evc plugin identity and map commands to cmd-* to avoid duplicate display ([#28](https://github.com/EigenCrate/evcrate/issues/28)) ([649e9f6](https://github.com/EigenCrate/evcrate/commit/649e9f6fdf78bbe29a92661dfa5cb5629c496294)), closes [#24](https://github.com/EigenCrate/evcrate/issues/24)
+
+
+### 🐞 Bug Fixes
+
+* **distribution:** remove retired advisory sources from target manifests and update command baseline ([5846305](https://github.com/EigenCrate/evcrate/commit/584630563350adaae060ebc6c7e6e786d59bd3fa))
+* **omp:** warn and continue on unavailable AGENTS payload during mid-run compaction ([#30](https://github.com/EigenCrate/evcrate/issues/30)) ([3f4cc62](https://github.com/EigenCrate/evcrate/commit/3f4cc62bad993919dd17d537a575402751d4d90b))
+* **release:** retire rc channel, move Windows PS7/Node24 smoke to PRs, and update README for 3.0.0 ([4dc0383](https://github.com/EigenCrate/evcrate/commit/4dc038338b2bd5cd4b7ac3ac400e769e7d682bdf))
+* **vscode:** correct subagent tool references and normalize runtime filePath ([#26](https://github.com/EigenCrate/evcrate/issues/26)) ([1f011b2](https://github.com/EigenCrate/evcrate/commit/1f011b295e9a6bfa01154e357fa3fb520ac7e0da))
+
+
+### 📚 Documentation
+
+* update core documentation and generate root AGENTS.md ([7e016be](https://github.com/EigenCrate/evcrate/commit/7e016be3f1787647d1b70f40ff2f1c1e3e4ffa58))
+
+
+### ♻️ Code Refactoring
+
+* retire advisor subsystem and retain inline advise ([#29](https://github.com/EigenCrate/evcrate/issues/29)) ([5196a4d](https://github.com/EigenCrate/evcrate/commit/5196a4d8707bb348052d3d2902207034d396d49c))
+* **workflows:** drop plan-progress and advisory-interview references ([#33](https://github.com/EigenCrate/evcrate/issues/33)) ([8f72656](https://github.com/EigenCrate/evcrate/commit/8f7265637335ebb47743812b820c96a8ecb72e52)), closes [#29](https://github.com/EigenCrate/evcrate/issues/29)
+
 ## [2.11.0](https://github.com/EigenCrate/evcrate/compare/v2.10.3...v2.11.0) (2026-10-10)
 
 

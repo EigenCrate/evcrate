@@ -69,14 +69,18 @@ export async function runLocalBuild(
 
     for (const [name, stagedPath] of result.stagedOutputs) {
       const localPath = result.localOutputs.get(name)!;
-      pairs.push({ source: stagedPath, destination: localPath });
+      if (!isSamePathTree(stagedPath, localPath)) {
+        pairs.push({ source: stagedPath, destination: localPath });
+      }
     }
 
     if (result.allStagedManifests && result.allStagedManifests.length > 0) {
       for (const entry of result.allStagedManifests) {
-        pairs.push({ source: entry.stagedManifestPath, destination: entry.manifestPath });
+        if (!isSamePathTree(entry.stagedManifestPath, entry.manifestPath)) {
+          pairs.push({ source: entry.stagedManifestPath, destination: entry.manifestPath });
+        }
       }
-    } else {
+    } else if (!isSamePathTree(result.stagedManifestPath, result.manifestPath)) {
       pairs.unshift({ source: result.stagedManifestPath, destination: result.manifestPath });
     }
 
@@ -121,11 +125,15 @@ export async function runAllManifestsBuild(
 
     for (const [name, stagedPath] of result.stagedOutputs) {
       const localPath = result.localOutputs.get(name)!;
-      pairs.push({ source: stagedPath, destination: localPath });
+      if (!isSamePathTree(stagedPath, localPath)) {
+        pairs.push({ source: stagedPath, destination: localPath });
+      }
     }
 
     for (const entry of result.allStagedManifests!) {
-      pairs.push({ source: entry.stagedManifestPath, destination: entry.manifestPath });
+      if (!isSamePathTree(entry.stagedManifestPath, entry.manifestPath)) {
+        pairs.push({ source: entry.stagedManifestPath, destination: entry.manifestPath });
+      }
     }
 
     const hooks = result.snapshotHashes

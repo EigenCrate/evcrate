@@ -1,0 +1,3 @@
+{"probe":"StopBlock","status":0,"output":{"continue":true,"hookSpecificOutput":{"hookEventName":"Stop","decision":"block","reason":"Stop qualification block sentinel"}},"pass":true}
+{"probe":"StopLoopGuard","status":0,"output":{"continue":true},"pass":true}
+{"probe":"PreToolDeny","status":0,"output":{"continue":true,"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Blocked by diagnostic policy"}},"pass":true}
