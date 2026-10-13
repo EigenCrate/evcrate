@@ -2,9 +2,9 @@
   "schema": "evcrate-vscode-companion-descriptor-v1",
   "extensionId": "eigencrate.evcrate-model-bindings",
   "version": "3.0.0",
-  "buildIdentity": "896738878150fea920411cf130e2ab10e94ca4b8442fc64a6e4d91ef9a8c1b72",
+  "buildIdentity": "880d7c61bc70fa577dc48c076d80e0d9f0ba063ac80ccc4024123df37fcebb69",
   "vsixRelativePath": "evcrate/companion/evcrate-model-bindings-3.0.0.vsix",
-  "vsixSha256": "04a2a469cf1084b51834d362e4d86d8e3c2eccd75a0764dab493ae8d51d8d437",
+  "vsixSha256": "c6daf8b0638a4262573de900c4e808e2c17ff51fffe1ce359a5fb5571d64be20",
   "supportedHost": {
     "vscodeVersion": "1.140.0",
     "vscodeCommit": "07f806f999227108933c2e30515b26eecc1fda74",

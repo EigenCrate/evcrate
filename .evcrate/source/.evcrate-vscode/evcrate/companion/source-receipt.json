@@ -2,7 +2,7 @@
   "schema": "evcrate-vscode-companion-source-receipt-v1",
   "extensionId": "eigencrate.evcrate-model-bindings",
   "version": "3.0.0",
-  "buildIdentity": "896738878150fea920411cf130e2ab10e94ca4b8442fc64a6e4d91ef9a8c1b72",
+  "buildIdentity": "880d7c61bc70fa577dc48c076d80e0d9f0ba063ac80ccc4024123df37fcebb69",
   "inputs": {
     "extensions/vscode-model-bindings/media/evcrate-icon.svg": "a2f1b4489d24fb6e988627faddc820bcc722e772f5bac3880f0bab51d65779a4",
     "extensions/vscode-model-bindings/package.json": "dfa5614c1fda0b95860bce31c108795d42a985390d657c41ddbf97cc61ed0438",
@@ -36,10 +36,10 @@
     "extensions/vscode-model-bindings/src/template-watcher.ts": "d6ac7eca53406f47690da72725842f01ff51fbfdaf726131f2d54ab8586896ac",
     "extensions/vscode-model-bindings/tsconfig.json": "bfe496fdce8ee2c3754d643b61f32b172ceefddd83db978db222b47e22e5fca9",
     "extensions/vscode-model-bindings/vscode.proposed.chatPromptFiles.d.ts": "b0b67a9b97d41cf9291adfb03548f94de67f2e1737ddd5ffe1c6fa3c0dd0e436",
-    "package-lock.json": "49a093e6362e22382ad616ad279b250dc3ad857210a1f9ea184467a6eec7bfda",
-    "package.json": "69ed5d4a00e65f2496179c6a400e1d56d7e69ffaeddda89013e1581d2393c101",
-    "scripts/build-vscode-companion.mjs": "df6a2590d15262ab94b8560c7d453cd8e1f32fb55f546d70133555976e09ba2b",
-    "scripts/verify-vscode-companion.mjs": "668764874645405578a3524251da5aaeddb01937995445abca426d12cef0065a",
+    "package-lock.json": "30afe6206cf84c3d6026ddecc9cdd18b054f0395b0d0d0ce213746e871dd3aa6",
+    "package.json": "e874a9162efa9d76e8b557827cb4ddc507c6b555939e6dfa5325c5947680c19c",
+    "scripts/build-vscode-companion.mjs": "242bf384b560c3864e35adc7b6da3201430b7fc58213abd6af895faa027ac3c0",
+    "scripts/verify-vscode-companion.mjs": "c9ae7864b7e37473849af422842d98622f6d05ac163fd993c66d729b52c661eb",
     "scripts/vscode-companion-media.mjs": "a6b241411c299e970c018924fa7a0ed5bbc55365d08de1901d1377506a330902",
     "src/adapters/vscode/companion-cli-contracts.ts": "79799cf56c4671f6e39f04d0b1b2648a25d032cd6c57b63a8338c4d527eca540",
     "src/adapters/vscode/companion-package-contracts.ts": "29a536278547a27d9326cfa29e1ac0325acdbdcb69c3b8982f04a8100de3e8f3"

@@ -16,7 +16,8 @@ import {
   VSCODE_COMPANION_SOURCE_RECEIPT_SCHEMA_V1,
   validateExtensionJsRuntimeClosure,
   createDeterministicZipBuffer,
-  buildVscodeCompanion
+  buildVscodeCompanion,
+  computeCompanionInputDigest
 } from '../../scripts/build-vscode-companion.mjs';
 import { verifyVscodeCompanion } from '../../scripts/verify-vscode-companion.mjs';
 import {
@@ -87,9 +88,12 @@ test('layout contract verifier detects tampered live input digest', async () => 
   const validDescriptor = validateCompanionDescriptor(desc);
   const validReceipt = validateCompanionSourceReceipt(receipt);
 
+  const testKey = 'extensions/vscode-model-bindings/package.json';
+  assert.ok(validReceipt.inputs[testKey], `validReceipt must contain recorded input ${testKey}`);
+
   const tamperedDigests = {
     ...validReceipt.inputs,
-    'package.json': '0'.repeat(64)
+    [testKey]: '0'.repeat(64)
   };
 
   assert.throws(() => {
@@ -102,6 +106,44 @@ test('layout contract verifier detects tampered live input digest', async () => 
       liveInputDigests: tamperedDigests
     });
   }, { code: 'STALE_CHECKOUT_INPUT' });
+});
+
+test('computeCompanionInputDigest is invariant to release version bumps but detects dependency tampering', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'evcrate-digest-test-'));
+  try {
+    const pkg300Path = path.join(tmpDir, 'package.json');
+    const lock300Path = path.join(tmpDir, 'package-lock.json');
+
+    const pkg300 = { name: 'evcrate', version: '3.0.0', dependencies: { foo: '^1.0.0' } };
+    const lock300 = { name: 'evcrate', version: '3.0.0', lockfileVersion: 3, packages: { '': { name: 'evcrate', version: '3.0.0' }, 'node_modules/foo': { version: '1.0.0' } } };
+
+    fs.writeFileSync(pkg300Path, JSON.stringify(pkg300, null, 2));
+    fs.writeFileSync(lock300Path, JSON.stringify(lock300, null, 2));
+
+    const digestPkg300 = computeCompanionInputDigest('package.json', pkg300Path);
+    const digestLock300 = computeCompanionInputDigest('package-lock.json', lock300Path);
+
+    // Bump release version
+    const pkg310 = { ...pkg300, version: '3.1.0' };
+    const lock310 = { ...lock300, version: '3.1.0', packages: { '': { name: 'evcrate', version: '3.1.0' }, 'node_modules/foo': { version: '1.0.0' } } };
+
+    fs.writeFileSync(pkg300Path, JSON.stringify(pkg310, null, 2));
+    fs.writeFileSync(lock300Path, JSON.stringify(lock310, null, 2));
+
+    const digestPkg310 = computeCompanionInputDigest('package.json', pkg300Path);
+    const digestLock310 = computeCompanionInputDigest('package-lock.json', lock300Path);
+
+    assert.equal(digestPkg300, digestPkg310, 'package.json digest must be invariant to version bumps');
+    assert.equal(digestLock300, digestLock310, 'package-lock.json digest must be invariant to version bumps');
+
+    // Tamper dependency
+    const pkgTampered = { ...pkg300, dependencies: { foo: '^2.0.0' } };
+    fs.writeFileSync(pkg300Path, JSON.stringify(pkgTampered, null, 2));
+    const digestPkgTampered = computeCompanionInputDigest('package.json', pkg300Path);
+    assert.notEqual(digestPkg300, digestPkgTampered, 'package.json digest must detect dependency modifications');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test('verifyPackCompanionArtifacts enforces presence, hashes, and consistency', () => {
@@ -162,8 +204,8 @@ test('version parity is preserved between package.json, extension, and vscode ma
   const extPkg = JSON.parse(fs.readFileSync(path.join(packageRoot, 'extensions', 'vscode-model-bindings', 'package.json'), 'utf8'));
   const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, '.evcrate', 'targets', 'vscode', 'manifest.json'), 'utf8'));
 
-  assert.equal(extPkg.version, rootPkg.version);
-  const expectedVsixOwned = `files/evcrate/companion/evcrate-model-bindings-${rootPkg.version}.vsix`;
+  assert.equal(extPkg.version.split('.')[0], rootPkg.version.split('.')[0], 'companion extension major version must match root package major version');
+  const expectedVsixOwned = `files/evcrate/companion/evcrate-model-bindings-${extPkg.version}.vsix`;
   assert.ok(manifest.owned_paths.includes(expectedVsixOwned), `owned_paths must contain ${expectedVsixOwned}`);
 });
 

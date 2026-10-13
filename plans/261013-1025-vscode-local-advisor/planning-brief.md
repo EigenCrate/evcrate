@@ -16,6 +16,9 @@ Status: user-authorized planning only, 2026-10-13. Native `/evc-cmd-plan-x-hard`
 - Follow-up scope interview: Linux x64 **and Windows x64** local single-folder support required.
 - Text-only, explicit file attachments approved; no image/history cache or prior-review permit mechanism in this version.
 - Rules mapping approved: root `AGENTS.md`, optional user-chosen global rules, optional `.vscode/advisor-preferences.md`; no silent Pi HOME reads.
+- Final validation confirmed manual private VSIX and external Node/Windows PowerShell prerequisites.
+- Final validation changed sequencing: Linux feasibility unlocks implementation; Windows remains required before completion.
+- Final validation confirmed one active consultation/window, 120-second deadline and no automatic retry/fallback.
 
 ## Evidence and boundaries
 

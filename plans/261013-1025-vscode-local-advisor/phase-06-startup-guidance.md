@@ -37,7 +37,7 @@ Existing `/home/loidinh/WS/evcrate/src/adapters/vscode/hooks.ts` and canonical/g
 1. Use one extension-owned startup wording source tied to the registered tool schema. Include objective/context requirement, consequential planning/failure/completion consultation, executor authority and explicit-disclosure caution. Omit transcript assumptions, empty-object advice and `xd://`.
 2. Implement standalone CommonJS runner: bounded stdin <=64 KiB, strict JSON/event check, snapshot <=16 KiB, canonical root match, no transcript/rules/Git/model reads. Foreign event/corrupt/missing/disabled snapshot => `{}`, exit 0. Successful envelope includes `hookEventName: SessionStart` and bounded additionalContext <=8 KiB.
 3. Conditional guidance: only call `evc-advisor_ask` when actually available/enabled; missing tool means explain unavailable and proceed without fabricated review. No Stop/PreToolUse blocking hooks, hard gates, recursion or process keepalive.
-4. Validate external Node >=22.19.0 from user-approved resolved executable using argv. Phase 01 qualified Linux single-quote and Windows encoded PowerShell construction is authoritative. No path interpolation without platform encoder; no model input in command; reject control characters.
+4. Validate external Node >=22.19.0 from user-approved resolved executable using argv. Use Phase 01-qualified Linux single-quote construction. Qualify Windows encoded PowerShell here or retain its explicit native gate for Phase 08; never treat Linux proof as Windows evidence. No path interpolation without platform encoder; no model input in command; reject control characters.
 5. Enable command performs all preflight checks before mutation: trust/support/configured model/Node, host hook settings/location restrictions, safe destination ancestors, workspace receipt, hashes and collisions. Diagnose disabled hook policy; require user to enable it if permitted, never silently mutate settings.
 6. Preview exact managed file paths and snapshot semantics, explain fresh-session requirement and machine-local paths. Ask consent. Do not alter preferences, `.gitignore`, shared hooks, EVCrate plugin manifest or editor settings. Offer manual exclusion guidance only.
 7. Acquire root-scoped exclusive lock for mutation; same-root concurrent window loses with actionable BUSY result. No automatic stale-lock deletion; interrupted lock requires explicit owner/process inspection before recovery.
@@ -61,7 +61,7 @@ Existing `/home/loidinh/WS/evcrate/src/adapters/vscode/hooks.ts` and canonical/g
 - [ ] Fresh-session native guidance proof and stale-hook limitation documented.
 
 ## Success Criteria
-- Fresh Local first prompt sees guidance before response on both platforms.
+- Fresh Local first prompt sees guidance before response on Linux. Record Windows proof here when available; otherwise keep its native acceptance pending for mandatory Phase 08 qualification while packaging proceeds.
 - No workspace change before consent; unmanaged or edited file never overwritten/deleted.
 - Interrupted installation does not expose half-updated active runner or falsely enable extension.
 - No credentials/privacy permissions available to runner; no process/network service.
@@ -81,4 +81,4 @@ Existing `/home/loidinh/WS/evcrate/src/adapters/vscode/hooks.ts` and canonical/g
 Phase 07 package and integrated regression. No further gate enhancements in this user-approved initial scope.
 
 ## Unresolved questions
-None after Phase 01. Unexpected host limitations require contract revision, not a hidden private API.
+Linux host questions resolved by Phase 01; Windows command/startup behavior must resolve here or in Phase 08. Unexpected host limitations require contract revision, not a hidden private API.

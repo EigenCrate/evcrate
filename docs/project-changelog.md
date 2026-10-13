@@ -5,6 +5,12 @@
 **Updated:** 2026-10-13
 **Status:** Core package release history; General Sonar remediation cycles partial offline handoff (8/8 phases offline verified; live host unexercised); General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-13 — fix(release): normalize release version in companion input digests and guard manifest parity
+
+- **Semantic input digests for companion receipt (`scripts/build-vscode-companion.mjs`, `scripts/verify-vscode-companion.mjs`):** Implemented `computeCompanionInputDigest`, normalizing root `package.json` and `package-lock.json` by stripping release-only `version` fields prior to hashing. Preserves full dependency and lockfile tamper detection while keeping input digests invariant under release version bumps by `@semantic-release/npm`.
+- **Companion manifest parity contract (`tests/distribution/vscode-companion-vsix.test.mjs`):** Aligned version parity contract to require companion major version match (`extPkg.version.split('.')[0] === rootPkg.version.split('.')[0]`) and verified `manifest.owned_paths` contains the extension VSIX (`files/evcrate/companion/evcrate-model-bindings-${extPkg.version}.vsix`). Added test asserting `computeCompanionInputDigest` invariance under release version bumps while proving dependency tamper detection.
+- **Verification:** `npm run test:vscode-companion` passed 60/60; `distribute:check` passed; `check:vscode-companion --mode=development-checkout` passed under simulated release bump to 3.1.0.
+
 ### 2026-10-13 — fix(vscode): cut over terminal tool references to execute namespace
 
 - **VS Code tool mapping cutover & normalization parity:** Cut over `VSCODE_LOCAL_TOOL_MAP` in `src/adapters/vscode/metadata-tools.ts` (`bash` -> `['execute/runInTerminal']`, `bashoutput` -> `['execute/getTerminalOutput']`, `killbash` / `killshell` -> `['execute/killTerminal']`); updated `src/adapters/vscode/tool-inputs.ts` and `runtime-sources.ts:LOCAL_TOOL_INPUTS_SOURCE` with behavioral parity, accepting `execute/*` terminal/helper names while preserving bare backward compatibility.
@@ -785,11 +791,6 @@
 
 - Historical Windows qualification milestone: self-contained qualification harness (Phase 05), semantic-release candidate/publisher wrappers (Phase 06), split producer/matrix/publisher CI workflow (Phase 07), and unprivileged PR smoke workflow with qualified asset labels (Phase 08).
 - Retained evidence: release orchestration 12/12, `npm run test:release` 29/29, scoped harness checks 60/60. Detailed phase records preserved in [changelog archive](./project-changelog-archive.md).
-
-### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
-
-- Scope distribution baseline: scalar `--scope home|project`, normalized project descriptors and identity hashing, runtime closures, single-snapshot planning, generic transaction engine, schema-2 state migration/recovery, and contract proofs across all targets.
-- Retained evidence: `npm run build`, `npm run test:publication`, `npm run test:integration`, and all target manifests green. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 ## Historical entries
 
 Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md); this document remains the maintained phase mirror for the active milestone.
