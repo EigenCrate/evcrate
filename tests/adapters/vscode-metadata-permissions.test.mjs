@@ -156,11 +156,25 @@ test('metadata: mapAgentTools maps canonical tools and restricts delegation when
   assert.equal(resGit.isExplicitNone, false);
   assert.deepEqual(
     [...resGit.mapped].sort(),
-    ['read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch'].sort()
+    ['execute/runInTerminal', 'read/readFile', 'search/fileSearch', 'search/textSearch'].sort()
   );
   assert.deepEqual(resGit.dropped, []);
   assert.equal(resGit.canDelegate, false);
 });
+test('metadata: mapAgentTools enforces least-privilege separation between terminal runner and helpers', () => {
+  const resBash = mapAgentTools('Bash');
+  assert.deepEqual([...resBash.mapped], ['execute/runInTerminal']);
+  assert.equal(resBash.canDelegate, false);
+
+  const resOutput = mapAgentTools('BashOutput');
+  assert.deepEqual([...resOutput.mapped], ['execute/getTerminalOutput']);
+  assert.ok(!resOutput.mapped.includes('execute/runInTerminal'), 'BashOutput must not grant execution');
+
+  const resKill = mapAgentTools('KillBash, KillShell');
+  assert.deepEqual([...resKill.mapped], ['execute/killTerminal']);
+  assert.ok(!resKill.mapped.includes('execute/runInTerminal'), 'Kill helpers must not grant execution');
+});
+
 
 test('metadata: mapAgentTools maps TodoWrite to todo', () => {
   const res = mapAgentTools('Read, TodoWrite');

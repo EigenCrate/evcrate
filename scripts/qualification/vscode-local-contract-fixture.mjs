@@ -186,14 +186,14 @@ description: "Local qualification agent with terminal execution capability famil
 user-invocable: true
 disable-model-invocation: false
 tools:
-  - runInTerminal
-  - getTerminalOutput
-  - killTerminal
+  - execute/runInTerminal
+  - execute/getTerminalOutput
+  - execute/killTerminal
 agents: []
 ---
 
 You are a terminal test agent for VS Code Local contract qualification.
-You have terminal capability family tool access (runInTerminal, getTerminalOutput, killTerminal).
+You have terminal capability family tool access (execute/runInTerminal, execute/getTerminalOutput, execute/killTerminal).
 You must not edit files or delegate.
 `;
 

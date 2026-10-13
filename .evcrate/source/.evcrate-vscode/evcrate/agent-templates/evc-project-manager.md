@@ -6,8 +6,8 @@ tools:
   - createFile
   - edit/editNotebook
   - editFiles
-  - getTerminalOutput
-  - killTerminal
+  - execute/getTerminalOutput
+  - execute/killTerminal
   - multiReplaceString
   - read/readFile
   - search/fileSearch

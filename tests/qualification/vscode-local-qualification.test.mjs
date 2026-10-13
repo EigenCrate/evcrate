@@ -12,6 +12,7 @@ import {
   FIXTURE_PLUGIN_JSON,
   FIXTURE_HOOKS_JSON
 } from '../../scripts/qualification/vscode-local-contract-fixture.mjs';
+import { parseFrontmatter } from '../../dist/adapters/vscode/metadata.js';
 
 import {
   redactString,
@@ -76,11 +77,12 @@ test('vscode-local: materializeFixture creates plugin components with expected c
     assert.ok(coordinatorContent.includes('contract-reader'));
 
     const terminalContent = fs.readFileSync(path.join(tmpDir, 'com.github.copilot/agents/contract-terminal.agent.md'), 'utf8');
-    assert.ok(terminalContent.includes('runInTerminal'));
-    assert.ok(terminalContent.includes('getTerminalOutput'));
-    assert.ok(terminalContent.includes('killTerminal'));
-    assert.ok(terminalContent.includes('agents: []'));
-
+    const terminalParsed = parseFrontmatter(terminalContent);
+    assert.deepEqual(
+      [...(terminalParsed.fields.tools || [])].sort(),
+      ['execute/getTerminalOutput', 'execute/killTerminal', 'execute/runInTerminal'].sort()
+    );
+    assert.deepEqual(terminalParsed.fields.agents, []);
     const todoContent = fs.readFileSync(path.join(tmpDir, 'com.github.copilot/agents/contract-todo.agent.md'), 'utf8');
     assert.ok(todoContent.includes('todo'));
     assert.ok(todoContent.includes('agents: []'));

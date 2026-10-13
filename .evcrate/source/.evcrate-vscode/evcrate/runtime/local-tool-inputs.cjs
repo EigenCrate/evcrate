@@ -41,6 +41,8 @@ const TERMINAL_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   run_in_terminal: true,
   execute: true,
   runinterminal: true,
+  'execute/runinterminal': true,
+  'execute/run_in_terminal': true,
   bash: true,
   terminal: true,
   powershell: true
@@ -86,7 +88,11 @@ const UNRELATED_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {
   read_resource: true,
   list_resources: true,
   getterminaloutput: true,
-  killterminal: true
+  'execute/getterminaloutput': true,
+  'execute/get_terminal_output': true,
+  killterminal: true,
+  'execute/killterminal': true,
+  'execute/kill_terminal': true
 }));
 
 const WEB_TOOL_NAMES = Object.freeze(Object.assign(Object.create(null), {

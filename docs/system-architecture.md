@@ -126,7 +126,7 @@ touches editor settings or agent-authored docs. Copilot CLI (`copilot`) and VS C
 In `src/adapters/vscode/metadata-tools.ts`,
 `mapAgentTools` projects canonical tool intent to pinned VS Code `1.140.0` / Copilot Chat
 `0.68.0` frontmatter references (`read/readFile`, `search/fileSearch`, `search/textSearch`,
-`search/listDirectory`, `runInTerminal`, `getTerminalOutput`, `killTerminal`,
+`search/listDirectory`, `execute/runInTerminal`, `execute/getTerminalOutput`, `execute/killTerminal`,
 `agent/runSubagent`, `todo`, `editFiles`, `createFile`, `multiReplaceString`, `web/fetch`,
 `edit/editNotebook`; `WebSearch` stays dropped) without broad groups, runtime discovery, or
 extra extensions. It preserves `tools: []` deny-all, omitted-tool inheritance, `Task`-derived
