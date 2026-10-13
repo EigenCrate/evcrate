@@ -127,7 +127,6 @@ recorded.
 Phase 03, adapter qualification and terminal parsing, is ready to start and
 consumes the Phase 02 timing interface.
 
-
 ### Phase 04: Regeneration, documentation, and release gates
 
 **Updated:** 2026-09-07  
@@ -528,7 +527,6 @@ npm publication, deployment, or `main` merge.
 - Live vendor qualification and production `$HOME/.evcrate/` publication remain
   operator-gated; no live quality or rollout claim is made.
 
-
 ### 2026-09-08 — test(advisor): verify deterministic Phase 10 acceptance and establish synthetic improvement baseline (phase-10)
 
 **Status:** Phase 10 DONE for deterministic acceptance (272/272; 100%). Live
@@ -658,7 +656,6 @@ deterministic acceptance entry above; the v2.0.0 milestone is recorded above
   279/279 tests; this proves fixture-backed lifecycle and projection behavior,
   not paid inference, live vendor qualification, hostile-process containment,
   or HOME publication.
-
 
 ### 2026-09-08 — feat(advisor): add sanitized audit history and outcome review tools (phase-07)
 

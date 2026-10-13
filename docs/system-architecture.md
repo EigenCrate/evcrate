@@ -4,7 +4,7 @@
 **Target Topology:** `3.0.0` (stable on `main`).
 **Status:** Core architecture for the completed advisor subsystem retirement and 7-target harness-only cutover; Phase 09 records integrated companion qualification and isolated Windows host checks, while interactive Copilot Chat qualification remains blocked.
 **Windows support:** Standalone installer lifecycle and clean-install `version --json` remain the general package boundary. Phase 09 qualifies only the isolated companion scenarios recorded below, not broad Windows runtime parity.
-**Updated:** 2026-10-12
+**Updated:** 2026-10-13
 
 **Authority:** TypeScript control plane and canonical harness resources.
 
@@ -247,6 +247,28 @@ and required live scanner, target, authentication, and environment conditions ar
 in the [qualification prerequisites report](../plans/261012-1944-general-snyk-remediation-cycles/reports/qualification-prerequisites.md).
 Phases 01–06 and Phase 08 are complete (contracts and prerequisites in Phase 01, procedure and lossless ledger references in Phase 02, specialist and task-skill cutover in Phase 03, and main-owned 8-stage coordinator `cmd-snyk-remediate/SKILL.md` with Step 8 post-review correction loop and observed procedure learning in Phase 04, inventory registration and 49 evaluation scenarios in Phase 05, local integration review and corrections in Phase 06, and documentation and closeout in Phase 08). Live operational qualification (Phase 07) remains blocked pending operator provision of real targets and scanner credentials.
 
+### Standalone Sonar remediation cycles
+
+The standalone extension `ext/sonarqube-test-quality/` provides neutral domain policy, discovery, scanner lifecycle, cycle-ledger, run-guidance references and templates, portable `sonar-evidence` actor prompt, and the thin `cmd-sonar-remediate` command skill prompt in repository source. No canonical resources, registry/projections, native actor registration or host settings are added.
+
+The consuming host must provide real independent subagents. The parent owns a
+global maximum N with persisted failures and bounded corrections; approved native
+scanner lifecycles submit actual analyses and correlate every target's task,
+analysis, gate and complete findings. Final success requires committed-input
+qualification and independent audit, not a passing gate alone. Upload, commit and
+push authority remain separate; prompt restrictions are not a sandbox.
+
+The dual-root installer (`lib/install.js`, `bin/install.js`) explicitly selects `.agents/skills/`,
+`.claude/skills/`, or both for the 18-asset two-skill payload (`skills/sonarqube-test-quality/`
+and `skills/cmd-sonar-remediate/`). Both roots use one guarded in-process publish/rollback
+transaction, with shared project-level and legacy agents-lock coordination. This is not
+all-file atomic visibility or process-crash recovery. Duplicate host discovery requires
+observed path selection, not assumed precedence.
+Implementation acceptance uses package/installed-host behavioral evidence and
+historical supplied-report guidance, not a mandatory new live Sonar run.
+Actual remediation-run server-success claims still require the full evidence
+contract above. Ordinary local-only and Jenkins routes remain separate.
+Phases 02–08 deliver repository-source discovery, scanner lifecycle, test/coverage verification, cycle-ledger state/budget/evidence policy ([`remediation-cycles.md`](../ext/sonarqube-test-quality/references/remediation-cycles.md)), privacy/redaction and promotion policy ([`run-guidance.md`](../ext/sonarqube-test-quality/references/run-guidance.md)), private ledger/sanitized guidance report templates ([`remediation-cycle-report.md`](../ext/sonarqube-test-quality/templates/remediation-cycle-report.md), [`run-guidance-report.md`](../ext/sonarqube-test-quality/templates/run-guidance-report.md)), portable evidence actor prompt ([`sonar-evidence.md`](../ext/sonarqube-test-quality/agents/sonar-evidence.md)), thin portable command skill prompt ([`cmd-sonar-remediate/SKILL.md`](../ext/sonarqube-test-quality/commands/cmd-sonar-remediate/SKILL.md)), dual-root transactional installer with packaging allowlist (`lib/install.js`, `bin/install.js`, `package.json#files`), and behavioral evals catalog ([`evals/evals.json`](../ext/sonarqube-test-quality/evals/evals.json)) in `ext/sonarqube-test-quality/`, linked from [`remediation-and-handoff.md`](../ext/sonarqube-test-quality/references/remediation-and-handoff.md) while keeping [`report-formats.md`](../ext/sonarqube-test-quality/references/report-formats.md) JSON-authoritative over converted Markdown views. Historical report lessons and offline package/install smoke are reviewed, while live host execution and live server qualification remain separate unexercised boundaries. Planning artifacts remain local and Git-ignored.
 ## 3. TypeScript control plane
 
 The source is organized around narrow contracts:

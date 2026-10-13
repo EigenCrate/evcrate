@@ -3,7 +3,7 @@
 ## Unreleased
 
 **Updated:** 2026-10-13
-**Status:** Core package release history; General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+**Status:** Core package release history; General Sonar remediation cycles partial offline handoff (8/8 phases offline verified; live host unexercised); General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
 ### 2026-10-13 — feat(snyk): usage documentation, ledger templates, and evidence-bound closeout (Phase 08)
 
@@ -144,6 +144,61 @@
 - Evaluated proposed `chatPromptFiles` API (`registerCustomAgentProvider`) for private companion model bindings on Linux x86_64 host (pinned candidate VS Code 1.140.0 commit `07f806f999227108933c2e30515b26eecc1fda74`).
 - Offline spike test harness passed 10/10 checks as documented in [native feasibility](../plans/261011-2349-vscode-runtime-model-bindings/reports/native-feasibility.md) and [support matrix](../plans/261011-2349-vscode-runtime-model-bindings/reports/support-matrix.md). Validated selector formatting, ambiguity rejection (`SELECTOR_AMBIGUOUS`), precedence layering, fail-closed remote authority rejection (`vscode-remote://`, `wsl://`), local file URI acceptance, simulated generation retention bounds, frontmatter contracts, simulated in-turn generation immutability, and storage isolation. Temporary spike removed; artifact packaging and digest recorded in report.
 - Native runtime qualification gates remain deferred to Phase 09 real-case verification per the explicit 2026-10-12 user gate amendment ([interface-freeze.md](../plans/261011-2349-vscode-runtime-model-bindings/reports/interface-freeze.md)); existing static projection remains unchanged.
+
+### 2026-10-13 — docs(sonar): historical-report review, documentation, and partial offline handoff (Phase 08)
+
+- Reviewed preserved historical report metrics (56 tests, 46.48% line coverage, 63.91% branch coverage; focused change unanalyzed) and vendor documentation contracts (CLI session vs scanner token auth separation, exact CE task and analysis binding, complete paging, overall vs new code separation, human owner hotspot reviews, verified CI trigger before push, active TLS) without transplanting corporate defaults.
+- Updated extension README (`ext/sonarqube-test-quality/README.md`) and core documentation with explicit `--target agents|claude|both` installer semantics, 18 proposed assets and 2 skill entrypoints per selected root (36 destinations for `both`), offline verification receipts, duplicate-root ambiguity notes, and 5-point consumer server-success criteria.
+- Compiled local-only offline implementation handoff report (`reports/implementation-handoff.md`): recorded 114/114 passing package tests and isolated packed installer smoke as verified offline capabilities; recorded live consuming-host LLM runtime discovery and independent-child execution as blocked/unexercised; recorded actual consumer Sonar server-success as a separate future consumer prerequisite.
+
+### 2026-10-13 — feat(sonar): behavioral evals catalog, contract alignment, and test suite (Phase 07)
+
+- Expanded standalone SonarQube behavioral evals catalog (`ext/sonarqube-test-quality/evals/evals.json`): 64 instruction scenarios with 195 authored prose assertions and monotonic integer IDs (1–64); covers four scanner lifecycle shapes, global budget $N$ enforcement, single correction batch invariant, two-round comparable no-progress escalation, neutral applicability and metric requirements, authority/auth invariants, and Stage $F$ server-verified success contracts with zero literal credentials or TLS bypass instructions.
+- Halting contracts & evals test suite: aligned `declined-upload` trigger across references (`remediation-cycles.md`) and report templates (`remediation-cycle-report.md`, `run-guidance-report.md`); added 15-test suite (`tests/evals.test.mjs`) validating catalog schema, assertion density, lifecycle shapes, static matrix traceability (A01–A09, D01–D09, C01–C12, E01–E08), and security invariants.
+- Verified package test and release inventory: all 114 package tests pass across 8 test suites (`tests/*.test.mjs`); release tarball packages exactly 23 verified entries (`package.json#files`). Packed installer extraction and offline scenario verification exercised; live LLM host execution and live Sonar server qualification remain unexercised boundaries.
+
+### 2026-10-13 — feat(sonar): dual-root transactional two-skill installer and package (Phase 06)
+
+- Extended standalone SonarQube installer (`ext/sonarqube-test-quality/lib/install.js`, `ext/sonarqube-test-quality/bin/install.js`): added explicit target selection via `--target agents|claude|both` and `--directory <project-root>`; unsupported or missing targets fail closed; `--target agents` preserves legacy behavior and paths (`<project>/.agents/skills/sonarqube-test-quality/`).
+- Added multi-target two-skill installation layout: installs 18 assets and exactly two skill entrypoints per selected root (`skills/sonarqube-test-quality/SKILL.md` and `skills/cmd-sonar-remediate/SKILL.md`), writing 36 total destinations when `--target both` is selected; writes zero unselected root payload, settings, or native registrations.
+- Implemented transactional multi-root lifecycle: plans, stages beside destination on the same volume, publishes, and verifies exact byte matches across selected roots; validates non-symlink regular files and ancestor directory containment before and during writes; caught failure triggers in-process rollback restoring replaced original bytes and removing only owned additions, preserving unrelated and concurrent content; reports partial rollback with affected paths if restoration encounters conflicts (no persistent journal, crash recovery, or atomic reader visibility claim).
+- Implemented two-tier lock coordination: acquires project-level lock `<project>/.sonarqube-test-quality.install.lock`, followed by legacy lock `<project>/.agents/skills/sonarqube-test-quality/.install.lock` whenever `agents` is selected; releases successfully acquired locks in reverse order on failure or completion.
+- Updated package allowlist and CLI docs: added `commands`, `agents`, `templates` to `ext/sonarqube-test-quality/package.json#files` (23 packaged tarball files); updated `ext/sonarqube-test-quality/README.md` with explicit `--target agents|claude|both` guidance and failure semantics.
+- Added comprehensive installer and regression test suite (`ext/sonarqube-test-quality/tests/install.test.mjs`): 19 unit, fault, collision, concurrency, and rollback tests (all 99/99 package tests pass across 7 suites; behavioral evals and host qualification handoff remain pending in Phases 07–08).
+
+### 2026-10-13 — feat(sonar): bounded remediation command and final audit (Phase 05)
+
+- Added thin portable command skill specification (`ext/sonarqube-test-quality/commands/cmd-sonar-remediate/SKILL.md`): specifies `cmd-sonar-remediate` orchestrator prompt sequencing real host subagents across 17 lifecycle stages within a mandatory global budget `N` (> 0, prompted interactively if omitted/invalid, never inferred or defaulted); contains zero native hooks, daemon processes, or `evc-*` registrations; resolves sibling domain assets strictly from loaded installed skill root (`.agents` or `.claude`), falling back to `../../` in repository source checkouts; defers all policy to sibling references (`remediation-cycles.md`, `project-discovery.md`, `local-analysis.md`, `run-guidance.md`).
+- Specified role binding and independence contracts: requires assigning real host subagents to operational roles (`implementer_id`, `tester_id`, `reviewer_id`, `rereviewer_id`, `evidence_actor_id`, `auditor_id`); requires `implementer_id` to differ from all reviewers, evidence actor, and auditor; requires every ID in the five-role Stage `F` set (`implementer_id`, `reviewer_id`, `rereviewer_id`, `auditor_id`, `evidence_actor_id`) to be pairwise distinct; fails closed on `role-independence-violation` (prompt restrictions remain behavioral guidance, not an OS sandbox).
+- Specified 17-stage lifecycle state machine and behavioral gate contracts: preflight baseline (`C0_BASELINE`, zero cost against `N`), 9 fix-round stages `Ck` (`CK_FIX`, `CK_TEST`, `CK_REVIEW`, `CK_CORRECTION`, `CK_REREVIEW`, `CK_VERIFY_IMPORT`, `CK_UPLOAD`, `CK_TASK_WAIT`, `CK_EVALUATION`), 6 non-editorial Stage `F` stages (`F_AGGREGATE_REVIEW`, `F_AWAITING_COMMIT`, `F_COMMITTED_INPUT_CHECK`, `F_FINAL_LIFECYCLE_UPLOAD`, `F_FINAL_TASK_WAIT`, `F_FINAL_AUDIT`), and terminal `HALTED`.
+- Specified transition and stopping invariants: single correction batch per round (`CK_CORRECTION → CK_REREVIEW`); test failure halts `Ck` immediately without in-round retry (`test-or-build-failed`); initial review rejection halts with `failed-review`; Stage `F` aggregate review rejection returns to `C(k+1)` if budget `N` remains or halts if exhausted; separate user commit authorization with no auto-push (`awaiting commit` on decline); mandatory actual scanner upload on committed SHA; 11-point success contract certified by independent auditor.
+- Defined private state persistence and exit guidance: specifies writing `<evidence-destination>/resume-checkpoint.json` on each transition; requires input hash check halting on drift (`drift-invalidated`); specifies emitting sanitized run guidance without telemetry.
+- Updated domain entrypoint and policy: linked bounded remediation route in `ext/sonarqube-test-quality/SKILL.md`; added `failed-review` and `role-independence-violation` canonical triggers and clarified Stage `F` return vs post-`N` extension in `ext/sonarqube-test-quality/references/remediation-cycles.md`.
+- Added specification and behavioral simulation test suite (`ext/sonarqube-test-quality/tests/cmd-sonar-remediate.test.mjs`): 31 tests across specification contracts, installed fixture resolution (`.agents` and `.claude`), and 15 simulated state transition scenarios (all 80/80 package tests pass; packaging in `lib/install.js` and `package.json#files`, live qualification, and installed-host behavioral testing remain pending in Phases 06–08).
+
+### 2026-10-13 — feat(sonar): portable Sonar evidence actor and verification suite (Phase 04)
+
+- Added portable Sonar evidence actor specification (`ext/sonarqube-test-quality/agents/sonar-evidence.md`): specifies `<evidence-actor-role>` generic host subagent contract with zero host frontmatter, native engine bindings, or `evc-*` registrations; prompt/policy resolution strictly from installed root (`skills/sonarqube-test-quality/agents/sonar-evidence.md`, with packaging pending Phase 06); restricts writes to build/scanner dirs (`.scannerwork/`), test/coverage reports, and owner-only private evidence dir (`<evidence-destination>/`, mode 0700, never inlined into reports); strictly prohibits checkout/source/test edits, server finding/hotspot status transitions, git mutations, CI changes, and toolchain installs.
+- Specified mandatory role independence (`actor_id != implementer_id | reviewer_id | rereviewer_id | auditor_id`; fails closed on `role-independence-violation`); prohibits self-certifying Stage `F` final audit (`F_FINAL_AUDIT`) or reviewing Security Hotspots (human repository owner only).
+- Defined three mutually exclusive operating modes: `snapshot` (read-only query/indexing, no checkout/source writes or uploads, private evidence index writes only), `verify-upload` (preflight upload authorization required, ordered lifecycle execution, report freshness, task polling, quality gate retrieval), and `verify-final` (strictly non-editorial Stage `F` verification with zero code edits permitted).
+- Defined execution, task, and consistency mechanics: serial multi-target execution per checkout, pre/post working-copy drift checks, uninstrumented native semantic parity, crash-window handling and task resume without re-upload, exact `analysisId`-bound quality gate (rejects latest-project gate fallbacks), complete paging and ceiling detection, closed canonical enumerations, and 14 labeled offline scenario traces (`E-TR-01` through `E-TR-14`).
+- Aligned remediation cycles reference (`ext/sonarqube-test-quality/references/remediation-cycles.md`) with evidence actor execution limits, global budget `N`, stage lifecycle, resume checkpoint, and server-verified success contracts.
+- Added comprehensive specification test suite (`ext/sonarqube-test-quality/tests/sonar-evidence-actor.test.mjs`): 20 tests across 2 suites verifying specification existence, zero host frontmatter, root resolution, bounded writes/security, TLS rules, role independence, operating mode boundaries, multi-target support, drift checks, lifecycle parity, task resume, gate binding, paging/consistency, closed enums, guidance redaction/schema, 14 offline scenario traces, and embedded JSON request/terminal result block validation against canonical schemas. (All 48 extension tests pass 100%).
+
+### 2026-10-13 — feat(sonar): cycle ledger and sanitized run guidance (Phase 03)
+
+- Added repository-source cycle state, budget, and server-evidence policy (`ext/sonarqube-test-quality/references/remediation-cycles.md`): specifies policy for global entered-round budget `N` (excluding `C0` and non-editorial Stage `F`), stage transitions, single corrective batch (`CK_CORRECTION → CK_REREVIEW`), private `<private-evidence-dir>/resume-checkpoint.json` persistence, atomic multi-target checkpoints, `ceTaskId → analysisId → qualityGate` binding, local finding stage vs. bound server status separation, disappearance causation rules (`code-fixed` vs. non-code/unknown), owner-only hotspot reviews, and Stage `F` success criteria.
+- Added sanitized run guidance, redaction, and promotion policy (`ext/sonarqube-test-quality/references/run-guidance.md`): specifies storing the private cycle ledger and raw evidence (`<private-evidence-dir>/`) outside the checkout or in an already-approved Git-ignored location (never committed, pushed, or distributed), emitting separate sanitized guidance with explicit owner permission required before any sharing, applying structural + key-name redaction placeholders (`<REDACTED_SECRET_TOKEN>`, `<REDACTED_ENV_VAR>`, `<REDACTED_SONAR_HOST>`, `<SYNTHETIC_CODE_FIXTURE>`, neutral `RUN-`/`GD-` slugs), enforcing provenance-capped confidence levels (`synthetic` capped at `hypothesized`), and requiring owner promotion gates without self-modification or telemetry.
+- Added private cycle ledger template (`ext/sonarqube-test-quality/templates/remediation-cycle-report.md`) and sanitized run guidance template (`ext/sonarqube-test-quality/templates/run-guidance-report.md`) with `[ILLUSTRATIVE PLACEHOLDER]` markers and data-only notices; linked iterative cycle handoffs in `ext/sonarqube-test-quality/references/remediation-and-handoff.md` while preserving ordinary single-batch local remediation and `references/report-formats.md` JSON authority over converted Markdown views.
+- Review & boundaries: Phase 03 marked approved in plan/roadmap after Review Cycle 3 (`8.0/10`, 0 critical issues, 8 warnings, 7 suggestions; review reported 28/28 existing extension tests passing and 0 broken relative links/anchors in an ad-hoc check of the 6 shipped Phase 03 Markdown files). Packaging of new Phase 02–03 references and `templates/` in `lib/install.js` and `package.json#files` remains gated on Phase 06; portable evidence actor, command skill, runtime orchestration, behavioral evals, and qualification handoff remain pending in Phases 04–08.
+
+### 2026-10-12 — feat(sonar): neutral discovery and scanner lifecycles (Phase 02)
+
+- Updated standalone extension `ext/sonarqube-test-quality/` references with language-neutral discovery, execution profile architecture, and ordered scanner lifecycles (installer, orchestration, and live qualification remain pending in later phases).
+- Added project discovery reference (`ext/sonarqube-test-quality/references/project-discovery.md`): defines deterministic discovery order (manifests, scanner configuration, installed tool help, vendor documentation), safe actual-input identity with credential redaction, two-factor report freshness (temporal ordering and input provenance digest binding), requirement contracts (`required`, `optional`, justified `not-applicable`), data-only execution profiles, and labeled offline scenario traces.
+- Added ordered scanner lifecycle reference (`ext/sonarqube-test-quality/references/local-analysis.md`): defines 8 ordered lifecycle stages (preparation, instrumentation, native build, native test, coverage generation, import/upload, submission tracking, finalization), 3 universal lifecycle shapes (integrated, standalone, begin/end), mandatory uninstrumented native semantic verification when scanner instrumentation alters compiler flags or build semantics, authentication separation (CLI query sessions vs scanner process credentials), TLS boundaries, and stage-specific failure recovery.
+- Generalized test and coverage verification (`ext/sonarqube-test-quality/references/testing-and-coverage.md`): neutral runner principles, two-factor coverage freshness, and counter/denominator rules (zero denominator undefined, unsupported branch tracking) while retaining optional Java/JaCoCo recipes.
+- Synchronized entrypoint (`ext/sonarqube-test-quality/SKILL.md`) and CLI reference (`ext/sonarqube-test-quality/references/sonar-cli-commands.md`) with neutral discovery/local analysis routes, dynamic server status checks, and preflight upload authorization requirements.
 
 ### 2026-10-11 — feat(vscode): shorten plugin identity and use container-local command names
 
@@ -697,71 +752,13 @@
   as a release asset.
 - Handoff: **Phase 09 — Focused qualification and performance benchmark**.
 
-### 2026-09-19 — feat(viewer): complete React Explorer and view architecture (Phase 07)
+### 2026-09-19 — feat(viewer): historical React Explorer and view architecture (Phase 07)
 
-**Status:** Phase 07 DONE (2026-09-19; 100%); code review approved **10/10**.  
-**Plan:** [Phase 07 plan](../plans/260917-2308-advisor-visual-metrics/phase-07-react-explorer-and-view-architecture.md)  
-**Evidence:** [viewer validation](../plans/reports/tester-260918-2352-phase-07-viewer-architecture-validation.md); [architecture review](../plans/reports/code-review-260918-2359-phase-07-react-explorer.md)
+- Added private static React explorer under `viewer/src/` with unified reducer, tab navigation, and telemetry-free view contracts. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 
-- Added the private static React explorer under `viewer/src/`: one reducer
-  state machine, explicit File System Access pick/refresh/cancel controls,
-  router-free `#overview`, `#history`, `#configuration`, and `#evaluations`
-  views, and local responsive styling.
-- Overview renders honest n/N/excluded ratios, missingness, latency, attempts,
-  completeness, and limitations. History provides frozen filters, 100-row
-  paging, and lazy inert detail. Configuration separates current policy from
-  historical route/prompt/build comparisons. Evaluations group exact comparable
-  digests, preserve human/automated provenance, and mask candidates until reveal.
-- Handles remain in refs; scans are generation-fenced; failed/cancelled/
-  incomplete refresh retains stale snapshots. No raw HTML, active record links,
-  network calls, model execution, persistence, grading, or external assets.
-- Verification: **28/28 tests passed** (22 viewer state/view tests + 6 metrics
-  tests), strict viewer typecheck/build passed with **zero TypeScript diagnostics**,
-  and every viewer module remains under 200 LOC.
-- **Canonical advisor mentoring verification:** **PASS** against the canonical
-  `.claude/workflows/advisor-mentoring.md` contract; the viewer remains a
-  validated data consumer and does not invoke model/checkpoint flows or claim
-  mentor quality.
-- Handoff: **Phase 08 — Packaging, CSP, preview, and release inventory**.
+### 2026-09-18 — feat(advisor): historical browser traversal, metrics CLI, and counsel evaluation (Phases 04–06)
 
-### 2026-09-18 — feat(advisor): complete counsel evaluation protocol and fixtures (Phase 06)
-
-**Status:** Phase 06 DONE (2026-09-18; 100%); Cycle 2 review approved 10/10.  
-**Plan:** [Phase 06 plan](../plans/260917-2308-advisor-visual-metrics/phase-06-counsel-evaluation-protocol-and-fixtures.md)  
-**Evidence:** [Cycle 2 validation](../plans/reports/tester-260918-1733-phase06-cycle2-validation.md); [Cycle 2 review](../plans/reports/code-review-260918-1736-phase-06-counsel-evaluation-cycle-2.md)
-
-- Added public `evcrate-advisor-counsel-evaluation` v1 types/facade, strict nested validation, canonical rubric/input SHA-256 checks, immutable documents, response/score invariants, and digest/provenance-separated aggregation.
-- Added explicit read-only browser multi-file evaluation reader with bounded 8 MiB files, per-file statuses, and no persistence, execution, grading, or history-metrics path.
-- Added `valid-mixed`, digest-mismatch, invalid-observations, and oracle-free nine-case fixtures derived from corpus inputs without `expected_mentor_response`.
-- Verification: **87/87 tests passed** across protocol, viewer, metrics, parity, and distribution suites; build, viewer typecheck, and release-check passed; review **10/10**.
-- Controller closure remains 33 files and unchanged. Handoff: **Phase 07 — React explorer and view architecture**.
-
-### 2026-09-18 — feat(advisor): complete browser history traversal and scanner (Phase 05)
-
-**Status:** Phase 05 DONE (2026-09-18; 100%); Cycle 2 review approved 9.8/10.  
-**Plan:** [Phase 05 plan](../plans/260917-2308-advisor-visual-metrics/phase-05-browser-history-traversal-and-scanner.md)  
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260918-1353-phase-05-browser-history-traversal-cycle-2.md); [suite validation](../plans/reports/tester-260918-1350-phase05-suite-validation.md)
-
-- Completed explicit read-only File System Access selection, deterministic three-level history traversal, bounded four-read scanning, strict record/digest validation, sanitized diagnostics, and duplicate resolution.
-- Completed atomic generation replacement with stale retention for incomplete/cancelled/denied scans, plus read-only policy inspection with legacy-v1 migration-required state.
-- Focused proof passed: viewer 24/24, advisor metrics 6/6, and contract parity 4/4 (34/34 total); all Phase 05 modules remain under 200 lines.
-- Handoff advanced to Phase 06 — Counsel evaluation protocol and fixtures.
-
-### 2026-09-18 — feat(advisor): integrate history metrics CLI (Phase 04)
-
-**Status:** Phase 04 DONE (2026-09-18; 100%); Cycle 2 review approved 10/10.  
-**Plan:** [Phase 04 plan](../plans/260917-2308-advisor-visual-metrics/phase-04-history-metrics-cli-integration.md)  
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260918-1243-phase-04-history-metrics-cli-integration-cycle-2.md)
-
-- Added the read-only `history metrics` CLI operation with exact request/result
-  envelopes, current-project/task scope, bounded unlocked collection, and
-  sanitized deterministic diagnostics.
-- Reused the finalized Phase 02 normalization and metrics kernel without
-  controller-local formulas; invalid, missing, unknown, and conflicting records
-  remain distinct and reconcile with scan accounting.
-- Focused proof passed: 26/26 history CLI/store/metrics tests, 6/6 advisor-metrics
-  tests, and 11/11 controller-closure tests; existing history operations remain
-  unchanged. Phase 05 is next: browser history traversal and scanner.
+- Completed read-only browser history traversal scanner (Phase 05), metrics CLI operation (Phase 04), and counsel evaluation protocol fixtures (Phase 06). Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 
 ### 2026-09-18 — feat(advisor): historical checkpoint digest, metrics kernel, and controller closure (Phases 02–03)
 

@@ -20,51 +20,25 @@ export function isSupportedNodeVersion(version = process.versions.node) {
   return patch >= minPatch;
 }
 
-function acquireLock(lockPath) {
-  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
-  try {
-    const fd = fs.openSync(lockPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY);
-    fs.writeSync(fd, JSON.stringify({ pid: process.pid, time: Date.now() }));
-    fs.closeSync(fd);
-  } catch (error) {
-    if (error.code === 'EEXIST') {
-      throw new Error(`Installation locked by another process: ${lockPath}`);
-    }
-    throw error;
-  }
-}
-
-function releaseLock(lockPath) {
-  try {
-    fs.unlinkSync(lockPath);
-  } catch {}
-}
-
-function pruneEmptyDirectories(directory, root) {
-  try {
-    let current = directory;
-    while (current !== root && isWithin(root, current)) {
-      if (fs.existsSync(current) && fs.readdirSync(current).length === 0) {
-        fs.rmdirSync(current);
-        current = path.dirname(current);
-      } else {
-        break;
-      }
-    }
-  } catch {}
-}
-
-const SKILL_FILES = [
-  'SKILL.md',
-  'references/sonar-cli-commands.md',
-  'references/full-scan-workflow.md',
-  'references/testing-and-coverage.md',
-  'references/remediation-and-handoff.md',
-  'references/report-formats.md',
-  'references/worktree-remediation.md',
-  'scripts/convert-sonar-report.mjs',
-  'scripts/fetch-sonar-issues.ps1',
-  'scripts/calculate-jacoco-coverage.ps1'
+export const ASSET_INVENTORY = [
+  { source: 'SKILL.md', destination: 'skills/sonarqube-test-quality/SKILL.md' },
+  { source: 'references/sonar-cli-commands.md', destination: 'skills/sonarqube-test-quality/references/sonar-cli-commands.md' },
+  { source: 'references/full-scan-workflow.md', destination: 'skills/sonarqube-test-quality/references/full-scan-workflow.md' },
+  { source: 'references/testing-and-coverage.md', destination: 'skills/sonarqube-test-quality/references/testing-and-coverage.md' },
+  { source: 'references/remediation-and-handoff.md', destination: 'skills/sonarqube-test-quality/references/remediation-and-handoff.md' },
+  { source: 'references/report-formats.md', destination: 'skills/sonarqube-test-quality/references/report-formats.md' },
+  { source: 'references/worktree-remediation.md', destination: 'skills/sonarqube-test-quality/references/worktree-remediation.md' },
+  { source: 'scripts/convert-sonar-report.mjs', destination: 'skills/sonarqube-test-quality/scripts/convert-sonar-report.mjs' },
+  { source: 'scripts/fetch-sonar-issues.ps1', destination: 'skills/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1' },
+  { source: 'scripts/calculate-jacoco-coverage.ps1', destination: 'skills/sonarqube-test-quality/scripts/calculate-jacoco-coverage.ps1' },
+  { source: 'references/remediation-cycles.md', destination: 'skills/sonarqube-test-quality/references/remediation-cycles.md' },
+  { source: 'references/project-discovery.md', destination: 'skills/sonarqube-test-quality/references/project-discovery.md' },
+  { source: 'references/local-analysis.md', destination: 'skills/sonarqube-test-quality/references/local-analysis.md' },
+  { source: 'references/run-guidance.md', destination: 'skills/sonarqube-test-quality/references/run-guidance.md' },
+  { source: 'agents/sonar-evidence.md', destination: 'skills/sonarqube-test-quality/agents/sonar-evidence.md' },
+  { source: 'templates/remediation-cycle-report.md', destination: 'skills/sonarqube-test-quality/templates/remediation-cycle-report.md' },
+  { source: 'templates/run-guidance-report.md', destination: 'skills/sonarqube-test-quality/templates/run-guidance-report.md' },
+  { source: 'commands/cmd-sonar-remediate/SKILL.md', destination: 'skills/cmd-sonar-remediate/SKILL.md' }
 ];
 
 function isWithin(base, candidate) {
@@ -76,19 +50,112 @@ function lstatOrNull(filePath) {
   return fs.lstatSync(filePath, { throwIfNoEntry: false }) || null;
 }
 
-function inspectDestination(root, relativePath, sourceBytes) {
-  const destination = path.resolve(root, relativePath);
-  if (!isWithin(root, destination)) {
-    return { status: 'blocked', reason: 'Destination escapes installation root' };
+function validateAncestors(checkPath) {
+  let current = path.resolve(checkPath);
+  const root = path.parse(current).root;
+  while (current && current !== root) {
+    const parent = path.dirname(current);
+    if (!parent || parent === current) break;
+    const stat = lstatOrNull(parent);
+    if (stat) {
+      if (stat.isSymbolicLink()) return 'Ancestor contains a symbolic link';
+      if (!stat.isDirectory()) return 'Ancestor is not a directory';
+    }
+    current = parent;
+  }
+  return null;
+}
+
+function mkdirTrackedSync(dirPath, createdDirs) {
+  const resolved = path.resolve(dirPath);
+  const root = path.parse(resolved).root;
+  const parts = path.relative(root, resolved).split(path.sep);
+  let current = root;
+  for (const part of parts) {
+    if (!part) continue;
+    current = path.join(current, part);
+    const stat = lstatOrNull(current);
+    if (stat) {
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error(`Cannot create directory through non-directory or symbolic link: ${current}`);
+      }
+    } else {
+      fs.mkdirSync(current);
+      if (createdDirs) createdDirs.add(current);
+    }
+  }
+}
+
+function pruneCreatedDirectories(createdDirs, stopRoot, includeStopRoot = false) {
+  if (!createdDirs || createdDirs.size === 0) return;
+  const sorted = Array.from(createdDirs).sort((a, b) => b.length - a.length);
+  for (const dir of sorted) {
+    try {
+      const canPrune = includeStopRoot ? isWithin(stopRoot, dir) : (isWithin(stopRoot, dir) && dir !== stopRoot);
+      if (canPrune && fs.existsSync(dir) && fs.readdirSync(dir).length === 0) {
+        fs.rmdirSync(dir);
+        createdDirs.delete(dir);
+      }
+    } catch {}
+  }
+}
+
+function acquireLock(lockPath, createdDirs) {
+  mkdirTrackedSync(path.dirname(lockPath), createdDirs);
+  let fd;
+  try {
+    fd = fs.openSync(lockPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY);
+  } catch (error) {
+    if (error.code === 'EEXIST') {
+      throw new Error(`Installation locked by another process: ${lockPath}`);
+    }
+    throw error;
   }
 
-  const rootStat = lstatOrNull(root);
+  try {
+    const payload = JSON.stringify({ pid: process.pid, time: Date.now() });
+    fs.writeSync(fd, payload);
+  } finally {
+    try {
+      fs.closeSync(fd);
+    } catch {}
+  }
+
+  let stat;
+  try {
+    stat = fs.statSync(lockPath);
+  } catch {
+    return { lockPath, ino: null, dev: null };
+  }
+  return { lockPath, ino: stat.ino, dev: stat.dev };
+}
+
+function releaseLock(lockHandle) {
+  if (!lockHandle || !lockHandle.lockPath) return;
+  try {
+    const stat = fs.statSync(lockHandle.lockPath);
+    if (lockHandle.ino == null || (stat.ino === lockHandle.ino && stat.dev === lockHandle.dev)) {
+      fs.unlinkSync(lockHandle.lockPath);
+    }
+  } catch {}
+}
+
+function inspectDestination(installationRoot, relativePath, sourceBytes, projectRoot) {
+  const destination = path.resolve(installationRoot, relativePath);
+  if (!isWithin(installationRoot, destination)) {
+    return { status: 'blocked', reason: 'Destination escapes installation root' };
+  }
+  if (projectRoot && !isWithin(projectRoot, destination)) {
+    return { status: 'blocked', reason: 'Destination escapes project root' };
+  }
+
+  const rootStat = lstatOrNull(installationRoot);
   if (rootStat && (!rootStat.isDirectory() || rootStat.isSymbolicLink())) {
     return { status: 'blocked', reason: 'Installation root is not a regular directory' };
   }
 
-  const parts = path.relative(root, destination).split(path.sep);
-  let current = root;
+  const parts = path.relative(installationRoot, destination).split(path.sep);
+  let current = installationRoot;
   for (let index = 0; index < parts.length; index += 1) {
     current = path.join(current, parts[index]);
     const stat = lstatOrNull(current);
@@ -112,11 +179,11 @@ function inspectDestination(root, relativePath, sourceBytes) {
 }
 
 export function resolveInstallTarget({ target, directory } = {}) {
-  if (target !== 'agents') {
-    throw new Error(`Unsupported target or missing target '${target}'. Choose agents.`);
+  if (target !== 'agents' && target !== 'claude' && target !== 'both') {
+    throw new Error(`Unsupported target or missing target '${target}'. Choose agents, claude, or both.`);
   }
   if (typeof directory !== 'string' || directory.trim().length === 0) {
-    throw new Error('The agents target requires --directory <project-root>.');
+    throw new Error(`The ${target} target requires --directory <project-root>.`);
   }
 
   const projectRoot = path.resolve(directory);
@@ -125,26 +192,83 @@ export function resolveInstallTarget({ target, directory } = {}) {
     throw new Error('The project root must be a non-symbolic-link directory.');
   }
 
-  return { target, installationRoot: path.join(projectRoot, '.agents') };
+  const ancestorIssue = validateAncestors(projectRoot);
+  if (ancestorIssue) {
+    throw new Error(`The project root must be a non-symbolic-link directory: ${ancestorIssue}`);
+  }
+
+  if (target === 'agents') {
+    return { target, installationRoot: path.join(projectRoot, '.agents'), projectRoot };
+  }
+  if (target === 'claude') {
+    return { target, installationRoot: path.join(projectRoot, '.claude'), projectRoot };
+  }
+  return { target, installationRoot: projectRoot, projectRoot };
 }
 
 export function planInstallation({ sourceDir, target, directory } = {}) {
   const resolved = resolveInstallTarget({ target, directory });
-  const files = SKILL_FILES.map(sourceRelative => ({
-    sourceRelative,
-    relativePath: path.posix.join('skills', SKILL_NAME, sourceRelative),
-    sourcePath: path.join(sourceDir, ...sourceRelative.split('/'))
-  }));
 
-  const actions = files.map(file => {
-    const sourceStat = lstatOrNull(file.sourcePath);
-    if (!sourceStat || !sourceStat.isFile() || sourceStat.isSymbolicLink()) {
-      throw new Error(`Required regular bundle file is missing: ${file.sourceRelative}`);
+  const sourceStat = lstatOrNull(sourceDir);
+  if (!sourceStat || !sourceStat.isDirectory() || sourceStat.isSymbolicLink()) {
+    throw new Error('Bundle sourceDir must be a non-symbolic-link directory.');
+  }
+
+  const sourceAncestorIssue = validateAncestors(sourceDir);
+  if (sourceAncestorIssue) {
+    throw new Error(`Bundle sourceDir contains invalid ancestor: ${sourceAncestorIssue}`);
+  }
+
+  const rootMap = {
+    agents: [{ prefix: '', rootDir: resolved.installationRoot }],
+    claude: [{ prefix: '', rootDir: resolved.installationRoot }],
+    both: [
+      { prefix: '.agents', rootDir: path.join(resolved.installationRoot, '.agents') },
+      { prefix: '.claude', rootDir: path.join(resolved.installationRoot, '.claude') }
+    ]
+  };
+  const rootConfigs = rootMap[resolved.target];
+
+  const actions = [];
+  for (const rootConfig of rootConfigs) {
+    for (const asset of ASSET_INVENTORY) {
+      const sourcePath = path.join(sourceDir, ...asset.source.split('/'));
+
+      // Validate source path and its ancestors
+      const srcParts = path.relative(sourceDir, sourcePath).split(path.sep);
+      let curSrc = sourceDir;
+      for (let i = 0; i < srcParts.length; i++) {
+        curSrc = path.join(curSrc, srcParts[i]);
+        const sStat = lstatOrNull(curSrc);
+        if (!sStat) throw new Error(`Required regular bundle file is missing: ${asset.source}`);
+        if (sStat.isSymbolicLink()) throw new Error(`Source path contains a symbolic link: ${asset.source}`);
+        if (i < srcParts.length - 1 && !sStat.isDirectory()) throw new Error(`Source path ancestor is not a directory: ${asset.source}`);
+        if (i === srcParts.length - 1 && !sStat.isFile()) throw new Error(`Source asset is not a regular file: ${asset.source}`);
+      }
+
+      const sourceBytes = fs.readFileSync(sourcePath);
+      const relativePath = rootConfig.prefix
+        ? path.posix.join(rootConfig.prefix, asset.destination)
+        : asset.destination;
+      const destinationPath = path.resolve(resolved.installationRoot, relativePath);
+
+      const inspected = inspectDestination(
+        resolved.installationRoot,
+        relativePath,
+        sourceBytes,
+        resolved.projectRoot
+      );
+
+      actions.push({
+        sourceRelative: asset.source,
+        relativePath,
+        sourcePath,
+        destinationPath,
+        sourceBytes,
+        ...inspected
+      });
     }
-    const sourceBytes = fs.readFileSync(file.sourcePath);
-    const inspected = inspectDestination(resolved.installationRoot, file.relativePath, sourceBytes);
-    return { ...file, ...inspected, sourceBytes, destinationPath: path.resolve(resolved.installationRoot, file.relativePath) };
-  });
+  }
 
   return {
     ...resolved,
@@ -156,8 +280,10 @@ export function planInstallation({ sourceDir, target, directory } = {}) {
   };
 }
 
-export function executeInstallation(plan, { dryRun = false, force = false, yes = false, _beforePublish = null } = {}) {
-  if (plan.blockers.length) throw new Error(`Installation blocked: ${plan.blockers.map(item => `${item.relativePath}: ${item.reason}`).join('; ')}`);
+export function executeInstallation(plan, { dryRun = false, force = false, yes = false, _beforePublish = null, _afterStage = null } = {}) {
+  if (plan.blockers.length) {
+    throw new Error(`Installation blocked: ${plan.blockers.map(item => `${item.relativePath}: ${item.reason}`).join('; ')}`);
+  }
   if (yes && !force) throw new Error('Option --yes cannot be used without --force.');
   if (plan.replacements.length && !force) throw new Error('Destination files differ. Re-run with --force to authorize replacement.');
   if (plan.replacements.length && force && !yes) throw new Error('Replacing files also requires confirmation with --yes.');
@@ -171,87 +297,174 @@ export function executeInstallation(plan, { dryRun = false, force = false, yes =
     };
   }
 
-  const lockPath = path.join(plan.installationRoot, 'skills', SKILL_NAME, '.install.lock');
-  acquireLock(lockPath);
+  const projectRoot = plan.projectRoot;
+  const sharedLockPath = path.join(projectRoot, '.sonarqube-test-quality.install.lock');
+  const legacyLockPath = (plan.target === 'agents' || plan.target === 'both')
+    ? path.join(projectRoot, '.agents', 'skills', SKILL_NAME, '.install.lock')
+    : null;
+
+  const locksToAcquire = [sharedLockPath];
+  if (legacyLockPath) {
+    locksToAcquire.push(legacyLockPath);
+  }
+
+  const acquiredLocks = [];
+  const createdDirs = new Set();
+
+  try {
+    for (const lockPath of locksToAcquire) {
+      const handle = acquireLock(lockPath, createdDirs);
+      acquiredLocks.push(handle);
+    }
+  } catch (lockError) {
+    while (acquiredLocks.length > 0) {
+      const handle = acquiredLocks.pop();
+      releaseLock(handle);
+    }
+    pruneCreatedDirectories(createdDirs, projectRoot, true);
+    throw lockError;
+  }
+
+  const temporaryPaths = [];
+  const staged = [];
+  const committed = [];
+  const createdFiles = new Map();
+  const backups = new Map();
 
   try {
     for (const action of plan.actions) {
-      const current = inspectDestination(plan.installationRoot, action.relativePath, action.sourceBytes);
+      const current = inspectDestination(plan.installationRoot, action.relativePath, action.sourceBytes, projectRoot);
       if (current.status !== action.status || (action.status === 'replace' && !current.existingBytes.equals(action.existingBytes))) {
         throw new Error(`Destination changed after planning: ${action.relativePath}`);
       }
     }
 
-    const committed = [];
-    const temporaryPaths = [];
-    const createdFiles = new Set();
-    const backups = new Map();
-
-    try {
-      const staged = [];
-      for (const action of [...plan.additions, ...plan.replacements]) {
-        fs.mkdirSync(path.dirname(action.destinationPath), { recursive: true });
-        const temporaryPath = path.join(path.dirname(action.destinationPath), `.tmp-${crypto.randomUUID()}`);
-        temporaryPaths.push(temporaryPath);
-        fs.writeFileSync(temporaryPath, action.sourceBytes, { flag: 'wx' });
-        staged.push({ action, temporaryPath });
+    // Staging inside rollback try block
+    const stagedActions = [...plan.additions, ...plan.replacements];
+    for (let sIdx = 0; sIdx < stagedActions.length; sIdx += 1) {
+      const action = stagedActions[sIdx];
+      mkdirTrackedSync(path.dirname(action.destinationPath), createdDirs);
+      const temporaryPath = path.join(path.dirname(action.destinationPath), `.tmp-${crypto.randomUUID()}`);
+      temporaryPaths.push(temporaryPath);
+      const srcStat = lstatOrNull(action.sourcePath);
+      const mode = srcStat ? srcStat.mode : 0o644;
+      fs.writeFileSync(temporaryPath, action.sourceBytes, { flag: 'wx', mode });
+      staged.push({ action, temporaryPath, mode });
+      if (typeof _afterStage === 'function') {
+        _afterStage(action, sIdx, temporaryPath);
       }
-
-      for (let index = 0; index < staged.length; index += 1) {
-        const { action, temporaryPath } = staged[index];
-
-        if (typeof _beforePublish === 'function') {
-          _beforePublish(action, index);
-        }
-
-        if (action.status === 'add') {
-          try {
-            fs.copyFileSync(temporaryPath, action.destinationPath, fs.constants.COPYFILE_EXCL);
-          } catch (error) {
-            if (error.code === 'EEXIST') {
-              throw new Error(`Destination changed during installation: ${action.relativePath} already exists`);
-            }
-            throw error;
-          }
-          createdFiles.add(action.destinationPath);
-          fs.rmSync(temporaryPath, { force: true });
-          committed.push(action.relativePath);
-        } else if (action.status === 'replace') {
-          const current = inspectDestination(plan.installationRoot, action.relativePath, action.sourceBytes);
-          if (current.status !== 'replace' || !current.existingBytes.equals(action.existingBytes)) {
-            throw new Error(`Destination changed during installation: ${action.relativePath}`);
-          }
-          backups.set(action.destinationPath, current.existingBytes);
-          fs.renameSync(temporaryPath, action.destinationPath);
-          committed.push(action.relativePath);
-        }
-      }
-
-      for (const action of plan.actions) {
-        if (!fs.readFileSync(action.destinationPath).equals(action.sourceBytes)) {
-          throw new Error(`Installed file verification failed: ${action.relativePath}`);
-        }
-      }
-
-      return { dryRun: false, committed, unchanged: plan.unchanged.map(item => item.relativePath) };
-    } catch (error) {
-      for (const temporaryPath of temporaryPaths) fs.rmSync(temporaryPath, { force: true });
-      for (const createdPath of createdFiles) fs.rmSync(createdPath, { force: true });
-      for (const [destinationPath, existingBytes] of backups) {
-        try {
-          fs.writeFileSync(destinationPath, existingBytes);
-        } catch {}
-      }
-      for (const createdPath of createdFiles) {
-        pruneEmptyDirectories(path.dirname(createdPath), plan.installationRoot);
-      }
-      for (const temporaryPath of temporaryPaths) {
-        pruneEmptyDirectories(path.dirname(temporaryPath), plan.installationRoot);
-      }
-      throw new Error(`Installation failed after ${committed.length} file(s): ${error.message}`);
     }
+
+    // Publication loop
+    for (let index = 0; index < staged.length; index += 1) {
+      const { action, temporaryPath, mode } = staged[index];
+
+      if (typeof _beforePublish === 'function') {
+        _beforePublish(action, index);
+      }
+
+      if (action.status === 'add') {
+        const preStat = lstatOrNull(action.destinationPath);
+        if (preStat !== null) {
+          throw new Error(`Destination changed during installation: ${action.relativePath} already exists`);
+        }
+        try {
+          fs.copyFileSync(temporaryPath, action.destinationPath, fs.constants.COPYFILE_EXCL);
+        } catch (error) {
+          if (error.code === 'EEXIST') {
+            throw new Error(`Destination changed during installation: ${action.relativePath} already exists`);
+          }
+          throw error;
+        }
+        createdFiles.set(action.destinationPath, { sourceBytes: action.sourceBytes, action });
+        fs.chmodSync(action.destinationPath, mode);
+        fs.rmSync(temporaryPath, { force: true });
+        committed.push(action.relativePath);
+      } else if (action.status === 'replace') {
+        const current = inspectDestination(plan.installationRoot, action.relativePath, action.sourceBytes, projectRoot);
+        if (current.status !== 'replace' || !current.existingBytes.equals(action.existingBytes)) {
+          throw new Error(`Destination changed during installation: ${action.relativePath}`);
+        }
+        const existingStat = lstatOrNull(action.destinationPath);
+        fs.renameSync(temporaryPath, action.destinationPath);
+        backups.set(action.destinationPath, {
+          existingBytes: current.existingBytes,
+          existingMode: existingStat ? existingStat.mode : 0o644,
+          action
+        });
+        fs.chmodSync(action.destinationPath, mode);
+        committed.push(action.relativePath);
+      }
+    }
+
+    for (const action of plan.actions) {
+      const stat = lstatOrNull(action.destinationPath);
+      if (!stat || !stat.isFile() || stat.isSymbolicLink() || !fs.readFileSync(action.destinationPath).equals(action.sourceBytes)) {
+        throw new Error(`Installed file verification failed: ${action.relativePath}`);
+      }
+    }
+
+    return {
+      dryRun: false,
+      committed,
+      unchanged: plan.unchanged.map(item => item.relativePath)
+    };
+  } catch (error) {
+    for (const temporaryPath of temporaryPaths) {
+      try { fs.rmSync(temporaryPath, { force: true }); } catch {}
+    }
+
+    const rollbackFailures = [];
+
+    for (const [createdPath, { sourceBytes, action }] of createdFiles) {
+      try {
+        const stat = lstatOrNull(createdPath);
+        if (stat) {
+          if (stat.isFile() && !stat.isSymbolicLink() && fs.readFileSync(createdPath).equals(sourceBytes)) {
+            fs.rmSync(createdPath, { force: true });
+          } else {
+            rollbackFailures.push(`${action.relativePath}: concurrent modification or symlink detected, preserving file`);
+          }
+        }
+      } catch (rmErr) {
+        rollbackFailures.push(`${action.relativePath}: ${rmErr.message}`);
+      }
+    }
+
+    for (const [destinationPath, { existingBytes, existingMode, action }] of backups) {
+      try {
+        const stat = lstatOrNull(destinationPath);
+        if (!stat) {
+          rollbackFailures.push(`${action.relativePath}: destination missing during rollback, unable to safely restore`);
+        } else if (stat.isSymbolicLink() || !stat.isFile()) {
+          rollbackFailures.push(`${action.relativePath}: destination replaced with symbolic link or non-regular file, refusing to overwrite`);
+        } else if (!fs.readFileSync(destinationPath).equals(action.sourceBytes)) {
+          rollbackFailures.push(`${action.relativePath}: concurrent modification detected, unable to safely restore`);
+        } else {
+          const tmpRestore = path.join(path.dirname(destinationPath), `.tmp-restore-${crypto.randomUUID()}`);
+          try {
+            fs.writeFileSync(tmpRestore, existingBytes, { flag: 'wx', mode: existingMode });
+            fs.renameSync(tmpRestore, destinationPath);
+          } finally {
+            try { fs.rmSync(tmpRestore, { force: true }); } catch {}
+          }
+        }
+      } catch (restoreErr) {
+        rollbackFailures.push(`${action.relativePath}: ${restoreErr.message}`);
+      }
+    }
+
+    pruneCreatedDirectories(createdDirs, projectRoot, true);
+
+    if (rollbackFailures.length > 0) {
+      throw new Error(`Installation failed after ${committed.length} file(s): ${error.message}; rollback partial failure: ${rollbackFailures.join('; ')}`);
+    }
+    throw new Error(`Installation failed after ${committed.length} file(s): ${error.message}`);
   } finally {
-    releaseLock(lockPath);
-    pruneEmptyDirectories(path.dirname(lockPath), plan.installationRoot);
+    while (acquiredLocks.length > 0) {
+      const handle = acquiredLocks.pop();
+      releaseLock(handle);
+    }
+    pruneCreatedDirectories(createdDirs, projectRoot, true);
   }
 }
