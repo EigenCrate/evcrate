@@ -14,11 +14,11 @@
 - Public APIs support extension tools and model calls; account entitlement and host timing remain runtime questions.
 - Local hooks use `SessionStart` and `hookSpecificOutput.hookEventName`, not CLI lowercase event schemas.
 - Current Linux CLI reports VS Code 1.140.0; default extension listing is empty. Other profiles not inspected. No authenticated Copilot claim.
-- Windows has a separate shell/process/filesystem qualification requirement; Linux success is insufficient.
+- Linux feasibility unlocks implementation by explicit validation decision. Windows native qualification remains mandatory before final completion, not a prerequisite to begin Phase 02.
 
 ## Requirements
 - Authorized Copilot account; exact target model selected by user; explicit permission for billable smoke calls.
-- Linux x64 and Windows x64 desktop environments, trusted scratch workspaces, external Node >=22.19.0 and Git.
+- Linux x64 desktop, trusted scratch workspace, external Node >=22.19.0 and Git required now. Inventory Windows x64 access; its native scenarios may run during Phase 06/08 and must pass before final acceptance.
 - Disposable VS Code user-data/extensions/profile directories; never mutate operator HOME settings or real project hooks for this spike.
 - Record VS Code version+commit, Copilot extension version, OS, Node/Git/shell versions, requested/returned model identity, and source/package hash.
 
@@ -35,7 +35,7 @@
 - Modify on evidence: this phase, design contracts, support requirements. Do not silently change user scope.
 
 ## Implementation Steps
-1. Inventory both native environments. Check current official API/type package and tool schema against the selected engine baseline; pin compatible versions. Do not fabricate ambient API declarations when a stable capability is absent.
+1. Inventory Linux native environment and available Windows prerequisites. Check official API/types against selected baseline; pin compatible versions. Missing Windows access alone does not block Linux-first implementation. Do not fabricate ambient declarations.
 2. Obtain authorized Copilot access in the disposable profile. Select **Local / Agent**, enable hooks and tool only through user-approved configuration. Record restrictions; a policy denial is a blocked gate, not a defect to bypass.
 3. Load the minimal extension without proposed flags. Enumerate `vendor: copilot` models through a user-triggered command, choose exact model, and observe actual authorization flow. Determine whether enumeration or first send prompts consent.
 4. From real Local chat, explicitly reference `#evcAdvisor` and submit a bounded review request. Verify handler runs, nested LM request succeeds, correct selected model object is used, result appears in same conversation, and executor continues independently.
@@ -43,23 +43,23 @@
 6. Test `countTokens` on the actual message type and full request; verify `maxInputTokens` is usable. Record host tool-result tokenization constraints. No approximate-token fallback if guaranteed bounds cannot be established.
 7. Install a disposable `SessionStart` hook using the documented envelope. Start a **new** Local chat, submit first prompt, inspect the host's supported debug/context surface to establish guidance arrived before first model response. Model repeating a marker alone is supporting evidence, not proof of exact system-role placement.
 8. Repeat after window reload and in an existing chat. Document fresh-session-only guarantee. Verify enabled/disabled `chat.useHooks`, excluded hook location and tool-disabled behavior are accurately diagnosed.
-9. Qualify Linux single-quote and Windows encoded PowerShell command paths: spaces, Unicode, apostrophes, dollar signs, ampersands, parentheses; malicious path text must not execute additional commands. Use harmless sentinels in scratch dirs.
+9. Qualify Linux single-quote paths now: spaces, Unicode, apostrophes, dollar signs, ampersands, parentheses; malicious path text must not execute additional commands. Windows encoded PowerShell is a mandatory Phase 06/08 gate; run here early if available.
 10. Exercise cancellation during stream, selected-model unavailable/denied behavior, and extension disabled with hook still present. Confirm no automatic retry or false successful advice.
 11. Record evidence per platform and scenario with timestamps and redacted logs/screenshots. Scrub secrets and conversation content not needed for the receipt. Do not infer Windows results from Linux.
-12. Go/no-go review: approve exact supported tuple and startup command contract only after all essential native paths pass. If blocked by account/Windows/host API access, mark blocked and stop phases 02–08; document exact prerequisite and required rerun.
+12. Go/no-go review: approve Linux implementation tuple/startup path after all Linux G01–G06 pass. Account/Linux/required public API failure blocks Phase 02. Windows evidence stays explicitly pending for Phase 06/08 and blocks final completion, not ongoing Linux-first implementation.
 13. Remove temporary sources and scratch hook registrations; retain only sanitized receipts and deliberate reusable qualification tooling.
 
 ## Todo list
-- [ ] Inventory supported host/API/type versions on both platforms.
+- [ ] Inventory Linux supported host/API/type versions and Windows prerequisites.
 - [ ] Establish user-authorized model access and exact selection.
 - [ ] Prove real Local tool→advisor→same-chat return.
 - [ ] Prove full-message token counting and output limits.
 - [ ] Prove guidance reaches first fresh-session response.
-- [ ] Qualify Linux and Windows command encoding/lifecycle.
+- [ ] Qualify Linux command encoding/lifecycle; assign remaining Windows cases to Phase 06/08.
 - [ ] Record go/no-go and clean disposable artifacts.
 
 ## Success Criteria
-- G01–G06 in validation matrix have PASS receipts on both platforms, tied to exact candidates.
+- G01–G06 have Linux PASS receipts tied to exact candidates; Windows counterparts explicitly tracked pending or passed and required by Phase 08.
 - No internal API dependency, model proxy, hidden credential reuse or fabricated transcript access.
 - Supported engine/types and external runtime requirements settled in contracts.
 - Independent review accepts evidence; remaining uncertainty is listed, not hidden in a generic PASS.
@@ -67,7 +67,7 @@
 ## Risk Assessment
 - Preview hook behavior can change: pin baseline and requalify upgrades.
 - Subscription restrictions may make desired model pair unavailable: stop and ask for an authorized alternative; never silently change models.
-- Missing Windows access blocks completion of this phase; it does not authorize Linux-only scope.
+- Missing Windows access does not block this Linux-first gate; it still blocks final two-platform product completion.
 
 ## Security Considerations
 - Disposable isolated workspace; no secrets or private code in connectivity checks.
@@ -78,4 +78,4 @@
 If go: Phase 02. If no-go: update explicit blocker and revised design proposal; do not begin downstream implementation.
 
 ## Unresolved questions
-Technical only: actual authorization flow, selected model availability, exact stable type baseline, output/token constraints and two-platform hook timing. This phase owns their resolution.
+Technical: Linux authorization/model/API/output/token/first-turn behavior resolved here. Windows native timing and command behavior may be resolved in Phase 06/08; never inferred from Linux.

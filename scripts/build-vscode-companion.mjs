@@ -186,6 +186,25 @@ export function computeSha256(data) {
 export function computeFileSha256(filePath) {
   return computeSha256(fs.readFileSync(filePath));
 }
+export function computeCompanionInputDigest(relPath, absPath) {
+  if (relPath === 'package.json') {
+    const raw = fs.readFileSync(absPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    delete parsed.version;
+    return computeSha256(Buffer.from(JSON.stringify(parsed), 'utf8'));
+  }
+  if (relPath === 'package-lock.json') {
+    const raw = fs.readFileSync(absPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    delete parsed.version;
+    if (parsed.packages && parsed.packages['']) {
+      delete parsed.packages[''].version;
+    }
+    return computeSha256(Buffer.from(JSON.stringify(parsed), 'utf8'));
+  }
+  return computeSha256(fs.readFileSync(absPath));
+}
+
 
 export function computeBuildIdentity(extensionId, version, inputs, toolIdentities) {
   const hasher = crypto.createHash('sha256');
@@ -289,7 +308,7 @@ export function buildVscodeCompanion(options = {}) {
     if (!fs.existsSync(absPath)) {
       throw new Error(`Required companion input file missing: ${relPath}`);
     }
-    inputs[relPath] = computeFileSha256(absPath);
+    inputs[relPath] = computeCompanionInputDigest(relPath, absPath);
   }
 
   const toolIdentities = {

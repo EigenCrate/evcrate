@@ -29,7 +29,7 @@ Required support: **Linux x64 + Windows x64**, trusted local single-folder works
 
 | # | Phase | Dependency | Status / progress |
 |---|---|---|---|
-| 01 | [Native feasibility and support freeze](phase-01-native-feasibility.md) | None | Pending / 0% |
+| 01 | [Linux-first native feasibility and support freeze](phase-01-native-feasibility.md) | None | Pending / 0% |
 | 02 | [Independent package and contract foundation](phase-02-package-and-contracts.md) | 01 go | Pending / 0% |
 | 03 | [Model configuration, consent and commands](phase-03-model-configuration.md) | 02 | Pending / 0% |
 | 04 | [Bounded context and disclosure policies](phase-04-context-and-privacy.md) | 02 | Pending / 0% |
@@ -52,10 +52,20 @@ Follow order by default. Only phases 03/04 can be parallelized after contracts f
 
 ## Gates and evidence
 
-Phase 01 resolves API/type availability, model authorization, Windows command quoting and first-turn ordering before production work. Phase 08 repeats against final package hashes. Account credentials/policies and native Windows access are execution prerequisites, not claims from this planning session. Docs/API inspection, mock tests and hook JSON output alone do not pass live gates.
+Phase 01 proves Linux public API/model/startup behavior before production work. Windows feasibility may follow during implementation but remains mandatory by Phase 08, which repeats both platforms against final package hashes. Missing account/policy/native access is an explicit blocker at its gate; docs, mocks and hook stdout alone do not pass live acceptance.
 
 Planning changed documentation only. Native hard-plan command expanded successfully. Active-plan helper could not persist because `EVCRATE_SESSION_ID` is unset; use this path explicitly in future commands. No Copilot inference or implementation performed.
 
 ## Unresolved questions
 
-Product choices: none. Technical unknowns are explicit Phase 01 stop/go checks. Effort intentionally not estimated; no delivery-date commitment. Optional plan-validation interview is recorded in `reports/plan-validation.md` when completed or declined.
+Product choices: none. Technical unknowns have explicit native gates. Effort intentionally not estimated; no delivery-date commitment.
+
+## Validation Summary
+
+**Validated:** 2026-10-13. **Questions asked:** 4. [Interview and checks](reports/plan-validation.md).
+
+- Confirmed private manual VSIX; no EVCrate installer/publication integration.
+- Confirmed external Node >=22.19.0 and qualified Windows PowerShell prerequisites.
+- Changed gate: Linux proof unlocks implementation; Windows proof still mandatory before final completion.
+- Confirmed one active call/window, 120-second deadline, no automatic retry/fallback.
+- Required revision applied across phase dependencies, design and matrix; no open plan-revision items. Implementation remains pending.

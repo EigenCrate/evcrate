@@ -16,6 +16,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   calcCrc32,
   computeBuildIdentity,
+  computeCompanionInputDigest,
   validateExtensionJsRuntimeClosure,
   PROJECT_ROOT
 } from './build-vscode-companion.mjs';
@@ -320,7 +321,7 @@ export async function verifyVscodeCompanion(options = {}) {
       if (!fs.existsSync(fullPath)) {
         throw new Error(`Missing checkout source input "${relPath}"`);
       }
-      liveInputDigests[relPath] = computeSha256(fs.readFileSync(fullPath));
+      liveInputDigests[relPath] = computeCompanionInputDigest(relPath, fullPath);
     }
     layoutInput.liveInputDigests = liveInputDigests;
   }
