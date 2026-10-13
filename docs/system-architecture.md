@@ -207,17 +207,17 @@ analysis, gate and complete findings. Final success requires committed-input
 qualification and independent audit, not a passing gate alone. Upload, commit and
 push authority remain separate; prompt restrictions are not a sandbox.
 
-The proposed installer explicitly selects `.agents/skills/`, `.claude/skills/`,
-or both for the same two-skill payload. Both roots use one guarded in-process
-publish/rollback transaction, with shared and legacy-lock coordination. This is
-not all-file atomic visibility or process-crash recovery. Duplicate host
-discovery requires observed path selection, not assumed precedence.
-
+The dual-root installer (`lib/install.js`, `bin/install.js`) explicitly selects `.agents/skills/`,
+`.claude/skills/`, or both for the 18-asset two-skill payload (`skills/sonarqube-test-quality/`
+and `skills/cmd-sonar-remediate/`). Both roots use one guarded in-process publish/rollback
+transaction, with shared project-level and legacy agents-lock coordination. This is not
+all-file atomic visibility or process-crash recovery. Duplicate host discovery requires
+observed path selection, not assumed precedence.
 Implementation acceptance uses package/installed-host behavioral evidence and
 historical supplied-report guidance, not a mandatory new live Sonar run.
 Actual remediation-run server-success claims still require the full evidence
 contract above. Ordinary local-only and Jenkins routes remain separate.
-Phases 02–05 implement repository-source discovery, scanner lifecycle, test/coverage verification, cycle-ledger state/budget/evidence policy ([`remediation-cycles.md`](../ext/sonarqube-test-quality/references/remediation-cycles.md)), privacy/redaction and promotion policy ([`run-guidance.md`](../ext/sonarqube-test-quality/references/run-guidance.md)), private ledger/sanitized guidance report templates ([`remediation-cycle-report.md`](../ext/sonarqube-test-quality/templates/remediation-cycle-report.md), [`run-guidance-report.md`](../ext/sonarqube-test-quality/templates/run-guidance-report.md)), portable evidence actor prompt ([`sonar-evidence.md`](../ext/sonarqube-test-quality/agents/sonar-evidence.md)), and thin portable command skill prompt ([`cmd-sonar-remediate/SKILL.md`](../ext/sonarqube-test-quality/commands/cmd-sonar-remediate/SKILL.md)) in `ext/sonarqube-test-quality/`, linked from [`remediation-and-handoff.md`](../ext/sonarqube-test-quality/references/remediation-and-handoff.md) while keeping [`report-formats.md`](../ext/sonarqube-test-quality/references/report-formats.md) JSON-authoritative over converted Markdown views. Dual-root installer and `package.json#files` packaging for new references, templates, agents, and commands, offline behavioral evals, and host discovery/qualification handoff remain pending in Phases 06–08. Planning artifacts remain local and Git-ignored.
+Phases 02–06 implement repository-source discovery, scanner lifecycle, test/coverage verification, cycle-ledger state/budget/evidence policy ([`remediation-cycles.md`](../ext/sonarqube-test-quality/references/remediation-cycles.md)), privacy/redaction and promotion policy ([`run-guidance.md`](../ext/sonarqube-test-quality/references/run-guidance.md)), private ledger/sanitized guidance report templates ([`remediation-cycle-report.md`](../ext/sonarqube-test-quality/templates/remediation-cycle-report.md), [`run-guidance-report.md`](../ext/sonarqube-test-quality/templates/run-guidance-report.md)), portable evidence actor prompt ([`sonar-evidence.md`](../ext/sonarqube-test-quality/agents/sonar-evidence.md)), thin portable command skill prompt ([`cmd-sonar-remediate/SKILL.md`](../ext/sonarqube-test-quality/commands/cmd-sonar-remediate/SKILL.md)), and dual-root transactional installer with packaging allowlist (`lib/install.js`, `bin/install.js`, `package.json#files`) in `ext/sonarqube-test-quality/`, linked from [`remediation-and-handoff.md`](../ext/sonarqube-test-quality/references/remediation-and-handoff.md) while keeping [`report-formats.md`](../ext/sonarqube-test-quality/references/report-formats.md) JSON-authoritative over converted Markdown views. Offline behavioral evals and host discovery/qualification handoff remain pending in Phases 07–08. Planning artifacts remain local and Git-ignored.
 ## 3. TypeScript control plane
 
 The source is organized around narrow contracts:

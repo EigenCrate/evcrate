@@ -5,6 +5,15 @@
 **Updated:** 2026-10-13
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-13 — feat(sonar): dual-root transactional two-skill installer and package (Phase 06)
+
+- Extended standalone SonarQube installer (`ext/sonarqube-test-quality/lib/install.js`, `ext/sonarqube-test-quality/bin/install.js`): added explicit target selection via `--target agents|claude|both` and `--directory <project-root>`; unsupported or missing targets fail closed; `--target agents` preserves legacy behavior and paths (`<project>/.agents/skills/sonarqube-test-quality/`).
+- Added multi-target two-skill installation layout: installs 18 assets and exactly two skill entrypoints per selected root (`skills/sonarqube-test-quality/SKILL.md` and `skills/cmd-sonar-remediate/SKILL.md`), writing 36 total destinations when `--target both` is selected; writes zero unselected root payload, settings, or native registrations.
+- Implemented transactional multi-root lifecycle: plans, stages beside destination on the same volume, publishes, and verifies exact byte matches across selected roots; validates non-symlink regular files and ancestor directory containment before and during writes; caught failure triggers in-process rollback restoring replaced original bytes and removing only owned additions, preserving unrelated and concurrent content; reports partial rollback with affected paths if restoration encounters conflicts (no persistent journal, crash recovery, or atomic reader visibility claim).
+- Implemented two-tier lock coordination: acquires project-level lock `<project>/.sonarqube-test-quality.install.lock`, followed by legacy lock `<project>/.agents/skills/sonarqube-test-quality/.install.lock` whenever `agents` is selected; releases successfully acquired locks in reverse order on failure or completion.
+- Updated package allowlist and CLI docs: added `commands`, `agents`, `templates` to `ext/sonarqube-test-quality/package.json#files` (23 packaged tarball files); updated `ext/sonarqube-test-quality/README.md` with explicit `--target agents|claude|both` guidance and failure semantics.
+- Added comprehensive installer and regression test suite (`ext/sonarqube-test-quality/tests/install.test.mjs`): 19 unit, fault, collision, concurrency, and rollback tests (all 99/99 package tests pass across 7 suites; behavioral evals and host qualification handoff remain pending in Phases 07–08).
+
 ### 2026-10-13 — feat(sonar): bounded remediation command and final audit (Phase 05)
 
 - Added thin portable command skill specification (`ext/sonarqube-test-quality/commands/cmd-sonar-remediate/SKILL.md`): specifies `cmd-sonar-remediate` orchestrator prompt sequencing real host subagents across 17 lifecycle stages within a mandatory global budget `N` (> 0, prompted interactively if omitted/invalid, never inferred or defaulted); contains zero native hooks, daemon processes, or `evc-*` registrations; resolves sibling domain assets strictly from loaded installed skill root (`.agents` or `.claude`), falling back to `../../` in repository source checkouts; defers all policy to sibling references (`remediation-cycles.md`, `project-discovery.md`, `local-analysis.md`, `run-guidance.md`).
@@ -778,10 +787,6 @@
 - Handoff advanced to Phase 06 — semantic-release candidate, receipt, and
   publisher.
 
-### 2026-09-11–2026-09-13 — feat(distribution): historical hook materialization scope distribution (Phases 01–07)
-
-- Scope distribution baseline: scalar `--scope home|project`, normalized project descriptors and identity hashing, runtime closures, single-snapshot planning, generic transaction engine, schema-2 state migration/recovery, and contract proofs across all targets.
-- Retained evidence: `npm run build`, `npm run test:publication`, `npm run test:integration`, and all target manifests green. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 ## Historical entries
 
 Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md).

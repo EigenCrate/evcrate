@@ -18,8 +18,8 @@ function printHelp() {
   console.log(`\nUsage: sonarqube-test-quality-install [options]
 
 Options:
-  -t, --target <name>      Required: agents
-  -d, --directory <path>   Required project root; installs under .agents/skills
+  -t, --target <name>      Required: agents, claude, or both
+  -d, --directory <path>   Required project root; installs under .agents/skills and/or .claude/skills
   -n, --dry-run            Preview files without writing
   -f, --force              Authorize replacing different files
   -y, --yes                Confirm replacement non-interactively (requires --force)
@@ -63,7 +63,7 @@ async function main() {
     return;
   }
   if (values.yes && !values.force) throw new Error('Option --yes cannot be used without --force.');
-  if (!values.target) throw new Error('Option --target is required. Choose agents.');
+  if (!values.target) throw new Error('Option --target is required. Choose agents, claude, or both.');
 
   const plan = planInstallation({
     sourceDir: packageRoot,
@@ -96,7 +96,11 @@ async function main() {
 
   const result = executeInstallation(plan, { force: values.force, yes: confirmed });
   console.log(`Installed ${result.committed.length} file(s); ${result.unchanged.length} unchanged.`);
-  console.log(`Discover the common skill in ${path.join(plan.installationRoot, 'skills')} using your agent's skill discovery.`);
+  if (plan.target === 'both') {
+    console.log(`Discover the common skill in ${path.join(plan.installationRoot, '.agents', 'skills')} and ${path.join(plan.installationRoot, '.claude', 'skills')} using your agent's skill discovery.`);
+  } else {
+    console.log(`Discover the common skill in ${path.join(plan.installationRoot, 'skills')} using your agent's skill discovery.`);
+  }
 }
 
 main().catch(error => {

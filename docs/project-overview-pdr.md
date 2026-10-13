@@ -298,6 +298,19 @@ VS Code 1.140.0/Copilot Chat 0.68.0 receipts describe their original candidates,
 not qualification of the current source cutover or inline interview.
 
 **Container-aware naming acceptance:** Canonical `evc-cmd-*` commands become `.evcrate-vscode/skills/cmd-*/SKILL.md`, preserving `-x-` nesting and semantic command IDs. Copilot Chat displays `evc cmd-*`; `/<plugin-name>:<skill-name>` resolves to `/evc:cmd-*` without duplicate `evc` prefixing. `replaceCommandInvocations` in `src/adapters/vscode/references.ts` rewrites `/evc-cmd-*` and `$evc-cmd-*`, including wildcard families, to local `/cmd-*` and `$cmd-*`. Shared `ev-help.py` discovers both `evc-cmd-*` and `cmd-*` skill directories.
+### FR-26: Standalone SonarQube test quality extension and dual-root installer (Phases 01–06)
+
+**Requirement:** Maintain `ext/sonarqube-test-quality/` as a standalone extension outside the canonical harness source tree, registry inventory, and seven core projections. It provides language-neutral SonarQube triage, scanner lifecycles, test/coverage verification, cycle ledger contracts, sanitized run guidance, portable `sonar-evidence` actor prompt, and the `cmd-sonar-remediate` command skill prompt. The standalone installer (`lib/install.js`, `bin/install.js`) installs into `<project>/.agents/skills/` and/or `<project>/.claude/skills/` without mutating core package publication metadata, canonical resources, or native host settings.
+
+**Acceptance:**
+- Target selection requires explicit `--target agents|claude|both` and `--directory <project-root>`. Unsupported or missing targets fail closed. Legacy `--target agents` preserves paths under `<project>/.agents/skills/sonarqube-test-quality/`.
+- Selected roots install exactly two skill entrypoints (`skills/sonarqube-test-quality/SKILL.md` and `skills/cmd-sonar-remediate/SKILL.md`) and 18 assets per root (36 total for `--target both`), writing zero unselected root payload, settings, or native registrations.
+- Execution enforces two-tier locking (project-level `.sonarqube-test-quality.install.lock` followed by legacy `.agents/skills/sonarqube-test-quality/.install.lock` whenever `agents` is selected), releasing owned locks in reverse order on exit or failure.
+- In-process transactional staging occurs beside destinations on the same volume; caught failure restores prior bytes across roots, removes owned additions and empty owned directories, preserving concurrent/unrelated files, and surfaces partial rollback if restoration encounters conflicts (no persistent journal, crash recovery, or atomic reader visibility claim).
+- Path and symlink security validates that project root and ancestors are non-symlink regular directories; `--force` requires `--yes` confirmation for overwrites and never overrides type safety or containment checks.
+- Package manifest `package.json#files` includes `commands`, `agents`, `templates`, references, scripts, and documentation (23 packaged tarball files).
+- Standalone extension tests (99/99 passing) verify installer contracts, layout resolution, locking, fault rollback, and actor/command specifications. Behavioral evals, installed-host smoke, and host qualification and handoff remain pending in Phases 07–08.
+
 
 ## Non-functional requirements
 

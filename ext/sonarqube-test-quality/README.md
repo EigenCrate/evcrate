@@ -1,6 +1,6 @@
 # SonarQube Test Quality
 
-Portable SonarQube triage, Java test-quality, JaCoCo coverage, and offline reporting skill. The self-contained bundle installs directly into `.agents/skills/sonarqube-test-quality` under a specified project directory. It uses a sole common `.agents` layout without host-specific adapters or `.claude` installation; pre-existing user installations in other directories are not uninstalled.
+Portable SonarQube triage, Java test-quality, JaCoCo coverage, and offline reporting skill. The self-contained bundle installs directly into `.agents/skills/sonarqube-test-quality` and/or `.claude/skills/sonarqube-test-quality` along with the companion `cmd-sonar-remediate` command skill under a specified project directory using explicit `--target agents|claude|both`. Pre-existing user installations in other directories are not uninstalled.
 
 ## Runtime Requirements
 
@@ -14,18 +14,20 @@ Preview the installation before writing files:
 ```bash
 node bin/install.js --help
 node bin/install.js --target agents --directory /path/to/project --dry-run
-node bin/install.js --target agents --directory /path/to/project
+node bin/install.js --target claude --directory /path/to/project
+node bin/install.js --target both --directory /path/to/project
 ```
 
-The installer requires an explicit target project root via `--directory` and installs into `<project-root>/.agents/skills/sonarqube-test-quality/`. It provides a single common `.agents` layout for agent discovery without host-specific adapters (VS Code and Claude Code targets are retired and rejected) and without creating `.claude` directories or modifying harness settings. Existing installations in other directories are preserved and not automatically uninstalled.
+The installer requires an explicit target via `--target agents|claude|both` and target project root via `--directory`. It installs 18 payload files and exactly two skill entrypoints (`skills/sonarqube-test-quality/SKILL.md` and `skills/cmd-sonar-remediate/SKILL.md`) per selected root (36 files when `both` is selected). Selected-root-only payload writes ensure no unselected root payloads or native host registrations are created. Existing installations in other directories are preserved and not automatically uninstalled.
 
 ### Installer Safety
 
-- `--dry-run` previews file changes without modifying disk state.
+- `--dry-run` previews file changes without modifying disk state or acquiring locks.
 - Changed destination files fail closed; replacement requires both `--force` and `--yes` (or interactive confirmation with `--force`).
-- Exclusive installation locking prevents concurrent installer conflicts.
-- Transactional staging and automatic rollback ensure failed installations never leave a partially modified skill.
-- Unrelated files are preserved; no harness configurations or settings are modified.
+- Exclusive lock hierarchy: acquires project `<project>/.sonarqube-test-quality.install.lock`, then legacy `<project>/.agents/skills/sonarqube-test-quality/.install.lock` whenever agents is selected. Pre-existing locks block without stale auto-deletion; partial acquisition failure releases owned locks in reverse order.
+- Path and symlink guards: source files/ancestors and destination files/ancestors are validated against symlinks, non-directory ancestors, and root escape. Symlink and type violations block the entire plan and cannot be overridden by `--force`.
+- Staging and caught-failure rollback: staged beside destinations on the same volume; on caught failure during publication, replacement backups are restored, created addition files are removed, and only transaction-owned empty directories are pruned. Any restoration conflicts or failures are reported as partial rollback detailing affected paths (without claims of process-crash recovery or simultaneous atomic reader visibility).
+- Unrelated files, concurrent user edits, and pre-existing directories are preserved; no harness configurations or native host settings are modified.
 
 Run focused installer tests with `npm test` from this package directory.
 

@@ -9,25 +9,36 @@ import { executeInstallation, isSupportedNodeVersion, MIN_NODE_VERSION, planInst
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliPath = path.join(packageRoot, 'bin', 'install.js');
-const skillFiles = [
-  'SKILL.md',
-  'references/sonar-cli-commands.md',
-  'references/full-scan-workflow.md',
-  'references/testing-and-coverage.md',
-  'references/remediation-and-handoff.md',
-  'references/report-formats.md',
-  'references/worktree-remediation.md',
-  'scripts/convert-sonar-report.mjs',
-  'scripts/fetch-sonar-issues.ps1',
-  'scripts/calculate-jacoco-coverage.ps1'
+
+const EXPECTED_ASSETS = [
+  { source: 'SKILL.md', dest: 'skills/sonarqube-test-quality/SKILL.md' },
+  { source: 'references/sonar-cli-commands.md', dest: 'skills/sonarqube-test-quality/references/sonar-cli-commands.md' },
+  { source: 'references/full-scan-workflow.md', dest: 'skills/sonarqube-test-quality/references/full-scan-workflow.md' },
+  { source: 'references/testing-and-coverage.md', dest: 'skills/sonarqube-test-quality/references/testing-and-coverage.md' },
+  { source: 'references/remediation-and-handoff.md', dest: 'skills/sonarqube-test-quality/references/remediation-and-handoff.md' },
+  { source: 'references/report-formats.md', dest: 'skills/sonarqube-test-quality/references/report-formats.md' },
+  { source: 'references/worktree-remediation.md', dest: 'skills/sonarqube-test-quality/references/worktree-remediation.md' },
+  { source: 'scripts/convert-sonar-report.mjs', dest: 'skills/sonarqube-test-quality/scripts/convert-sonar-report.mjs' },
+  { source: 'scripts/fetch-sonar-issues.ps1', dest: 'skills/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1' },
+  { source: 'scripts/calculate-jacoco-coverage.ps1', dest: 'skills/sonarqube-test-quality/scripts/calculate-jacoco-coverage.ps1' },
+  { source: 'references/remediation-cycles.md', dest: 'skills/sonarqube-test-quality/references/remediation-cycles.md' },
+  { source: 'references/project-discovery.md', dest: 'skills/sonarqube-test-quality/references/project-discovery.md' },
+  { source: 'references/local-analysis.md', dest: 'skills/sonarqube-test-quality/references/local-analysis.md' },
+  { source: 'references/run-guidance.md', dest: 'skills/sonarqube-test-quality/references/run-guidance.md' },
+  { source: 'agents/sonar-evidence.md', dest: 'skills/sonarqube-test-quality/agents/sonar-evidence.md' },
+  { source: 'templates/remediation-cycle-report.md', dest: 'skills/sonarqube-test-quality/templates/remediation-cycle-report.md' },
+  { source: 'templates/run-guidance-report.md', dest: 'skills/sonarqube-test-quality/templates/run-guidance-report.md' },
+  { source: 'commands/cmd-sonar-remediate/SKILL.md', dest: 'skills/cmd-sonar-remediate/SKILL.md' }
 ];
+
 const skillRoot = project => path.join(project, '.agents', 'skills', 'sonarqube-test-quality');
 const planFor = project => planInstallation({ sourceDir: packageRoot, target: 'agents', directory: project });
 
 function assertNoRegistration(project) {
   for (const file of [
-    '.claude', '.vscode', 'plugin.json', 'settings.json', '.agents/plugin.json', '.agents/settings.json',
-    '.agents/skills/sonarqube-test-quality/plugin.json', '.agents/skills/sonarqube-test-quality/settings.json'
+    '.vscode', 'plugin.json', 'settings.json', '.agents/plugin.json', '.agents/settings.json',
+    '.agents/skills/sonarqube-test-quality/plugin.json', '.agents/skills/sonarqube-test-quality/settings.json',
+    '.agents/agents/sonar-evidence.md', '.claude/agents/sonar-evidence.md'
   ]) {
     assert.ok(!fs.existsSync(path.join(project, file)), `Installer must not create ${file}`);
   }
@@ -49,15 +60,16 @@ describe('SonarQube common skill installer', () => {
     const plan = planFor(project);
     assert.equal(plan.installationRoot, path.join(project, '.agents'));
     const result = executeInstallation(plan);
-    assert.equal(result.committed.length, skillFiles.length);
-    for (const file of skillFiles) {
-      assert.ok(fs.readFileSync(path.join(skillRoot(project), file)).equals(fs.readFileSync(path.join(packageRoot, file))));
+    assert.equal(result.committed.length, EXPECTED_ASSETS.length);
+    for (const asset of EXPECTED_ASSETS) {
+      assert.ok(fs.readFileSync(path.join(project, '.agents', asset.dest)).equals(fs.readFileSync(path.join(packageRoot, asset.source))));
     }
     const repeated = executeInstallation(planFor(project));
     assert.equal(repeated.committed.length, 0);
-    assert.equal(repeated.unchanged.length, skillFiles.length);
+    assert.equal(repeated.unchanged.length, EXPECTED_ASSETS.length);
     assert.deepEqual(fs.readdirSync(project), ['.agents']);
     assert.deepEqual(fs.readdirSync(path.join(project, '.agents')), ['skills']);
+    assert.deepEqual(fs.readdirSync(path.join(project, '.agents', 'skills')).sort(), ['cmd-sonar-remediate', 'sonarqube-test-quality']);
     assertNoRegistration(project);
   });
 
@@ -100,7 +112,7 @@ describe('SonarQube common skill installer', () => {
   test('library and CLI dry runs preview the .agents payload without creating a project', () => {
     const project = path.join(tempRoot, 'new-project');
     const result = executeInstallation(planFor(project), { dryRun: true });
-    assert.deepEqual(result.additions, skillFiles.map(file => `skills/sonarqube-test-quality/${file}`));
+    assert.deepEqual(result.additions, EXPECTED_ASSETS.map(a => a.dest));
     const output = execFileSync(process.execPath, [cliPath, '--target', 'agents', '--directory', project, '--dry-run'], {
       cwd: tempRoot, encoding: 'utf8'
     });
@@ -123,18 +135,12 @@ describe('SonarQube common skill installer', () => {
     const plan = planFor(project);
     assert.equal(plan.replacements.length, 1);
     assert.throws(() => executeInstallation(plan), /Destination files differ/);
-    assert.throws(() => executeInstallation(plan, { force: true }), /requires confirmation/);
-    assert.throws(() => executeInstallation(plan, { yes: true }), /without --force/);
-    for (const flags of [[], ['--force'], ['--yes']]) {
-      const result = spawnSync(process.execPath, [cliPath, '--target', 'agents', '--directory', project, ...flags], {
-        cwd: tempRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe']
-      });
-      assert.equal(result.status, 1);
-      assert.match(result.stderr, /Destination files differ|requires confirmation|without --force/);
-      assert.equal(fs.readFileSync(destination, 'utf8'), 'user-owned change');
-    }
-    execFileSync(process.execPath, [cliPath, '--target', 'agents', '--directory', project, '--force', '--yes']);
-    assert.ok(fs.readFileSync(destination).equals(fs.readFileSync(path.join(packageRoot, 'SKILL.md'))));
+    assert.throws(() => executeInstallation(plan, { force: true }), /requires confirmation with --yes/);
+    assert.throws(() => executeInstallation(plan, { yes: true }), /Option --yes cannot be used without --force/);
+    const result = executeInstallation(plan, { force: true, yes: true });
+    assert.equal(result.committed.length, 1);
+    assert.equal(result.unchanged.length, EXPECTED_ASSETS.length - 1);
+    assert.equal(fs.readFileSync(destination, 'utf8'), fs.readFileSync(path.join(packageRoot, 'SKILL.md'), 'utf8'));
     assert.equal(fs.readFileSync(unrelated, 'utf8'), 'unrelated evidence');
     assert.equal(fs.readFileSync(existingInstallation, 'utf8'), 'pre-existing user installation');
   });
@@ -142,7 +148,7 @@ describe('SonarQube common skill installer', () => {
   test('rejects removed or missing targets and missing project roots without writing', () => {
     const project = path.join(tempRoot, 'project');
     fs.writeFileSync(path.join(tempRoot, 'unrelated.txt'), 'keep');
-    for (const target of ['claude', 'directory', 'vscode', 'codex', '', undefined]) {
+    for (const target of ['directory', 'vscode', 'codex', 'copilot', 'antigravity', '', undefined]) {
       assert.throws(() => resolveInstallTarget({ target, directory: project }), /Unsupported target.*Choose agents/);
       assert.throws(() => planInstallation({ sourceDir: packageRoot, target, directory: project }), /Unsupported target/);
       const args = [...(target === undefined ? [] : ['--target', target]), '--directory', project];
@@ -167,30 +173,25 @@ describe('SonarQube common skill installer', () => {
   for (const relativePath of ['.agents', '.agents/skills', '.agents/skills/sonarqube-test-quality/SKILL.md']) {
     test(`blocks a symbolic link at ${relativePath} without touching its target`, t => {
       const project = path.join(tempRoot, 'project');
-      const outside = path.join(tempRoot, 'outside');
-      const destination = path.join(project, relativePath);
-      const isFile = relativePath.endsWith('SKILL.md');
-      fs.mkdirSync(path.dirname(destination), { recursive: true });
-      if (isFile) fs.writeFileSync(outside, 'outside evidence');
-      else fs.mkdirSync(outside);
+      fs.mkdirSync(project, { recursive: true });
+      const linkTarget = path.join(tempRoot, 'link-target');
+      fs.mkdirSync(linkTarget, { recursive: true });
+      const targetFile = path.join(linkTarget, 'target.txt');
+      fs.writeFileSync(targetFile, 'target payload');
+      const linkPath = path.join(project, relativePath);
+      fs.mkdirSync(path.dirname(linkPath), { recursive: true });
       try {
-        fs.symlinkSync(outside, destination, isFile ? 'file' : 'junction');
+        fs.symlinkSync(linkTarget, linkPath, relativePath.endsWith('.md') ? 'file' : 'junction');
       } catch (error) {
-        t.skip(`Symlinks are unavailable: ${error.code}`);
+        t.skip(`Symlink creation is unavailable: ${error.code}`);
         return;
       }
+
       const plan = planFor(project);
       assert.ok(plan.blockers.length > 0);
-      assert.throws(() => executeInstallation(plan, { force: true, yes: true }), /Installation blocked/);
-      const result = spawnSync(process.execPath, [cliPath, '--target', 'agents', '--directory', project, '--force', '--yes'], {
-        cwd: tempRoot, encoding: 'utf8'
-      });
-      assert.equal(result.status, 1);
-      assert.match(result.stderr, /unsafe destination/);
-      if (isFile) assert.equal(fs.readFileSync(outside, 'utf8'), 'outside evidence');
-      else assert.deepEqual(fs.readdirSync(outside), []);
-      assert.ok(fs.lstatSync(destination).isSymbolicLink());
-      assert.ok(!fs.existsSync(path.join(skillRoot(project), 'references')));
+      assert.throws(() => executeInstallation(plan), /Installation blocked/);
+      assert.equal(fs.readFileSync(targetFile, 'utf8'), 'target payload');
+      assert.equal(fs.readdirSync(linkTarget).length, 1);
     });
   }
 
@@ -336,5 +337,550 @@ describe('SonarQube common skill installer', () => {
     for (const f of allFiles) {
       assert.ok(!f.includes('.tmp-'));
     }
+  });
+
+  test('installs claude-only payload and leaves .agents untouched', () => {
+    const project = path.join(tempRoot, 'claude-project');
+    const plan = planInstallation({ sourceDir: packageRoot, target: 'claude', directory: project });
+    assert.equal(plan.installationRoot, path.join(project, '.claude'));
+    const result = executeInstallation(plan);
+    assert.equal(result.committed.length, EXPECTED_ASSETS.length);
+    for (const asset of EXPECTED_ASSETS) {
+      assert.ok(fs.readFileSync(path.join(project, '.claude', asset.dest)).equals(fs.readFileSync(path.join(packageRoot, asset.source))));
+    }
+    assert.ok(!fs.existsSync(path.join(project, '.agents')), 'Installer must not create .agents when target is claude');
+    assert.deepEqual(fs.readdirSync(path.join(project, '.claude', 'skills')).sort(), ['cmd-sonar-remediate', 'sonarqube-test-quality']);
+
+    const repeated = executeInstallation(planInstallation({ sourceDir: packageRoot, target: 'claude', directory: project }));
+    assert.equal(repeated.committed.length, 0);
+    assert.equal(repeated.unchanged.length, EXPECTED_ASSETS.length);
+  });
+
+  test('installs both targets with 36 destinations and dual discovery messaging', () => {
+    const project = path.join(tempRoot, 'both-project');
+    const plan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+    assert.equal(plan.installationRoot, project);
+    assert.equal(plan.actions.length, 36);
+    assert.equal(plan.additions.length, 36);
+
+    const cliResult = spawnSync(process.execPath, [cliPath, '--target', 'both', '--directory', project], {
+      cwd: tempRoot, encoding: 'utf8'
+    });
+    assert.equal(cliResult.status, 0);
+    assert.match(cliResult.stdout, /Installed 36 file\(s\)/);
+    assert.match(cliResult.stdout, /\.agents\/skills.*and.*\.claude\/skills/);
+    assert.doesNotMatch(cliResult.stdout, new RegExp(`${project}/skills`));
+
+    for (const asset of EXPECTED_ASSETS) {
+      assert.ok(fs.readFileSync(path.join(project, '.agents', asset.dest)).equals(fs.readFileSync(path.join(packageRoot, asset.source))));
+      assert.ok(fs.readFileSync(path.join(project, '.claude', asset.dest)).equals(fs.readFileSync(path.join(packageRoot, asset.source))));
+    }
+
+    const repeatedPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+    assert.equal(repeatedPlan.unchanged.length, 36);
+    const repeated = executeInstallation(repeatedPlan);
+    assert.equal(repeated.committed.length, 0);
+    assert.equal(repeated.unchanged.length, 36);
+  });
+
+  test('enforces locking hierarchy: shared project lock and legacy agents lock', () => {
+    const project = path.join(tempRoot, 'locked-project');
+    fs.mkdirSync(project, { recursive: true });
+
+    const sharedLock = path.join(project, '.sonarqube-test-quality.install.lock');
+    fs.writeFileSync(sharedLock, 'shared lock active');
+    for (const target of ['agents', 'claude', 'both']) {
+      const plan = planInstallation({ sourceDir: packageRoot, target, directory: project });
+      assert.throws(() => executeInstallation(plan), /Installation locked by another process/);
+    }
+    fs.unlinkSync(sharedLock);
+
+    const legacyLock = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', '.install.lock');
+    fs.mkdirSync(path.dirname(legacyLock), { recursive: true });
+    fs.writeFileSync(legacyLock, 'legacy lock active');
+
+    const claudePlan = planInstallation({ sourceDir: packageRoot, target: 'claude', directory: project });
+    const claudeRes = executeInstallation(claudePlan);
+    assert.equal(claudeRes.committed.length, 18);
+
+    const agentsPlan = planInstallation({ sourceDir: packageRoot, target: 'agents', directory: project });
+    assert.throws(() => executeInstallation(agentsPlan), /Installation locked by another process/);
+
+    const bothPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+    assert.throws(() => executeInstallation(bothPlan), /Installation locked by another process/);
+    assert.ok(!fs.existsSync(sharedLock), 'Shared lock must be released on partial acquisition failure');
+    assert.ok(fs.existsSync(legacyLock), 'Pre-existing legacy lock must be preserved');
+    fs.unlinkSync(legacyLock);
+  });
+
+  test('cross-root rollback restores state and cleans up on publication failure in both mode', () => {
+    const project = path.join(tempRoot, 'rollback-project');
+    executeInstallation(planInstallation({ sourceDir: packageRoot, target: 'both', directory: project }));
+
+    const agentsSkill = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', 'SKILL.md');
+    const claudeSkill = path.join(project, '.claude', 'skills', 'sonarqube-test-quality', 'SKILL.md');
+    fs.writeFileSync(agentsSkill, 'modified agents skill');
+    fs.writeFileSync(claudeSkill, 'modified claude skill');
+
+    const replacePlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+    assert.equal(replacePlan.replacements.length, 2);
+
+    assert.throws(() => executeInstallation(replacePlan, {
+      force: true,
+      yes: true,
+      _beforePublish: (action, index) => {
+        if (index === 1) throw new Error('simulated fault during second replacement');
+      }
+    }), /simulated fault during second replacement/);
+
+    assert.equal(fs.readFileSync(agentsSkill, 'utf8'), 'modified agents skill');
+    assert.equal(fs.readFileSync(claudeSkill, 'utf8'), 'modified claude skill');
+    assert.ok(!fs.existsSync(path.join(project, '.sonarqube-test-quality.install.lock')));
+  });
+
+  test('detects concurrent modification during publication after planning', () => {
+    const project = path.join(tempRoot, 'partial-rollback-project');
+    executeInstallation(planInstallation({ sourceDir: packageRoot, target: 'both', directory: project }));
+
+    const agentsSkill = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', 'SKILL.md');
+    fs.writeFileSync(agentsSkill, 'modified agents skill');
+
+    const replacePlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+
+    assert.throws(() => executeInstallation(replacePlan, {
+      force: true,
+      yes: true,
+      _beforePublish: (action, index) => {
+        if (action.relativePath.includes('sonarqube-test-quality/SKILL.md')) {
+          fs.writeFileSync(action.destinationPath, 'concurrent external modification');
+        }
+      }
+    }), /Destination changed during installation/);
+  });
+
+  test('preserves pre-existing empty directories along managed paths across installation and rollback', () => {
+    const project = path.join(tempRoot, 'empty-dir-project');
+    const preExistingEmpty = path.join(project, 'pre-existing-dir');
+    const preExistingAgentsSkill = path.join(project, '.agents', 'skills', 'existing-agent-skill');
+    const preExistingClaudeSkill = path.join(project, '.claude', 'skills', 'existing-claude-skill');
+    fs.mkdirSync(preExistingEmpty, { recursive: true });
+    fs.mkdirSync(preExistingAgentsSkill, { recursive: true });
+    fs.mkdirSync(preExistingClaudeSkill, { recursive: true });
+
+    // 1. Initial installation with pre-existing directories in place
+    executeInstallation(planInstallation({ sourceDir: packageRoot, target: 'both', directory: project }));
+    assert.ok(fs.existsSync(preExistingEmpty), 'Pre-existing empty directory must be preserved after install');
+    assert.ok(fs.existsSync(preExistingAgentsSkill), 'Pre-existing empty directory in .agents/skills must be preserved after install');
+    assert.ok(fs.existsSync(preExistingClaudeSkill), 'Pre-existing empty directory in .claude/skills must be preserved after install');
+
+    // 2. Rollback during replacement preserving pre-existing directories
+    const agentsSkill = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', 'SKILL.md');
+    fs.writeFileSync(agentsSkill, 'user edit');
+    const replacePlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+
+    assert.throws(() => executeInstallation(replacePlan, {
+      force: true,
+      yes: true,
+      _beforePublish: () => { throw new Error('rollback fault'); }
+    }), /rollback fault/);
+
+    assert.ok(fs.existsSync(preExistingEmpty), 'Pre-existing empty directory must be preserved after rollback');
+    assert.ok(fs.existsSync(preExistingAgentsSkill), 'Pre-existing empty directory in .agents/skills must be preserved after rollback');
+    assert.ok(fs.existsSync(preExistingClaudeSkill), 'Pre-existing empty directory in .claude/skills must be preserved after rollback');
+
+    // 3. Rollback during fresh installation into a new target cleans new paths while preserving pre-existing directories
+    const freshProject = path.join(tempRoot, 'fresh-failed-project');
+    const freshAgentsPre = path.join(freshProject, '.agents', 'skills', 'pre-existing-custom-skill');
+    const freshClaudePre = path.join(freshProject, '.claude', 'skills', 'pre-existing-custom-skill');
+    fs.mkdirSync(freshAgentsPre, { recursive: true });
+    fs.mkdirSync(freshClaudePre, { recursive: true });
+
+    const freshPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: freshProject });
+    assert.throws(() => executeInstallation(freshPlan, {
+      _beforePublish: (action, index) => {
+        if (index === 2) throw new Error('simulated fresh install fault');
+      }
+    }), /simulated fresh install fault/);
+
+    assert.ok(fs.existsSync(freshAgentsPre), 'Pre-existing empty directory in .agents/skills must survive fresh install rollback');
+    assert.ok(fs.existsSync(freshClaudePre), 'Pre-existing empty directory in .claude/skills must survive fresh install rollback');
+    assert.ok(!fs.existsSync(path.join(freshProject, '.agents', 'skills', 'sonarqube-test-quality')), 'Newly created skill dir must be pruned');
+  });
+
+  test('package validation smoke test: packed tarball installs cleanly with --target both into disposable directory', () => {
+    const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const packOutput = execFileSync(npmCmd, ['pack', '--pack-destination', tempRoot], {
+      cwd: packageRoot,
+      encoding: 'utf8'
+    }).trim();
+    const tarballName = packOutput.split('\n').pop().trim();
+    const tarballPath = path.join(tempRoot, tarballName);
+    assert.ok(fs.existsSync(tarballPath), `Tarball must exist at ${tarballPath}`);
+
+    const extractDir = path.join(tempRoot, 'extracted-package');
+    const targetDir = path.join(tempRoot, 'disposable-install-target');
+    fs.mkdirSync(extractDir, { recursive: true });
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    execFileSync('tar', ['-xzf', tarballPath, '-C', extractDir]);
+    const packedCliPath = path.join(extractDir, 'package', 'bin', 'install.js');
+    assert.ok(fs.existsSync(packedCliPath), `Packed CLI must exist at ${packedCliPath}`);
+
+    const cliResult = spawnSync(process.execPath, [packedCliPath, '--target', 'both', '--directory', targetDir], {
+      cwd: tempRoot,
+      encoding: 'utf8'
+    });
+    assert.equal(cliResult.status, 0);
+    assert.match(cliResult.stdout, /Installed 36 file\(s\)/);
+    assert.match(cliResult.stdout, /\.agents[\\/]skills.*and.*\.claude[\\/]skills/);
+    for (const root of ['.agents', '.claude']) {
+      const rootPath = path.join(targetDir, root);
+      assert.ok(fs.existsSync(rootPath), `Root ${root} must exist`);
+
+      const entrypoint1 = path.join(rootPath, 'skills', 'sonarqube-test-quality', 'SKILL.md');
+      const entrypoint2 = path.join(rootPath, 'skills', 'cmd-sonar-remediate', 'SKILL.md');
+      assert.ok(fs.existsSync(entrypoint1), `Entrypoint 1 must exist at ${entrypoint1}`);
+      assert.ok(fs.existsSync(entrypoint2), `Entrypoint 2 must exist at ${entrypoint2}`);
+      assert.ok(fs.readFileSync(entrypoint1).equals(fs.readFileSync(path.join(packageRoot, 'SKILL.md'))));
+      assert.ok(fs.readFileSync(entrypoint2).equals(fs.readFileSync(path.join(packageRoot, 'commands', 'cmd-sonar-remediate', 'SKILL.md'))));
+
+      for (const asset of EXPECTED_ASSETS) {
+        const installedFile = path.join(rootPath, asset.dest);
+        const sourceFile = path.join(packageRoot, asset.source);
+        assert.ok(fs.existsSync(installedFile), `Expected file missing: ${installedFile}`);
+        assert.ok(fs.readFileSync(installedFile).equals(fs.readFileSync(sourceFile)), `File content mismatch: ${installedFile}`);
+      }
+    }
+
+    let fileCount = 0;
+    function countFiles(dir) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) countFiles(full);
+        else if (entry.isFile()) fileCount++;
+      }
+    }
+    countFiles(targetDir);
+    assert.equal(fileCount, 36, `Expected exactly 36 installed files, found ${fileCount}`);
+  });
+
+  test('staging failure cleans up temporary staged files', () => {
+    const project = path.join(tempRoot, 'staging-fail-project');
+    const plan = planFor(project);
+    let stageSeen = false;
+    assert.throws(() => executeInstallation(plan, {
+      _afterStage: (action, index, tempPath) => {
+        if (index === 2) {
+          stageSeen = true;
+          assert.ok(fs.existsSync(tempPath), 'Staged temp file must exist before failure');
+          throw new Error('deterministic staging failure injection');
+        }
+      }
+    }), /deterministic staging failure injection/);
+    assert.ok(stageSeen, 'Staging hook must have run');
+    if (fs.existsSync(project)) {
+      const allFiles = fs.readdirSync(project, { recursive: true });
+      for (const file of allFiles) {
+        assert.ok(!file.includes('.tmp-'), `Leaked temporary file found: ${file}`);
+      }
+    }
+    const sharedLock = path.join(project, '.sonarqube-test-quality.install.lock');
+    const legacyLock = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', '.install.lock');
+    assert.ok(!fs.existsSync(sharedLock), 'Lock must be released after staging failure');
+    assert.ok(!fs.existsSync(legacyLock), 'Legacy lock must be released after staging failure');
+  });
+
+  test('rollback refuses to write through a symlink mid-transaction and reports partial rollback failure', () => {
+    const project = path.join(tempRoot, 'symlink-rollback-project');
+    executeInstallation(planFor(project));
+    const targetFile = path.join(skillRoot(project), 'SKILL.md');
+    const secondFile = path.join(skillRoot(project), 'references', 'sonar-cli-commands.md');
+    const victimFile = path.join(tempRoot, 'victim.txt');
+    fs.writeFileSync(victimFile, 'VICTIM');
+    fs.writeFileSync(targetFile, 'original user edit');
+    fs.writeFileSync(secondFile, 'second user edit');
+
+    const replacePlan = planFor(project);
+    assert.throws(() => executeInstallation(replacePlan, {
+      force: true,
+      yes: true,
+      _beforePublish: (action, index) => {
+        if (index === 1) {
+          fs.rmSync(targetFile);
+          fs.symlinkSync(victimFile, targetFile);
+          throw new Error('publish fault after symlink swap');
+        }
+      }
+    }), /rollback partial failure.*refusing to overwrite/);
+
+    assert.equal(fs.readFileSync(victimFile, 'utf8'), 'VICTIM');
+    assert.ok(fs.lstatSync(targetFile).isSymbolicLink(), 'Target file must remain a symlink');
+    assert.equal(fs.readlinkSync(targetFile), victimFile);
+    assert.equal(fs.readFileSync(secondFile, 'utf8'), 'second user edit');
+    const sharedLock = path.join(project, '.sonarqube-test-quality.install.lock');
+    const legacyLock = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', '.install.lock');
+    assert.ok(!fs.existsSync(sharedLock), 'Shared lock must be released');
+    assert.ok(!fs.existsSync(legacyLock), 'Legacy lock must be released');
+    const allFiles = fs.readdirSync(project, { recursive: true });
+    for (const file of allFiles) {
+      assert.ok(!file.includes('.tmp-'), `Leaked temporary file found: ${file}`);
+    }
+  });
+
+  test('rollback reports conflict when regular file is concurrently modified after publish before rollback', () => {
+    const project = path.join(tempRoot, 'regular-rollback-conflict-project');
+    executeInstallation(planFor(project));
+    const targetFile = path.join(skillRoot(project), 'SKILL.md');
+    const secondFile = path.join(skillRoot(project), 'references', 'sonar-cli-commands.md');
+    fs.writeFileSync(targetFile, 'original user edit 1');
+    fs.writeFileSync(secondFile, 'original user edit 2');
+
+    const replacePlan = planFor(project);
+    assert.throws(() => executeInstallation(replacePlan, {
+      force: true,
+      yes: true,
+      _beforePublish: (action, index) => {
+        if (index === 1) {
+          fs.writeFileSync(targetFile, 'foreign concurrent edit');
+          throw new Error('publish fault after regular file edit');
+        }
+      }
+    }), /rollback partial failure.*concurrent modification detected, unable to safely restore/);
+
+    assert.equal(fs.readFileSync(targetFile, 'utf8'), 'foreign concurrent edit');
+    assert.equal(fs.readFileSync(secondFile, 'utf8'), 'original user edit 2');
+    const sharedLock = path.join(project, '.sonarqube-test-quality.install.lock');
+    const legacyLock = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', '.install.lock');
+    assert.ok(!fs.existsSync(sharedLock), 'Shared lock must be released');
+    assert.ok(!fs.existsSync(legacyLock), 'Legacy lock must be released');
+    const allFiles = fs.readdirSync(project, { recursive: true });
+    for (const file of allFiles) {
+      assert.ok(!file.includes('.tmp-'), `Leaked temporary file found: ${file}`);
+    }
+  });
+
+  test('addition rollback removes copied file if chmodSync fails during publication', () => {
+    const project = path.join(tempRoot, 'chmod-fail-project');
+    const plan = planFor(project);
+    const origChmodSync = fs.chmodSync;
+    let injected = false;
+    try {
+      assert.throws(() => executeInstallation(plan, {
+        _beforePublish: (action, index) => {
+          if (index === 0) {
+            fs.chmodSync = (p, m) => {
+              if (p === plan.actions[0].destinationPath) {
+                fs.chmodSync = origChmodSync;
+                injected = true;
+                throw new Error('injected chmodSync failure');
+              }
+              return origChmodSync(p, m);
+            };
+          }
+        }
+      }), /injected chmodSync failure/);
+      assert.ok(injected, 'Injected chmodSync failure must have run');
+      const action0Dest = plan.actions[0].destinationPath;
+      assert.ok(!fs.existsSync(action0Dest), 'Action 0 destination must be removed by rollback');
+      const sharedLock = path.join(project, '.sonarqube-test-quality.install.lock');
+      const legacyLock = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', '.install.lock');
+      assert.ok(!fs.existsSync(sharedLock), 'Shared lock must be released');
+      assert.ok(!fs.existsSync(legacyLock), 'Legacy lock must be released');
+      if (fs.existsSync(project)) {
+        const allFiles = fs.readdirSync(project, { recursive: true });
+        for (const file of allFiles) {
+          assert.ok(!file.includes('.tmp-'), `Leaked temporary file found: ${file}`);
+        }
+      }
+    } finally {
+      fs.chmodSync = origChmodSync;
+    }
+  });
+
+  test('replacement rollback restores original files and does not falsely report conflict if renameSync fails', () => {
+    const project = path.join(tempRoot, 'rename-fail-project');
+    executeInstallation(planFor(project));
+    const targetFile = path.join(skillRoot(project), 'SKILL.md');
+    fs.writeFileSync(targetFile, 'original user edit before rename fail');
+    fs.chmodSync(targetFile, 0o600);
+    const replacePlan = planFor(project);
+    const origRenameSync = fs.renameSync;
+    let injected = false;
+    try {
+      assert.throws(() => executeInstallation(replacePlan, {
+        force: true,
+        yes: true,
+        _beforePublish: (action, index) => {
+          if (index === 0) {
+            fs.renameSync = (src, dest) => {
+              if (dest === replacePlan.actions[0].destinationPath) {
+                fs.renameSync = origRenameSync;
+                injected = true;
+                throw new Error('injected renameSync failure');
+              }
+              return origRenameSync(src, dest);
+            };
+          }
+        }
+      }), (err) => {
+        assert.ok(!err.message.includes('rollback partial failure'), `Must not report rollback conflict: ${err.message}`);
+        assert.match(err.message, /injected renameSync failure/);
+        return true;
+      });
+      assert.ok(injected, 'Injected renameSync failure must have run');
+      assert.equal(fs.readFileSync(targetFile, 'utf8'), 'original user edit before rename fail');
+      assert.equal(fs.statSync(targetFile).mode & 0o777, 0o600, 'Original mode must survive failed renameSync');
+      const sharedLock = path.join(project, '.sonarqube-test-quality.install.lock');
+      const legacyLock = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', '.install.lock');
+      assert.ok(!fs.existsSync(sharedLock), 'Shared lock must be released');
+      assert.ok(!fs.existsSync(legacyLock), 'Legacy lock must be released');
+      if (fs.existsSync(project)) {
+        const allFiles = fs.readdirSync(project, { recursive: true });
+        for (const file of allFiles) {
+          assert.ok(!file.includes('.tmp-'), `Leaked temporary file found: ${file}`);
+        }
+      }
+    } finally {
+      fs.renameSync = origRenameSync;
+    }
+  });
+
+  test('replacement rollback restores original file when chmodSync fails after rename', () => {
+    const project = path.join(tempRoot, 'replace-chmod-fail-project');
+    executeInstallation(planFor(project));
+    const targetFile = path.join(skillRoot(project), 'SKILL.md');
+    fs.writeFileSync(targetFile, 'original user edit before replace chmod fail');
+    fs.chmodSync(targetFile, 0o600);
+    const replacePlan = planFor(project);
+    const origChmodSync = fs.chmodSync;
+    let injected = false;
+    try {
+      assert.throws(() => executeInstallation(replacePlan, {
+        force: true,
+        yes: true,
+        _beforePublish: (action, index) => {
+          if (index === 0) {
+            fs.chmodSync = (p, m) => {
+              if (p === replacePlan.actions[0].destinationPath) {
+                fs.chmodSync = origChmodSync;
+                injected = true;
+                throw new Error('injected replace chmodSync failure');
+              }
+              return origChmodSync(p, m);
+            };
+          }
+        }
+      }), /injected replace chmodSync failure/);
+      assert.ok(injected, 'Injected replace chmodSync failure must have run');
+      assert.equal(fs.readFileSync(targetFile, 'utf8'), 'original user edit before replace chmod fail');
+      assert.equal(fs.statSync(targetFile).mode & 0o777, 0o600, 'Original mode must be restored after post-rename failure');
+      const sharedLock = path.join(project, '.sonarqube-test-quality.install.lock');
+      const legacyLock = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', '.install.lock');
+      assert.ok(!fs.existsSync(sharedLock), 'Shared lock must be released');
+      assert.ok(!fs.existsSync(legacyLock), 'Legacy lock must be released');
+      if (fs.existsSync(project)) {
+        const allFiles = fs.readdirSync(project, { recursive: true });
+        for (const file of allFiles) {
+          assert.ok(!file.includes('.tmp-'), `Leaked temporary file found: ${file}`);
+        }
+      }
+    } finally {
+      fs.chmodSync = origChmodSync;
+    }
+  });
+
+  test('sibling-only or root-only collision blocks the whole plan', () => {
+    const project = path.join(tempRoot, 'collision-project');
+    executeInstallation(planFor(project));
+    const cmdSkill = path.join(project, '.agents', 'skills', 'cmd-sonar-remediate', 'SKILL.md');
+    fs.writeFileSync(cmdSkill, 'user custom command');
+
+    const plan = planFor(project);
+    assert.equal(plan.replacements.length, 1);
+    assert.equal(plan.unchanged.length, EXPECTED_ASSETS.length - 1);
+    assert.throws(() => executeInstallation(plan), /Destination files differ/);
+  });
+
+  test('handles mixed additions and replacements across roots in both mode', () => {
+    const project = path.join(tempRoot, 'mixed-roots-project');
+    executeInstallation(planInstallation({ sourceDir: packageRoot, target: 'claude', directory: project }));
+
+    const claudeSkill = path.join(project, '.claude', 'skills', 'sonarqube-test-quality', 'SKILL.md');
+    fs.writeFileSync(claudeSkill, 'user edit in claude');
+
+    const bothPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+    assert.equal(bothPlan.additions.length, 18);
+    assert.equal(bothPlan.replacements.length, 1);
+    assert.equal(bothPlan.unchanged.length, 17);
+
+    assert.throws(() => executeInstallation(bothPlan), /Destination files differ/);
+    const result = executeInstallation(bothPlan, { force: true, yes: true });
+    assert.equal(result.committed.length, 19);
+    assert.equal(result.unchanged.length, 17);
+  });
+
+  test('concurrent user-created file survives in both mode', () => {
+    const project = path.join(tempRoot, 'surviving-file-project');
+    const userFile = path.join(project, '.agents', 'skills', 'user-file.txt');
+
+    const plan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+    const result = executeInstallation(plan, {
+      _beforePublish: (action, index) => {
+        if (index === 0) {
+          fs.mkdirSync(path.dirname(userFile), { recursive: true });
+          fs.writeFileSync(userFile, 'user created file');
+        }
+      }
+    });
+    assert.equal(result.committed.length, 36);
+    assert.ok(fs.existsSync(userFile));
+    assert.equal(fs.readFileSync(userFile, 'utf8'), 'user created file');
+  });
+
+  test('CLI installs claude-only without creating .agents', () => {
+    const project = path.join(tempRoot, 'cli-claude-project');
+    const cliResult = spawnSync(process.execPath, [cliPath, '--target', 'claude', '--directory', project], {
+      cwd: tempRoot,
+      encoding: 'utf8'
+    });
+    assert.equal(cliResult.status, 0);
+    assert.match(cliResult.stdout, /Installed 18 file\(s\)/);
+    assert.match(cliResult.stdout, /\.claude\/skills/);
+    assert.ok(!fs.existsSync(path.join(project, '.agents')));
+    assert.ok(fs.existsSync(path.join(project, '.claude', 'skills', 'sonarqube-test-quality', 'SKILL.md')));
+    assert.ok(fs.existsSync(path.join(project, '.claude', 'skills', 'cmd-sonar-remediate', 'SKILL.md')));
+  });
+
+  test('blocks symbolic links for claude and both targets', t => {
+    const project = path.join(tempRoot, 'symlink-claude-project');
+    fs.mkdirSync(project, { recursive: true });
+    const linkTarget = path.join(tempRoot, 'link-target-claude');
+    fs.mkdirSync(linkTarget, { recursive: true });
+    const linkPath = path.join(project, '.claude');
+    try {
+      fs.symlinkSync(linkTarget, linkPath, 'junction');
+    } catch (e) {
+      t.skip('symlinks unavailable');
+      return;
+    }
+    const claudePlan = planInstallation({ sourceDir: packageRoot, target: 'claude', directory: project });
+    assert.ok(claudePlan.blockers.length > 0);
+    assert.throws(() => executeInstallation(claudePlan), /Installation blocked/);
+
+    const bothPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+    assert.ok(bothPlan.blockers.length > 0);
+    assert.throws(() => executeInstallation(bothPlan), /Installation blocked/);
+  });
+
+  test('cleans up newly created project root on failed fresh install', () => {
+    const project = path.join(tempRoot, 'nonexistent-fresh-project');
+    const plan = planInstallation({ sourceDir: packageRoot, target: 'agents', directory: project });
+    assert.ok(!fs.existsSync(project));
+
+    assert.throws(() => executeInstallation(plan, {
+      _beforePublish: () => { throw new Error('fail fresh install'); }
+    }), /fail fresh install/);
+
+    assert.ok(!fs.existsSync(project), 'Nonexistent project root created by installer must be cleaned up on failure');
   });
 });
