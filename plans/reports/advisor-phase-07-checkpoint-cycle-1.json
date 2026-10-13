@@ -1,0 +1,34 @@
+{
+  "checkpoint": "review:step-4",
+  "cycle": 1,
+  "status": "ADVICE_READY",
+  "advisor": {
+    "backend": "codex",
+    "model": "gpt-5.6-sol",
+    "effort": "high"
+  },
+  "recommendation": "Do not finalize; return Step 4 with a corrected review packet containing the actual workflow diff and per-job permissions, pinned action SHAs, matrix rows, and publisher behavior, while reconciling every changed file with the authorized-path list.",
+  "must_fix": [
+    "Provide the actual changed-path list and diff or immutable review artifact.",
+    "Show explicit workflow-level and job-level permissions proving least privilege, including publisher credentials and token access.",
+    "Enumerate all action references with exact immutable commit SHAs and demonstrate that existing pins were preserved.",
+    "Show the exact four matrix rows and evidence that each required row executes the intended Linux gates.",
+    "Demonstrate that the publisher stage is verify-only and cannot build, alter, or substitute producer artifacts.",
+    "Resolve the apparent mismatch between workflow restructuring and the sole authorized path, package.json; obtain explicit scope authorization before accepting any other changed path."
+  ],
+  "cautions": [
+    "Passing tests may validate expected structure without proving effective token permissions, artifact provenance, or resistance to publisher-side substitution.",
+    "A nominally pinned action can still be unsafe if a reusable workflow, container image, downloaded tool, or script dependency remains mutable.",
+    "Aggregate test totals do not show that every matrix row ran independently or that failures cannot be masked by exclusions, continue-on-error, or conditional skips."
+  ],
+  "code_review": {
+    "score": 10,
+    "status": "Approved",
+    "report_file": "plans/reports/code-review-260915-0109-phase-07-release-workflow.md"
+  },
+  "testing": {
+    "status": "PASS",
+    "release_tests": "29/29 passed",
+    "full_tests": "536/536 runnable passed (1 Windows skip)"
+  }
+}

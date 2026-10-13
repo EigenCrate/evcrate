@@ -1,0 +1,679 @@
+{
+  "taskRunId": "6c27c91d-0358-48eb-a437-b0f0a2842c7a",
+  "consultationId": "afd84f13-4d34-482b-96ff-101f36bd5697",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+    "task_run_id": "6c27c91d-0358-48eb-a437-b0f0a2842c7a",
+    "checkpoint_id": "checkpoint-review-step-4-phase-10-cycle-2",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "2f28f87549f9d90d6ae21f54b569e9f476094dba1702ab81458ab29811a97cf4",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.154.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 29556
+    },
+    "attempts": [
+      {
+        "attempt_id": "97ec25aa-38d5-4e05-ad6f-e4f25f42618a",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 29468,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Run one read-only Step 5 preflight that captures the exact tracked diff and names every file the proposed status update would modify; do not perform any status-file edits until those paths are explicitly authorized.",
+      "rationale": "The review evidence supports the six documentation deliverables, test results, and documentation constraints, but the proposed Step 5 status update is not safely authorized as stated. The checkpoint says it is confined to the Phase 10 plan, yet that plan is absent from authorized_paths, while the quoted report also claims the master plan was synchronized despite the requirement that exactly six documentation files be modified. A read-only preflight is the least complex action that preserves the approved deliverables and prevents scope drift while resolving this accounting contradiction.",
+      "must_fix": [
+        "Resolve whether the Phase 10 plan and master plan are intended Step 5 write targets; neither is currently authorized.",
+        "Reconcile the report's claim that the master plan was synchronized with the success criterion and summary asserting exactly six tracked documentation files are modified.",
+        "Do not characterize the review report as an intended tracked change; it is an authorized evidence path but is stated to be gitignored and outside the six-file deliverable set."
+      ],
+      "cautions": [
+        "Any Step 5 edit outside the six documentation files would invalidate the current exact-path success claim unless authorization and path accounting are formally revised.",
+        "The supplied excerpts cover only three of the six deliverable documents, so the terminal review score cannot independently establish that every document preserves all required exclusions.",
+        "Documentation files near the 800-line ceiling, particularly system-architecture.md at 798 lines, have almost no safe growth margin."
+      ],
+      "assumptions": [
+        "The quoted test counts, git-status count, link audit, line counts, digests, and review score are accurate but have not been independently verified here.",
+        "Step 5 may be completed without modifying repository files, or authorization can be amended before any required plan-status edit.",
+        "The claimed master-plan synchronization either predates the six-file working diff or is inaccurately described; the supplied evidence does not distinguish those cases."
+      ],
+      "success_checks": [
+        "The preflight reports exactly the six intended documentation paths as tracked modifications and no forbidden, generated, changelog, plan, or manifest changes.",
+        "Every proposed Step 5 write target is either removed from the action or added explicitly to authorized_paths with updated deliverable accounting.",
+        "The final status statement preserves the bounded Windows claim: installer lifecycle and version --json only, with health --json and all runtime, signing, desktop, and enterprise claims excluded.",
+        "All docs remain at or below 800 lines and README asset placeholders remain version-neutral after any subsequently authorized edit."
+      ],
+      "unresolved_questions": [
+        "Should Step 5 be a no-write administrative finalization, or should authorization be expanded to permit edits to the Phase 10 plan and possibly the master plan?",
+        "Was the master-plan synchronization already committed or otherwise outside the current working-tree diff, or is the Cycle 2 report's statement incorrect?"
+      ]
+    },
+    "audit_status": "recorded"
+  },
+  "freshState": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "get",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "6c27c91d-0358-48eb-a437-b0f0a2842c7a",
+      "project_id": "fa0115be0f6877ca599febe95dcd3c8d6af52001867f4b5c96f92764decf9f3d",
+      "task_revision": 4,
+      "phase_id": "phase-10",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+      "disposition": null,
+      "outcome": null,
+      "task": {
+        "goal": "Phase 10 Post-Proof Documentation and Bounded Support Cutover (Cycle 2)",
+        "non_goals": [
+          "Unrelated refactoring",
+          "Modifying historical plans, archived evidence, or active CHANGELOG.md",
+          "Editing generated projections or manifests",
+          "Broadening Windows claims beyond verified matrix and installer/version subset"
+        ],
+        "authorized_paths": [
+          "README.md",
+          "docs/code-standards.md",
+          "docs/codebase-summary.md",
+          "docs/project-overview-pdr.md",
+          "docs/project-roadmap.md",
+          "docs/system-architecture.md",
+          "plans/reports/code-review-260915-1314-phase-10-post-proof-documentation-and-support-cutover-cycle-2.md"
+        ],
+        "scope_rationale": "Phase 10 documentation files and Cycle 2 terminal review report",
+        "invariants": [
+          "All doc files in docs/ maintain line count <= 800",
+          "README asset placeholders are version-neutral <version>",
+          "Windows verification is version --json only (no health --json)",
+          "All runtime, signing, desktop, and enterprise exclusions remain explicit",
+          "No touch to forbidden, generated, or active changelog files",
+          "Deliverable set is strictly the 6 tracked documentation files; reports are gitignored evidence artifacts"
+        ],
+        "success_criteria": [
+          "Review approved with score 10/10 and zero critical issues/warnings",
+          "All 52 scoped tests pass across test:release, test:installer:linux, test:distribution:rollout",
+          "Exactly 6 documentation files modified in git status",
+          "Path accounting and status records reconciled per advisor guidance"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "README.md",
+          "digest": "30b2f259a7e525605b4af50ceef443fd5e53ddc9f1116aa8628b95aa9e2bba6c",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 3a89f09f77d3d4269453c1fd4cb118a1b024e600 3a89f09f77d3d4269453c1fd4cb118a1b024e600|100644 3a89f09f77d3d4269453c1fd4cb118a1b024e600 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/code-standards.md",
+          "digest": "6e24aa7c50a9eb7a0db797607ec24a40b8a54906232ee756ac60c0d6296f6cd0",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 15d4eaf8abf1b29cd60fe280243dafe9abb47735 15d4eaf8abf1b29cd60fe280243dafe9abb47735|100644 15d4eaf8abf1b29cd60fe280243dafe9abb47735 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/codebase-summary.md",
+          "digest": "79ade05b80cb917b303b0b5082e3c3a4b8bbab47651d156c56d944fadb65b5d1",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 9e53bee57836de88bde84be348eb190d737be0ff 9e53bee57836de88bde84be348eb190d737be0ff|100644 9e53bee57836de88bde84be348eb190d737be0ff 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/project-overview-pdr.md",
+          "digest": "a8b042a5d42ed529c3e532f28bef8dd3d1871714daeb22e636d502566b632162",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60|100644 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/project-roadmap.md",
+          "digest": "a74d445f4b3867eabe02ae7723c6dccd6285811088890270037fe9aa54e8484c",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 a625daa6092e2c8b066817dc821ef436f6b4a39e a625daa6092e2c8b066817dc821ef436f6b4a39e|100644 a625daa6092e2c8b066817dc821ef436f6b4a39e 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/system-architecture.md",
+          "digest": "2013e8e724d660c7b111644f0a34245fc00f1ee8ce4b2b66d9a1b82163dcf4e7",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 f7541aa7b159bf52472240a83f916a0b6e259470 f7541aa7b159bf52472240a83f916a0b6e259470|100644 f7541aa7b159bf52472240a83f916a0b6e259470 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/code-review-260915-1314-phase-10-post-proof-documentation-and-support-cutover-cycle-2.md",
+          "digest": "b637c64c1097f98e061ed9c78a46d0b6db54cc63be86fcf8a3cb2d017f2a413e",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "README.md",
+          "docs/code-standards.md",
+          "docs/codebase-summary.md",
+          "docs/project-overview-pdr.md",
+          "docs/project-roadmap.md",
+          "docs/system-architecture.md",
+          "plans/reports/code-review-260915-1314-phase-10-post-proof-documentation-and-support-cutover-cycle-2.md"
+        ],
+        "rationale": "Phase 10 documentation files and Cycle 2 terminal review report",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "README.md",
+          "digest": "30b2f259a7e525605b4af50ceef443fd5e53ddc9f1116aa8628b95aa9e2bba6c",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 3a89f09f77d3d4269453c1fd4cb118a1b024e600 3a89f09f77d3d4269453c1fd4cb118a1b024e600|100644 3a89f09f77d3d4269453c1fd4cb118a1b024e600 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/code-standards.md",
+          "digest": "6e24aa7c50a9eb7a0db797607ec24a40b8a54906232ee756ac60c0d6296f6cd0",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 15d4eaf8abf1b29cd60fe280243dafe9abb47735 15d4eaf8abf1b29cd60fe280243dafe9abb47735|100644 15d4eaf8abf1b29cd60fe280243dafe9abb47735 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/codebase-summary.md",
+          "digest": "79ade05b80cb917b303b0b5082e3c3a4b8bbab47651d156c56d944fadb65b5d1",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 9e53bee57836de88bde84be348eb190d737be0ff 9e53bee57836de88bde84be348eb190d737be0ff|100644 9e53bee57836de88bde84be348eb190d737be0ff 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/project-overview-pdr.md",
+          "digest": "a8b042a5d42ed529c3e532f28bef8dd3d1871714daeb22e636d502566b632162",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60|100644 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/project-roadmap.md",
+          "digest": "a74d445f4b3867eabe02ae7723c6dccd6285811088890270037fe9aa54e8484c",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 a625daa6092e2c8b066817dc821ef436f6b4a39e a625daa6092e2c8b066817dc821ef436f6b4a39e|100644 a625daa6092e2c8b066817dc821ef436f6b4a39e 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/system-architecture.md",
+          "digest": "2013e8e724d660c7b111644f0a34245fc00f1ee8ce4b2b66d9a1b82163dcf4e7",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 f7541aa7b159bf52472240a83f916a0b6e259470 f7541aa7b159bf52472240a83f916a0b6e259470|100644 f7541aa7b159bf52472240a83f916a0b6e259470 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/code-review-260915-1314-phase-10-post-proof-documentation-and-support-cutover-cycle-2.md",
+          "digest": "b637c64c1097f98e061ed9c78a46d0b6db54cc63be86fcf8a3cb2d017f2a413e",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-step-4-phase-10-cycle-2",
+        "checkpoint_digest": "2f28f87549f9d90d6ae21f54b569e9f476094dba1702ab81458ab29811a97cf4",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "65d41f1df65c3235d615143d8c449e13b8e879ec2c676804e93e19c14c007a4d",
+        "envelope_digest": "7771e6ef3426f72d7e3e03e0cb31d4d48ba317e8e209cc3a0820d170f91d0bd7",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.154.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 29556
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "npm run test:release",
+          "npm run test:installer:linux",
+          "npm run test:distribution:rollout"
+        ],
+        "intended_changed_paths": [
+          "README.md",
+          "docs/code-standards.md",
+          "docs/codebase-summary.md",
+          "docs/project-overview-pdr.md",
+          "docs/project-roadmap.md",
+          "docs/system-architecture.md"
+        ]
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "2d1c1fd2-91ee-4109-a50f-fe9e51bf99ef",
+          "operation": "init",
+          "digest": "944a73afc74181d78b878d017ca9bf92a7569202b14dff724e5375e31b839948",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "5a81eacd-1a32-4e45-ba3f-b5c22608be63",
+          "operation": "checkpoint",
+          "digest": "d2d0a18d1dadec6e229f480e96b98ac0fad3b6ea8f3109def5655d8284bdd04d",
+          "revision": 2,
+          "consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+          "operation": "attach",
+          "digest": "7771e6ef3426f72d7e3e03e0cb31d4d48ba317e8e209cc3a0820d170f91d0bd7",
+          "revision": 4,
+          "consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "2f28f87549f9d90d6ae21f54b569e9f476094dba1702ab81458ab29811a97cf4",
+          "result_digest": "65d41f1df65c3235d615143d8c449e13b8e879ec2c676804e93e19c14c007a4d"
+        }
+      ],
+      "human_decisions": []
+    },
+    "pending_process_status": null
+  },
+  "disposition": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "disposition",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "6c27c91d-0358-48eb-a437-b0f0a2842c7a",
+      "project_id": "fa0115be0f6877ca599febe95dcd3c8d6af52001867f4b5c96f92764decf9f3d",
+      "task_revision": 5,
+      "phase_id": "phase-10",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+      "disposition": {
+        "consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+        "evidence_revision": 0,
+        "action": "accept",
+        "rationale": "Cycle 2 review and advisor reconciliation confirmed safe; counsel accepted.",
+        "correction": null
+      },
+      "outcome": null,
+      "task": {
+        "goal": "Phase 10 Post-Proof Documentation and Bounded Support Cutover (Cycle 2)",
+        "non_goals": [
+          "Unrelated refactoring",
+          "Modifying historical plans, archived evidence, or active CHANGELOG.md",
+          "Editing generated projections or manifests",
+          "Broadening Windows claims beyond verified matrix and installer/version subset"
+        ],
+        "authorized_paths": [
+          "README.md",
+          "docs/code-standards.md",
+          "docs/codebase-summary.md",
+          "docs/project-overview-pdr.md",
+          "docs/project-roadmap.md",
+          "docs/system-architecture.md",
+          "plans/reports/code-review-260915-1314-phase-10-post-proof-documentation-and-support-cutover-cycle-2.md"
+        ],
+        "scope_rationale": "Phase 10 documentation files and Cycle 2 terminal review report",
+        "invariants": [
+          "All doc files in docs/ maintain line count <= 800",
+          "README asset placeholders are version-neutral <version>",
+          "Windows verification is version --json only (no health --json)",
+          "All runtime, signing, desktop, and enterprise exclusions remain explicit",
+          "No touch to forbidden, generated, or active changelog files",
+          "Deliverable set is strictly the 6 tracked documentation files; reports are gitignored evidence artifacts"
+        ],
+        "success_criteria": [
+          "Review approved with score 10/10 and zero critical issues/warnings",
+          "All 52 scoped tests pass across test:release, test:installer:linux, test:distribution:rollout",
+          "Exactly 6 documentation files modified in git status",
+          "Path accounting and status records reconciled per advisor guidance"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "README.md",
+          "digest": "30b2f259a7e525605b4af50ceef443fd5e53ddc9f1116aa8628b95aa9e2bba6c",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 3a89f09f77d3d4269453c1fd4cb118a1b024e600 3a89f09f77d3d4269453c1fd4cb118a1b024e600|100644 3a89f09f77d3d4269453c1fd4cb118a1b024e600 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/code-standards.md",
+          "digest": "6e24aa7c50a9eb7a0db797607ec24a40b8a54906232ee756ac60c0d6296f6cd0",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 15d4eaf8abf1b29cd60fe280243dafe9abb47735 15d4eaf8abf1b29cd60fe280243dafe9abb47735|100644 15d4eaf8abf1b29cd60fe280243dafe9abb47735 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/codebase-summary.md",
+          "digest": "79ade05b80cb917b303b0b5082e3c3a4b8bbab47651d156c56d944fadb65b5d1",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 9e53bee57836de88bde84be348eb190d737be0ff 9e53bee57836de88bde84be348eb190d737be0ff|100644 9e53bee57836de88bde84be348eb190d737be0ff 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/project-overview-pdr.md",
+          "digest": "a8b042a5d42ed529c3e532f28bef8dd3d1871714daeb22e636d502566b632162",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60|100644 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/project-roadmap.md",
+          "digest": "a74d445f4b3867eabe02ae7723c6dccd6285811088890270037fe9aa54e8484c",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 a625daa6092e2c8b066817dc821ef436f6b4a39e a625daa6092e2c8b066817dc821ef436f6b4a39e|100644 a625daa6092e2c8b066817dc821ef436f6b4a39e 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/system-architecture.md",
+          "digest": "2013e8e724d660c7b111644f0a34245fc00f1ee8ce4b2b66d9a1b82163dcf4e7",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 f7541aa7b159bf52472240a83f916a0b6e259470 f7541aa7b159bf52472240a83f916a0b6e259470|100644 f7541aa7b159bf52472240a83f916a0b6e259470 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/code-review-260915-1314-phase-10-post-proof-documentation-and-support-cutover-cycle-2.md",
+          "digest": "b637c64c1097f98e061ed9c78a46d0b6db54cc63be86fcf8a3cb2d017f2a413e",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "README.md",
+          "docs/code-standards.md",
+          "docs/codebase-summary.md",
+          "docs/project-overview-pdr.md",
+          "docs/project-roadmap.md",
+          "docs/system-architecture.md",
+          "plans/reports/code-review-260915-1314-phase-10-post-proof-documentation-and-support-cutover-cycle-2.md"
+        ],
+        "rationale": "Phase 10 documentation files and Cycle 2 terminal review report",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "README.md",
+          "digest": "30b2f259a7e525605b4af50ceef443fd5e53ddc9f1116aa8628b95aa9e2bba6c",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 3a89f09f77d3d4269453c1fd4cb118a1b024e600 3a89f09f77d3d4269453c1fd4cb118a1b024e600|100644 3a89f09f77d3d4269453c1fd4cb118a1b024e600 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/code-standards.md",
+          "digest": "6e24aa7c50a9eb7a0db797607ec24a40b8a54906232ee756ac60c0d6296f6cd0",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 15d4eaf8abf1b29cd60fe280243dafe9abb47735 15d4eaf8abf1b29cd60fe280243dafe9abb47735|100644 15d4eaf8abf1b29cd60fe280243dafe9abb47735 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/codebase-summary.md",
+          "digest": "79ade05b80cb917b303b0b5082e3c3a4b8bbab47651d156c56d944fadb65b5d1",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 9e53bee57836de88bde84be348eb190d737be0ff 9e53bee57836de88bde84be348eb190d737be0ff|100644 9e53bee57836de88bde84be348eb190d737be0ff 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/project-overview-pdr.md",
+          "digest": "a8b042a5d42ed529c3e532f28bef8dd3d1871714daeb22e636d502566b632162",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60|100644 1bdb04a57f1c4a70cfa6dba9c88fb23af39eed60 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/project-roadmap.md",
+          "digest": "a74d445f4b3867eabe02ae7723c6dccd6285811088890270037fe9aa54e8484c",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 a625daa6092e2c8b066817dc821ef436f6b4a39e a625daa6092e2c8b066817dc821ef436f6b4a39e|100644 a625daa6092e2c8b066817dc821ef436f6b4a39e 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "docs/system-architecture.md",
+          "digest": "2013e8e724d660c7b111644f0a34245fc00f1ee8ce4b2b66d9a1b82163dcf4e7",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 f7541aa7b159bf52472240a83f916a0b6e259470 f7541aa7b159bf52472240a83f916a0b6e259470|100644 f7541aa7b159bf52472240a83f916a0b6e259470 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/code-review-260915-1314-phase-10-post-proof-documentation-and-support-cutover-cycle-2.md",
+          "digest": "b637c64c1097f98e061ed9c78a46d0b6db54cc63be86fcf8a3cb2d017f2a413e",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-step-4-phase-10-cycle-2",
+        "checkpoint_digest": "2f28f87549f9d90d6ae21f54b569e9f476094dba1702ab81458ab29811a97cf4",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "65d41f1df65c3235d615143d8c449e13b8e879ec2c676804e93e19c14c007a4d",
+        "envelope_digest": "7771e6ef3426f72d7e3e03e0cb31d4d48ba317e8e209cc3a0820d170f91d0bd7",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.154.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 29556
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "npm run test:release",
+          "npm run test:installer:linux",
+          "npm run test:distribution:rollout"
+        ],
+        "intended_changed_paths": [
+          "README.md",
+          "docs/code-standards.md",
+          "docs/codebase-summary.md",
+          "docs/project-overview-pdr.md",
+          "docs/project-roadmap.md",
+          "docs/system-architecture.md"
+        ]
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "2d1c1fd2-91ee-4109-a50f-fe9e51bf99ef",
+          "operation": "init",
+          "digest": "944a73afc74181d78b878d017ca9bf92a7569202b14dff724e5375e31b839948",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "5a81eacd-1a32-4e45-ba3f-b5c22608be63",
+          "operation": "checkpoint",
+          "digest": "d2d0a18d1dadec6e229f480e96b98ac0fad3b6ea8f3109def5655d8284bdd04d",
+          "revision": 2,
+          "consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+          "operation": "attach",
+          "digest": "7771e6ef3426f72d7e3e03e0cb31d4d48ba317e8e209cc3a0820d170f91d0bd7",
+          "revision": 4,
+          "consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "2f28f87549f9d90d6ae21f54b569e9f476094dba1702ab81458ab29811a97cf4",
+          "result_digest": "65d41f1df65c3235d615143d8c449e13b8e879ec2c676804e93e19c14c007a4d"
+        },
+        {
+          "operation_id": "09c76dc0-4669-4579-8b95-c9cf9d3901b1",
+          "operation": "disposition",
+          "digest": "9ad005698dc0ce952ee77763e497eedd53db2132c6956f3ea624ed3c6500ab1a",
+          "revision": 5,
+          "consultation_id": "afd84f13-4d34-482b-96ff-101f36bd5697",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        }
+      ],
+      "human_decisions": []
+    }
+  }
+}

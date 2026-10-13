@@ -1,0 +1,71 @@
+{
+  "taskRunId": "1e9be256-6ba1-4b4b-b2e5-d53015d583ff",
+  "consultationId": "8baac2b1-b16d-451f-8975-cf9a3e420571",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "8baac2b1-b16d-451f-8975-cf9a3e420571",
+    "task_run_id": "1e9be256-6ba1-4b4b-b2e5-d53015d583ff",
+    "checkpoint_id": "checkpoint-review-step-4-phase-05",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "9d19bd438ab3be2a8435ca273f7f82542465793813096fafe8eeb873499d80d6",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.154.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 20269
+    },
+    "attempts": [
+      {
+        "attempt_id": "fdcb76dc-149a-4dd5-9d6c-b214a496d871",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 20190,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Hold Step 5 finalization and perform one reproducible pre-finalization gate covering TypeScript compilation plus automated checks of changed-path scope, production dependency count, and the 200-line module limit.",
+      "rationale": "The reported 32 passing tests support behavioral correctness, but the supplied evidence does not independently demonstrate every invariant. In particular, no type-check result, changed-file inventory, dependency audit, line-count output, or review artifact substantiates the summary claims. This bounded gate is cheaper and safer than reopening implementation review and should resolve the remaining approval gap.",
+      "must_fix": [],
+      "cautions": [
+        "Do not expand the gate into backend, React UI, or packaging work.",
+        "If the apparent singular/plural protocol import paths in the excerpts are intentional, compilation should confirm their validity; otherwise they may indicate an unresolved module-path defect.",
+        "Passing tests alone may not expose declaration, module-resolution, or unexercised type errors."
+      ],
+      "assumptions": [
+        "The quoted test counts and 9.5/10 review score are accurate but currently lack attached artifacts.",
+        "Only the eight authorized paths are intended to have changed.",
+        "The project has an existing non-emitting TypeScript validation command or equivalent.",
+        "Zero root production dependencies means Phase 05 introduced no new production dependency at the repository root."
+      ],
+      "success_checks": [
+        "The relevant TypeScript project compiles with no errors and without emitting files.",
+        "The changed-file list contains no path outside the eight authorized paths.",
+        "The root production dependency baseline is unchanged.",
+        "Every changed source module is under 200 lines.",
+        "The three reported suites still total 32 passed and 0 failed.",
+        "The finalization record includes reproducible outputs or artifacts for these checks and the 9.5/10 review disposition."
+      ],
+      "unresolved_questions": []
+    },
+    "audit_status": "recorded"
+  }
+}

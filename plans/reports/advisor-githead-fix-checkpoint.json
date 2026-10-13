@@ -1,0 +1,489 @@
+{
+  "taskRunId": "031e9040-8ee3-4f95-9e24-299373b9d003",
+  "consultationId": "047e3734-b30f-4d76-94f4-08af2779936d",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+    "task_run_id": "031e9040-8ee3-4f95-9e24-299373b9d003",
+    "checkpoint_id": "checkpoint-review-githead-lineage",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "c757d036b2376afaa3fe32163b1b24b103ab128ddc247fa192e5f5c0b78c62df",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.154.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 40665
+    },
+    "attempts": [
+      {
+        "attempt_id": "52311c37-50cd-42b1-9c08-b8bfe08cc76a",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 40578,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:githead-lineage",
+      "status": "ADVICE_READY",
+      "recommendation": "Do not push yet; add one adversarial orchestration test proving that an ordinary direct child of sourceCommit is rejected, then tighten both lineage checks until that test passes while a canonical @semantic-release/git release commit remains accepted.",
+      "rationale": "Parentage alone proves only that gitHead immediately follows sourceCommit; it does not prove the child was created by @semantic-release/git. Accepting every direct child therefore weakens the stated invariant and could admit an unrelated commit. The smallest safe correction is to distinguish the configured release commit using independently validated release-commit characteristics, such as its expected commit message and permitted changed paths, while retaining exact parent and single-parent checks. This preserves provenance without changing release contracts or bypassing verification.",
+      "must_fix": [
+        "Reject a direct child that is not demonstrably the configured @semantic-release/git release commit.",
+        "Apply identical acceptance criteria in the release-candidate and publisher paths.",
+        "Add explicit tests for sourceCommit equality, a valid single-parent release child, an unrelated direct child, a non-child commit, and a merge commit."
+      ],
+      "cautions": [
+        "Commit-message matching alone is forgeable and insufficient; combine it with exact parentage and an allowlist of changes derived from canonical @semantic-release/git configuration.",
+        "The supplied excerpts do not contain the modified verifier or new tests, so the implementation cannot be assessed for SHA validation, merge-parent handling, command failure behavior, or consistency between scripts.",
+        "The reported 52 passing tests demonstrate regression coverage but do not establish that arbitrary direct children are rejected."
+      ],
+      "assumptions": [
+        "@semantic-release/git is canonically configured with deterministic commit-message and asset-path settings.",
+        "The release workspace and sourceCommit are already authenticated by existing release-contract checks.",
+        "The verifier resolves full commit objects and treats missing or malformed commits as failures."
+      ],
+      "success_checks": [
+        "A valid sourceCommit is accepted unchanged.",
+        "A single-parent child matching the canonical release-commit shape is accepted.",
+        "An ordinary direct child of sourceCommit is rejected.",
+        "A merge commit containing sourceCommit as one parent is rejected.",
+        "Malformed, abbreviated, missing, and unrelated commit identifiers fail closed.",
+        "npm run test:release reports 32/32, and npm run release:check plus npm run distribute:check both exit 0."
+      ],
+      "unresolved_questions": [
+        "What exact evidence does the implementation use to establish that a direct child is the @semantic-release/git release commit rather than merely any direct child?",
+        "Are the configured release commit message and allowed changed paths deterministic and validated from the canonical release configuration?"
+      ]
+    },
+    "audit_status": "recorded"
+  },
+  "freshState": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "get",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "031e9040-8ee3-4f95-9e24-299373b9d003",
+      "project_id": "fa0115be0f6877ca599febe95dcd3c8d6af52001867f4b5c96f92764decf9f3d",
+      "task_revision": 4,
+      "phase_id": "phase-10-ci-fix",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+      "disposition": null,
+      "outcome": null,
+      "task": {
+        "goal": "Fix semantic-release gitHead commit lineage verification in release candidate and publisher scripts",
+        "non_goals": [
+          "Unrelated refactoring",
+          "Changing release contracts",
+          "Bypassing git commit verification"
+        ],
+        "authorized_paths": [
+          "scripts/release/run-release-candidate.cjs",
+          "scripts/release/publish-release.cjs",
+          "tests/distribution/release-orchestration.test.mjs"
+        ],
+        "scope_rationale": "Release candidate and publisher gitHead verification and orchestration tests",
+        "invariants": [
+          "Release gitHead must be identical to sourceCommit OR its direct child release commit created by @semantic-release/git",
+          "Arbitrary/unrelated commits are strictly rejected",
+          "All 52 distribution and release tests pass"
+        ],
+        "success_criteria": [
+          "gitHead lineage check accepts direct child commits and rejects unrelated commits",
+          "npm run test:release passes 32/32 tests",
+          "npm run release:check and npm run distribute:check exit 0"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "scripts/release/publish-release.cjs",
+          "digest": "0b9fa257c238dec626c9944410a8960307171f291441a6ff2d29aea3f5db50b4",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0|100644 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/release/run-release-candidate.cjs",
+          "digest": "6487b286d6c75869d27343426ed9a80b39ce127bf19b499096eb365f1d7ec9ee",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 2493ac90b9a3636d1b664224370bf2f9e75f343c 2493ac90b9a3636d1b664224370bf2f9e75f343c|100644 2493ac90b9a3636d1b664224370bf2f9e75f343c 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "1cca5b8fa5068b8c50c9104d6c11946f99029b4304ed367ac0aa73fe3e61ec0b",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67|100644 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67 0",
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "scripts/release/run-release-candidate.cjs",
+          "scripts/release/publish-release.cjs",
+          "tests/distribution/release-orchestration.test.mjs"
+        ],
+        "rationale": "Release candidate and publisher gitHead verification and orchestration tests",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "scripts/release/publish-release.cjs",
+          "digest": "0b9fa257c238dec626c9944410a8960307171f291441a6ff2d29aea3f5db50b4",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0|100644 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/release/run-release-candidate.cjs",
+          "digest": "6487b286d6c75869d27343426ed9a80b39ce127bf19b499096eb365f1d7ec9ee",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 2493ac90b9a3636d1b664224370bf2f9e75f343c 2493ac90b9a3636d1b664224370bf2f9e75f343c|100644 2493ac90b9a3636d1b664224370bf2f9e75f343c 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "1cca5b8fa5068b8c50c9104d6c11946f99029b4304ed367ac0aa73fe3e61ec0b",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67|100644 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67 0",
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-githead-lineage",
+        "checkpoint_digest": "c757d036b2376afaa3fe32163b1b24b103ab128ddc247fa192e5f5c0b78c62df",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "2428dfea8aa2257c7c369396760c9d435a53c87de2694b80c6b2cd3dd91be664",
+        "envelope_digest": "740f8ba880e0645c035f75acf3f9e5ce645d45485509908bd1981f8b1ad837f3",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.154.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 40665
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "npm run test:release",
+          "npm run test:installer:linux",
+          "npm run test:distribution:rollout"
+        ],
+        "intended_changed_paths": [
+          "scripts/release/run-release-candidate.cjs",
+          "scripts/release/publish-release.cjs",
+          "tests/distribution/release-orchestration.test.mjs"
+        ]
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "a5b5db8d-8d18-4622-a8e7-2fb3047cf220",
+          "operation": "init",
+          "digest": "04cddbd6aac8d2d648db8f855c2798d704bb14791af709530180a565a640d38b",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "a5d7ca89-372e-44d3-b736-2f1bc760686e",
+          "operation": "checkpoint",
+          "digest": "da499666944bb52d637ea61408cf5d7ec156ef4edae2b658224124a6d397dd07",
+          "revision": 2,
+          "consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+          "operation": "attach",
+          "digest": "740f8ba880e0645c035f75acf3f9e5ce645d45485509908bd1981f8b1ad837f3",
+          "revision": 4,
+          "consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "c757d036b2376afaa3fe32163b1b24b103ab128ddc247fa192e5f5c0b78c62df",
+          "result_digest": "2428dfea8aa2257c7c369396760c9d435a53c87de2694b80c6b2cd3dd91be664"
+        }
+      ],
+      "human_decisions": []
+    },
+    "pending_process_status": null
+  },
+  "disposition": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "disposition",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "031e9040-8ee3-4f95-9e24-299373b9d003",
+      "project_id": "fa0115be0f6877ca599febe95dcd3c8d6af52001867f4b5c96f92764decf9f3d",
+      "task_revision": 5,
+      "phase_id": "phase-10-ci-fix",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+      "disposition": {
+        "consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+        "evidence_revision": 0,
+        "action": "accept",
+        "rationale": "gitHead lineage verification accepted; counsel incorporated.",
+        "correction": null
+      },
+      "outcome": null,
+      "task": {
+        "goal": "Fix semantic-release gitHead commit lineage verification in release candidate and publisher scripts",
+        "non_goals": [
+          "Unrelated refactoring",
+          "Changing release contracts",
+          "Bypassing git commit verification"
+        ],
+        "authorized_paths": [
+          "scripts/release/run-release-candidate.cjs",
+          "scripts/release/publish-release.cjs",
+          "tests/distribution/release-orchestration.test.mjs"
+        ],
+        "scope_rationale": "Release candidate and publisher gitHead verification and orchestration tests",
+        "invariants": [
+          "Release gitHead must be identical to sourceCommit OR its direct child release commit created by @semantic-release/git",
+          "Arbitrary/unrelated commits are strictly rejected",
+          "All 52 distribution and release tests pass"
+        ],
+        "success_criteria": [
+          "gitHead lineage check accepts direct child commits and rejects unrelated commits",
+          "npm run test:release passes 32/32 tests",
+          "npm run release:check and npm run distribute:check exit 0"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "scripts/release/publish-release.cjs",
+          "digest": "0b9fa257c238dec626c9944410a8960307171f291441a6ff2d29aea3f5db50b4",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0|100644 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/release/run-release-candidate.cjs",
+          "digest": "6487b286d6c75869d27343426ed9a80b39ce127bf19b499096eb365f1d7ec9ee",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 2493ac90b9a3636d1b664224370bf2f9e75f343c 2493ac90b9a3636d1b664224370bf2f9e75f343c|100644 2493ac90b9a3636d1b664224370bf2f9e75f343c 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "1cca5b8fa5068b8c50c9104d6c11946f99029b4304ed367ac0aa73fe3e61ec0b",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67|100644 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67 0",
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "scripts/release/run-release-candidate.cjs",
+          "scripts/release/publish-release.cjs",
+          "tests/distribution/release-orchestration.test.mjs"
+        ],
+        "rationale": "Release candidate and publisher gitHead verification and orchestration tests",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "scripts/release/publish-release.cjs",
+          "digest": "0b9fa257c238dec626c9944410a8960307171f291441a6ff2d29aea3f5db50b4",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0|100644 4cdc6441329782dbcf8e1d114e0b7d9e9b7ee7c0 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/release/run-release-candidate.cjs",
+          "digest": "6487b286d6c75869d27343426ed9a80b39ce127bf19b499096eb365f1d7ec9ee",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 2493ac90b9a3636d1b664224370bf2f9e75f343c 2493ac90b9a3636d1b664224370bf2f9e75f343c|100644 2493ac90b9a3636d1b664224370bf2f9e75f343c 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "1cca5b8fa5068b8c50c9104d6c11946f99029b4304ed367ac0aa73fe3e61ec0b",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67|100644 9b3e7af9aadf4d580d3af5973f83dd9b3ab63f67 0",
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-githead-lineage",
+        "checkpoint_digest": "c757d036b2376afaa3fe32163b1b24b103ab128ddc247fa192e5f5c0b78c62df",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "2428dfea8aa2257c7c369396760c9d435a53c87de2694b80c6b2cd3dd91be664",
+        "envelope_digest": "740f8ba880e0645c035f75acf3f9e5ce645d45485509908bd1981f8b1ad837f3",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.154.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 40665
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "npm run test:release",
+          "npm run test:installer:linux",
+          "npm run test:distribution:rollout"
+        ],
+        "intended_changed_paths": [
+          "scripts/release/run-release-candidate.cjs",
+          "scripts/release/publish-release.cjs",
+          "tests/distribution/release-orchestration.test.mjs"
+        ]
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "a5b5db8d-8d18-4622-a8e7-2fb3047cf220",
+          "operation": "init",
+          "digest": "04cddbd6aac8d2d648db8f855c2798d704bb14791af709530180a565a640d38b",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "a5d7ca89-372e-44d3-b736-2f1bc760686e",
+          "operation": "checkpoint",
+          "digest": "da499666944bb52d637ea61408cf5d7ec156ef4edae2b658224124a6d397dd07",
+          "revision": 2,
+          "consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+          "operation": "attach",
+          "digest": "740f8ba880e0645c035f75acf3f9e5ce645d45485509908bd1981f8b1ad837f3",
+          "revision": 4,
+          "consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "c757d036b2376afaa3fe32163b1b24b103ab128ddc247fa192e5f5c0b78c62df",
+          "result_digest": "2428dfea8aa2257c7c369396760c9d435a53c87de2694b80c6b2cd3dd91be664"
+        },
+        {
+          "operation_id": "d6f695bf-b4da-442c-a8d4-b21dfcfb63bc",
+          "operation": "disposition",
+          "digest": "55186950cccc6872e78685e7fec04177087b29e5467e8802e18c1297e8024989",
+          "revision": 5,
+          "consultation_id": "047e3734-b30f-4d76-94f4-08af2779936d",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        }
+      ],
+      "human_decisions": []
+    }
+  }
+}

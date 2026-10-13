@@ -69,8 +69,8 @@ function resolveWindowsCmdWrapper(wrapperPath: string): ResolvedEditorLaunchTarg
     const candidatePairs: Array<{ exe: string; cliJs: string }> = [];
     if (match) {
       candidatePairs.push({
-        exe: resolve(wrapperDir, match[1]),
-        cliJs: resolve(wrapperDir, match[2])
+        exe: resolve(wrapperDir, match[1].replace(/\\/gu, '/')),
+        cliJs: resolve(wrapperDir, match[2].replace(/\\/gu, '/'))
       });
     }
     const unversionedCli = resolve(installRoot, 'resources', 'app', 'out', 'cli.js');

@@ -8,6 +8,7 @@ import { parseArguments } from '../../dist/cli/arguments.js';
 import { dispatchInvocation } from '../../dist/cli/dispatch.js';
 import { resolveInvocationContext } from '../../dist/context/invocation-context.js';
 import { coordinateVscodeCompanionInstallation } from '../../dist/cli/vscode-companion-installation.js';
+import { resolveVscodeEditorLaunchTarget } from '../../dist/cli/vscode-editor-launcher.js';
 import { validateCompanionInstallNotice } from '../../dist/adapters/vscode/companion-cli-contracts.js';
 
 function createMockPublication(tempDir, options = {}) {
@@ -678,7 +679,7 @@ test('coordinateVscodeCompanionInstallation: post-install older version match fa
   }
 });
 
-test('coordinateVscodeCompanionInstallation: resolves Windows code.cmd versioned and unversioned layouts with ELECTRON_RUN_AS_NODE=1 and fails closed on missing layout', async () => {
+test('coordinateVscodeCompanionInstallation: resolves Windows code.cmd on host-native filesystem paths', async () => {
   const tempDir = mkdtempSync(join(tmpdir(), 'evcrate-cli-win-cmd-'));
   try {
     createMockPublication(tempDir);
@@ -736,15 +737,23 @@ test('coordinateVscodeCompanionInstallation: resolves Windows code.cmd versioned
       },
       'req-win-1'
     );
-    assert.equal(exitCode, undefined);
+    assert.equal(exitCode, undefined, noticeOutput);
     assert.equal(calls.length, 4);
-    assert.equal(calls[0].executable, versionedExe);
-    assert.equal(calls[0].args[0], versionedCliJs);
-    assert.equal(calls[0].args[1], '--version');
-    assert.equal(calls[0].env?.ELECTRON_RUN_AS_NODE, '1');
-    assert.equal(JSON.parse(noticeOutput).status, 'installed');
+    for (const call of calls) {
+      assert.equal(call.executable, versionedExe, JSON.stringify(call));
+      assert.equal(call.args[0], versionedCliJs, JSON.stringify(call));
+      assert.equal(call.env?.ELECTRON_RUN_AS_NODE, '1', JSON.stringify(call));
+      assert.equal(call.allowElectronRunAsNode, true, JSON.stringify(call));
+    }
+    assert.deepEqual(calls[0].args, [versionedCliJs, '--version']);
+    for (const call of calls.slice(1)) {
+      assert.deepEqual(call.args.slice(1, 3), ['--profile', 'prof-alpha'], JSON.stringify(call));
+    }
+    const versionedNotice = JSON.parse(noticeOutput);
+    validateCompanionInstallNotice(versionedNotice);
+    assert.equal(versionedNotice.status, 'installed', noticeOutput);
 
-    // 2. Broken .cmd wrapper missing cli.js fails closed with exit 5
+
     const brokenRoot = join(tempDir, 'BrokenCode');
     mkdirSync(join(brokenRoot, 'bin'), { recursive: true });
     const brokenCmd = join(brokenRoot, 'bin', 'code.cmd');
@@ -755,18 +764,207 @@ test('coordinateVscodeCompanionInstallation: resolves Windows code.cmd versioned
       '--vscode-editor', brokenCmd
     ]);
     let brokenNotice = '';
+    let brokenProcessCalls = 0;
     const brokenExit = await coordinateVscodeCompanionInstallation(
       brokenInv,
       context,
       result,
       {
         platform: 'win32',
-        vscodeCompanionConsole: { writeStderr: (t) => { brokenNotice += t; } }
+        vscodeCompanionConsole: { writeStderr: (text) => { brokenNotice += text; } },
+        processRunner: {
+          run: async () => {
+            brokenProcessCalls += 1;
+            throw new Error('unexpected process invocation for missing layout');
+          }
+        }
       },
       'req-win-2'
     );
-    assert.equal(brokenExit, 5);
-    assert.equal(JSON.parse(brokenNotice).status, 'failed');
+    assert.equal(brokenExit, 5, brokenNotice);
+    assert.equal(brokenProcessCalls, 0, brokenNotice);
+    const parsedBrokenNotice = JSON.parse(brokenNotice);
+    validateCompanionInstallNotice(parsedBrokenNotice);
+    assert.equal(parsedBrokenNotice.status, 'failed', brokenNotice);
+    assert.ok(parsedBrokenNotice.reason.includes('could not be resolved'), brokenNotice);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('resolveVscodeEditorLaunchTarget: handles forward and mixed separators in versioned Windows wrappers', () => {
+  const tempDir = mkdtempSync(join(tmpdir(), 'evcrate-cli-win-separators-'));
+  try {
+    const installRoot = join(tempDir, 'Microsoft VS Code');
+    const binDir = join(installRoot, 'bin');
+    const cliDir = join(installRoot, '07f806f999', 'resources', 'app', 'out');
+    mkdirSync(binDir, { recursive: true });
+    mkdirSync(cliDir, { recursive: true });
+    const executable = join(installRoot, 'Code.exe');
+    const cliJs = join(cliDir, 'cli.js');
+    const wrapper = join(binDir, 'code.cmd');
+    writeFileSync(executable, 'MZ-mock-exe');
+    writeFileSync(cliJs, '// mock cli.js');
+
+    const variants = [
+      {
+        name: 'forward-slash',
+        executablePath: '../Code.exe',
+        cliPath: '../07f806f999/resources/app/out/cli.js'
+      },
+      {
+        name: 'mixed-separator',
+        executablePath: '..\\Code.exe',
+        cliPath: '../07f806f999\\resources/app\\out/cli.js'
+      }
+    ];
+    for (const variant of variants) {
+      writeFileSync(
+        wrapper,
+        `@echo off\r\n"%~dp0${variant.executablePath}" "%~dp0${variant.cliPath}" %*\r\n`
+      );
+      const target = resolveVscodeEditorLaunchTarget(wrapper, 'win32');
+      assert.equal(target.ok, true, `${variant.name}: ${JSON.stringify(target)}`);
+      assert.equal(target.executable, executable, variant.name);
+      assert.deepEqual(target.prefixArgs, [cliJs], variant.name);
+      assert.deepEqual(target.envOverrides, { ELECTRON_RUN_AS_NODE: '1' }, variant.name);
+    }
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('resolveVscodeEditorLaunchTarget: resolves unversioned Windows wrapper and fallback layouts', () => {
+  const tempDir = mkdtempSync(join(tmpdir(), 'evcrate-cli-win-unversioned-'));
+  try {
+    const installRoot = join(tempDir, 'Microsoft VS Code');
+    const binDir = join(installRoot, 'bin');
+    const cliDir = join(installRoot, 'resources', 'app', 'out');
+    mkdirSync(binDir, { recursive: true });
+    mkdirSync(cliDir, { recursive: true });
+    const executable = join(installRoot, 'Code.exe');
+    const cliJs = join(cliDir, 'cli.js');
+    const wrapper = join(binDir, 'code.cmd');
+    writeFileSync(executable, 'MZ-mock-exe');
+    writeFileSync(cliJs, '// mock cli.js');
+
+    writeFileSync(
+      wrapper,
+      '@echo off\r\n"%~dp0..\\Code.exe" "%~dp0..\\resources\\app\\out\\cli.js" %*\r\n'
+    );
+    let target = resolveVscodeEditorLaunchTarget(wrapper, 'win32');
+    assert.equal(target.ok, true, JSON.stringify(target));
+    assert.equal(target.executable, executable);
+    assert.deepEqual(target.prefixArgs, [cliJs]);
+    assert.deepEqual(target.envOverrides, { ELECTRON_RUN_AS_NODE: '1' });
+
+    writeFileSync(wrapper, '@echo off\r\nrem no supported operands\r\n');
+    target = resolveVscodeEditorLaunchTarget(wrapper, 'win32');
+    assert.equal(target.ok, true, JSON.stringify(target));
+    assert.equal(target.executable, executable);
+    assert.deepEqual(target.prefixArgs, [cliJs]);
+    assert.deepEqual(target.envOverrides, { ELECTRON_RUN_AS_NODE: '1' });
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('coordinateVscodeCompanionInstallation: fails closed on Windows wrapper traversal and missing layouts', async () => {
+  const tempDir = mkdtempSync(join(tmpdir(), 'evcrate-cli-win-traversal-'));
+  try {
+    createMockPublication(tempDir);
+    const outsideExe = join(tempDir, 'OutsideCode.exe');
+    const outsideCli = join(tempDir, 'resources', 'app', 'out', 'cli.js');
+    mkdirSync(join(tempDir, 'resources', 'app', 'out'), { recursive: true });
+    writeFileSync(outsideExe, 'MZ-outside-exe');
+    writeFileSync(outsideCli, '// outside cli.js');
+    const result = createFakeResourceResult();
+
+    const scenarios = [
+      {
+        name: 'executable-escape-forward',
+        executablePath: '../../OutsideCode.exe',
+        cliPath: '../resources/app/out/cli.js',
+        createInternalExecutable: false,
+        createInternalCli: true
+      },
+      {
+        name: 'cli-escape-forward',
+        executablePath: '../Code.exe',
+        cliPath: '../../resources/app/out/cli.js',
+        createInternalExecutable: true,
+        createInternalCli: false
+      },
+      {
+        name: 'executable-escape-backslash',
+        executablePath: '..\\..\\OutsideCode.exe',
+        cliPath: '..\\resources\\app\\out\\cli.js',
+        createInternalExecutable: false,
+        createInternalCli: true
+      },
+      {
+        name: 'cli-escape-mixed-separators',
+        executablePath: '..\\Code.exe',
+        cliPath: '..\\..\\resources/app\\out/cli.js',
+        createInternalExecutable: true,
+        createInternalCli: false
+      },
+      {
+        name: 'missing-layout',
+        executablePath: '../Missing.exe',
+        cliPath: null,
+        createInternalExecutable: false,
+        createInternalCli: false
+      }
+    ];
+    for (const scenario of scenarios) {
+      const installRoot = join(tempDir, scenario.name);
+      const binDir = join(installRoot, 'bin');
+      mkdirSync(binDir, { recursive: true });
+      if (scenario.createInternalExecutable) {
+        writeFileSync(join(installRoot, 'Code.exe'), 'MZ-internal-exe');
+      }
+      if (scenario.createInternalCli) {
+        const internalCli = join(installRoot, 'resources', 'app', 'out', 'cli.js');
+        mkdirSync(join(installRoot, 'resources', 'app', 'out'), { recursive: true });
+        writeFileSync(internalCli, '// internal cli.js');
+      }
+      const wrapper = join(binDir, 'code.cmd');
+      const wrapperBody = scenario.cliPath
+        ? `@echo off\r\n"%~dp0${scenario.executablePath}" "%~dp0${scenario.cliPath}" %*\r\n`
+        : `@echo off\r\n"%~dp0${scenario.executablePath}" %*\r\n`;
+      writeFileSync(wrapper, wrapperBody);
+      const invocation = parseArguments([
+        'publish', '--apply', '--target', 'vscode', '--scope', 'project',
+        '--project-root', tempDir, '--install-vscode-companion',
+        '--vscode-editor', wrapper
+      ]);
+      const context = resolveInvocationContext({ ...invocation.options, projectRoot: tempDir });
+      let noticeOutput = '';
+      let processCalls = 0;
+      const exitCode = await coordinateVscodeCompanionInstallation(
+        invocation,
+        context,
+        result,
+        {
+          platform: 'win32',
+          vscodeCompanionConsole: { writeStderr: (text) => { noticeOutput += text; } },
+          processRunner: {
+            run: async () => {
+              processCalls += 1;
+              throw new Error(`unexpected process invocation for ${scenario.name}`);
+            }
+          }
+        },
+        `req-win-${scenario.name}`
+      );
+      assert.equal(exitCode, 5, noticeOutput);
+      assert.equal(processCalls, 0, noticeOutput);
+      const notice = JSON.parse(noticeOutput);
+      validateCompanionInstallNotice(notice);
+      assert.equal(notice.status, 'failed', noticeOutput);
+      assert.ok(notice.reason.includes('could not be resolved'), noticeOutput);
+    }
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }

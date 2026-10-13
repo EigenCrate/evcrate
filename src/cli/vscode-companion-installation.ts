@@ -131,13 +131,13 @@ export async function coordinateVscodeCompanionInstallation(
     const isErrorTTY = consolePort.isErrorTTY ?? Boolean(process.stderr.isTTY);
 
     const platform = runtime.platform ?? process.platform;
+    // Local artifact paths use host filesystem semantics; runtime.platform selects editor behavior.
     const paths = resolveVscodeSettingsPaths({
       scope: invocation.options.scope,
       projectRoot: context.projectRoot,
       homeRoot: context.homeRoot,
-      nativeUserHome: runtime.platformHome,
       env: rawEnv,
-      platform
+      platform: process.platform
     });
 
     const descriptorPath = join(paths.pluginPath, 'evcrate', 'companion', 'package.json');

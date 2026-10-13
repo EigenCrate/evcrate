@@ -1,0 +1,69 @@
+{
+  "protocol": "evcrate-advisor-controller",
+  "version": 2,
+  "correlation_id": "c5db4be2-bf74-406b-a639-f80c28e4c811",
+  "task_run_id": "a9478978-3e81-4f1e-a0ca-8f5744ba5266",
+  "checkpoint_id": "checkpoint-review-step-4",
+  "task_revision": 1,
+  "evidence_revision": 0,
+  "checkpoint_digest": "a48dd2afb4b62d8871f6cf16a8d60979c1f8dca3ff598551bd2f3e7e35dc0715",
+  "status": "ADVICE_READY",
+  "receipt": {
+    "backend": "omp",
+    "model": "openai-codex/gpt-6-astra",
+    "effort": "high",
+    "controller_version": 2,
+    "adapter_version": "18.8.7",
+    "build_identity": "evcrate-advisor-v2-16505a41eea260ae",
+    "elapsed_ms": 37047
+  },
+  "attempts": [
+    {
+      "attempt_id": "c3be3147-1ffb-4be5-ab18-a11098d689dd",
+      "slot": "primary",
+      "route": {
+        "backend": "omp",
+        "model": "openai-codex/gpt-6-astra",
+        "effort": "high"
+      },
+      "phase": "model",
+      "model_started": true,
+      "elapsed_ms": 32962,
+      "terminal_classification": "success",
+      "retry_delay_ms": null,
+      "cleanup_outcome": "confirmed"
+    }
+  ],
+  "result": {
+    "protocol": "evcrate-advisor-result",
+    "version": 2,
+    "checkpoint": "review:step-4",
+    "status": "ADVICE_READY",
+    "recommendation": "Hold Step 5 finalization and assemble a completion-evidence package: attach existing native VS Code scenario traces and the scoped change inventory, then run the explicitly required npm test command. Proceed to user approval only when that package supports the stated acceptance criteria.",
+    "rationale": "The checkpoint reports 11 Linux passes, Windows BLOCKED, an 8.5/10 review, and passing listed commands. Those are favorable reported results, but the supplied excerpts do not connect native VS Code execution to observable delegation and permission enforcement. The shown test checks only that result.cases contains 11 entries; eleven failed or synthetic entries could satisfy that assertion. The runner excerpt contains comments rather than execution evidence, and no trace artifacts are attached. Also, none of the listed validation commands is npm test, despite that being an explicit success criterion. This is an evidence-completeness blocker, not proof that the implementation or reported runs are defective; rerunning already reported passing suites would not resolve it.",
+    "must_fix": [
+      "Supply case-level native VS Code evidence for N01-N10 and W04 linking each specified action to its observed outcome. The case-count assertion and report summary alone do not establish native delegation or permission enforcement.",
+      "Provide a successful npm test result for the candidate being finalized; the listed adapter, qualification, distribution, and release commands do not establish this explicit acceptance criterion.",
+      "Provide the actual changed-path inventory and relevant diff evidence establishing zero runtime source modifications, no user-settings edits, and compliance with the authorized scope. Intended changed paths are not evidence of actual changes."
+    ],
+    "cautions": [
+      "Keep Windows BLOCKED distinct from PASS and describe completion as Linux qualification with a blocked Windows host, not cross-platform native qualification.",
+      "The evidence references plans/261010-1552-vscode-subagent-tool-references/reports/native-qualification.md, which is outside authorized_paths. Referencing an existing report is not a scope violation; creating or modifying it would require explicit authorization or relocation into an authorized report.",
+      "The 8.5/10 review and passing tests support review readiness but cannot substitute for observing the native permission boundary. Do not introduce runtime changes merely to close this evidence gap."
+    ],
+    "assumptions": [
+      "The runner excerpt is abbreviated; its comment-only body does not establish whether the actual implementation executes VS Code or only evaluates fixtures.",
+      "Existing native traces may already substantiate the reported passes. Retrieve those first rather than unnecessarily repeating reported successful runs.",
+      "The reported review score applies to the same candidate as the supplied validation results; the underlying review and candidate linkage are not included."
+    ],
+    "success_checks": [
+      "For each of N01-N10 and W04, provide the applicable scenario contract, native host and VS Code identity, concrete action, expected outcome, and observed result. Evidence should distinguish a real VS Code agent/tool interaction from fixture-generated results.",
+      "For the specified isolation, edit, terminal, and hook-policy scenarios, show the observable enforcement outcome: permitted actions produce their intended effect; prohibited actions are denied without the prohibited side effect. Include only boundaries actually required by those scenario contracts.",
+      "Run npm test on the final candidate and retain its exit status and full pass/fail summary; expect exit zero and no failing tests.",
+      "Check the candidate change inventory against authorized_paths and the non-goals; expect no runtime-source or user-settings changes and no unauthorized modified files.",
+      "Confirm final status documents preserve all 11 reported Linux outcomes, explicitly retain Windows as BLOCKED, and do not claim Windows execution or approval."
+    ],
+    "unresolved_questions": []
+  },
+  "audit_status": "recorded"
+}

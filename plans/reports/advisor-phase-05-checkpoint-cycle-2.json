@@ -1,0 +1,75 @@
+{
+  "taskRunId": "9e8a84ed-d366-433f-bda6-881d3b985ea8",
+  "consultationId": "0aabf59b-fcce-4692-8406-c5e1bb34eb4b",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "0aabf59b-fcce-4692-8406-c5e1bb34eb4b",
+    "task_run_id": "9e8a84ed-d366-433f-bda6-881d3b985ea8",
+    "checkpoint_id": "checkpoint-review-step-4-phase-05-cycle-2",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "bc9db4a5506280bdbc10474ef4453b726b722130ee76134c6a218a195728054f",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.154.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 26092
+    },
+    "attempts": [
+      {
+        "attempt_id": "a5ce7cff-a3d5-4859-8bf7-173fb1d98aed",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 26009,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Hold approval and perform one final evidence-only gate on the exact candidate revision, then proceed directly to Step 5 if it passes.",
+      "rationale": "The reported 9.8/10 review and 34 passing tests strongly support approval, but the checkpoint does not contain the review artifact, actual changed-path diff, type-check result, dependency diff, or line counts needed to verify the stated scope and invariants. A single bounded gate closes these audit gaps without expanding implementation scope.",
+      "must_fix": [
+        "Attach or record the cycle-2 review result that substantiates the 9.8/10 score and absence of critical issues or warnings.",
+        "Verify that the actual diff is limited to the eight authorized paths.",
+        "Verify every affected module remains under 200 lines and that root production dependencies are unchanged.",
+        "Record a successful TypeScript type-check for the viewer configuration."
+      ],
+      "cautions": [
+        "Passing unit and regression tests do not by themselves demonstrate File System Access behavior in supported browsers, especially permission denial, cancellation, malformed directory structures, bounded reads, and generation cancellation.",
+        "The supplied excerpts are truncated and cover only four of eight intended paths, so they cannot independently establish correctness or invariant compliance."
+      ],
+      "assumptions": [
+        "The 34 reported tests ran against the same immutable revision represented by the supplied file digests.",
+        "Cycle 2 review examined the complete diff rather than only the quoted excerpts.",
+        "Browser-specific edge cases and scan-budget exhaustion are included in the viewer tests.",
+        "No relevant baseline tests were excluded from the reported commands."
+      ],
+      "success_checks": [
+        "The recorded candidate revision matches the reviewed and tested revision.",
+        "The changed-file list contains only authorized paths.",
+        "Viewer type-check and all 34 reported tests pass with zero failures.",
+        "Root production dependency diff is empty.",
+        "Each affected source module is fewer than 200 lines.",
+        "The review artifact confirms a score of at least 9/10 with no blocking findings."
+      ],
+      "unresolved_questions": []
+    },
+    "audit_status": "recorded"
+  }
+}

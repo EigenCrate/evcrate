@@ -566,6 +566,37 @@ Its native `TreeDataProvider` in `extensions/vscode-model-bindings/src/sidebar-t
 - **Isolated test runner:** `CliRuntime.userDataDirectory` and `extensionsDirectory` support the exercised disposable profile pair. An absolute user-data path enables `--user-data-dir`; `--extensions-dir` is passed only when `userDataDirectory` is supplied and the extensions path is absolute. `package.json` includes `test:vscode-companion` in `npm test`.
 
 
+## Proposed VS Code Local advisor — planning only
+
+The [advisor plan](../plans/261013-1025-vscode-local-advisor/plan.md) specifies a
+separate private extension under `extensions/vscode-advisor/`. It is not
+implemented or runtime-qualified. It does not revive the retired root advisor
+subsystem, add an eighth target, or change the seven-asset release contract.
+
+The extension contributes a native language-model tool to built-in Local Agent
+chat. The tool calls a user-selected Copilot model through public `vscode.lm`
+APIs and returns critique to the existing executor. No OMP process, literal
+`xd://` transport, external model credentials, replacement chat participant, or
+proposed `chatPromptFiles` dependency is required for its core.
+
+Consented Local `SessionStart` guidance explains when to consult the tool.
+This is additive context, not base-system-prompt replacement. Local hooks are a
+documented Preview surface; their discovery, settings and timing require a
+pinned real-host gate. Initial scope excludes enforced completion/loop gates.
+
+Context uses an explicit executor handoff rather than unstable transcript
+scraping. Portable Pi-advisor disclosure options retain their documented
+defaults, except secret redaction defaults ON by explicit user decision.
+Workspace trust, user-controlled disclosure ceilings, bounded reads and honest
+omission notices are required. Neither model availability nor successful
+authenticated inference is inferred from the existing companion's receipts.
+
+The detailed design must preserve existing hook files and canonical/generated
+ownership, keep advisor inference in the extension host, and keep hook execution
+independent of model credentials. Installation and removal require explicit
+ownership; disabled or unavailable tools must never be represented as successful
+reviews.
+
 ## Related documents
 
 - [Agent guidance](../AGENTS.md)

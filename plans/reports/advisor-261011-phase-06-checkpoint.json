@@ -1,0 +1,70 @@
+{
+  "protocol": "evcrate-advisor-controller",
+  "version": 2,
+  "correlation_id": "2d7b852f-56fb-4efa-bcae-c22debb9af6e",
+  "task_run_id": "0d4bf5e0-0d05-4f9a-a2a3-d8171ebcf852",
+  "checkpoint_id": "checkpoint-review-step-4",
+  "task_revision": 1,
+  "evidence_revision": 0,
+  "checkpoint_digest": "80de361a06fab85af8fa099c67a2b744a0b3f98f0464e6a83f04f73a3e0cf4e1",
+  "status": "ADVICE_READY",
+  "receipt": {
+    "backend": "omp",
+    "model": "openai-codex/gpt-6-astra",
+    "effort": "high",
+    "controller_version": 2,
+    "adapter_version": "18.8.7",
+    "build_identity": "evcrate-advisor-v2-16505a41eea260ae",
+    "elapsed_ms": 30514
+  },
+  "attempts": [
+    {
+      "attempt_id": "82d8937d-429a-4691-9ff2-8108ef306d7b",
+      "slot": "primary",
+      "route": {
+        "backend": "omp",
+        "model": "openai-codex/gpt-6-astra",
+        "effort": "high"
+      },
+      "phase": "model",
+      "model_started": true,
+      "elapsed_ms": 26277,
+      "terminal_classification": "success",
+      "retry_delay_ms": null,
+      "cleanup_outcome": "confirmed"
+    }
+  ],
+  "result": {
+    "protocol": "evcrate-advisor-result",
+    "version": 2,
+    "checkpoint": "review:step-4",
+    "status": "ADVICE_READY",
+    "recommendation": "Hold Step 5 finalization and assemble a narrowly scoped acceptance evidence addendum: provide the existing Linux workflow execution trace, exact npm test result, terminal review result, and change-scope evidence. Where evidence does not exist, perform only the missing qualification action before requesting user approval.",
+    "rationale": "The checkpoint reports W01–W03 passing, Windows BLOCKED, and five successful validation suites; these reported results are not disputed. However, the acceptance plan explicitly requires the actual /evcrate-local cmd-docs-update path. The supplied test excerpt asserts returned PASS labels, the runner excerpt contains only descriptive comments, and no execution artifacts are supplied. These excerpts do not establish that the user-visible workflow ran successfully. Likewise, npm run test:adapters is documented, but the specifically required npm test result is absent. The review threshold is asserted without the terminal review evidence. This is an acceptance-evidence gap, not a demonstrated implementation defect; neither speculative code changes nor rerunning already reported passing checks resolves it.",
+    "must_fix": [
+      "Supply execution evidence connecting the actual Linux /evcrate-local cmd-docs-update invocation to W01–W03 outcomes, including leaf Scout immutability, docs-manager inherited editing, and the resulting documentation update.",
+      "Supply the clean npm test result required by the acceptance criteria; the listed validation commands do not include it.",
+      "Supply the terminal code-review finding establishing a score of at least 8.5/10 and its outstanding issues, rather than relying solely on the checkpoint summary.",
+      "Establish compliance with the authorized change scope and the prohibitions on runtime source modifications, candidate target contract changes, and user-settings edits; intended paths alone do not establish actual changes."
+    ],
+    "cautions": [
+      "Final approval must explicitly retain Windows as BLOCKED, not imply cross-platform qualification or include Windows in a passing-platform count.",
+      "Returned scenario status labels can summarize execution, but cannot alone distinguish an actual VS Code Local workflow from a simulated or fixture-only path.",
+      "Do not change implementation merely because this checkpoint lacks evidence; first recover the existing execution and review records."
+    ],
+    "assumptions": [
+      "The supplied excerpts are abbreviated; their omissions do not establish that the runner is a stub or that supporting evidence does not exist.",
+      "The checkpoint reports Windows BLOCKED as an allowed qualification disposition; the final acceptance record must preserve that limitation.",
+      "No independent execution, file inspection, or verification was performed in this consultation."
+    ],
+    "success_checks": [
+      "Inspect existing Linux workflow records for the actual /evcrate-local cmd-docs-update invocation. If absent, exercise that path using the phase's documented scenario inputs. Expected observations: leaf Scout leaves protected content unchanged, docs-manager performs the authorized edit through inherited editing capability, and the pipeline produces the expected documentation change. Fixture-only execution does not satisfy this check.",
+      "Retrieve an existing npm test log for the candidate under review, or run npm test if it has not been run. Expected outcome: successful exit and zero failed tests, with results attributable to that candidate.",
+      "Inspect the terminal review report for the same candidate. Expected outcome: score at least 8.5/10 and no unresolved approval-blocking findings.",
+      "Use the existing change record, or inspect the actual candidate changes if no record exists. Expected outcome: changes confined to authorized paths, no runtime source or candidate target contract modifications, and no user-settings edits.",
+      "Check the final qualification report and status documents. Expected outcome: three Linux workflow passes supported by execution evidence, Windows explicitly BLOCKED with its actual blocker stated, and user approval still pending until granted."
+    ],
+    "unresolved_questions": []
+  },
+  "audit_status": "recorded"
+}

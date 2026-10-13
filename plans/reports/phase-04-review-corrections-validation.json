@@ -1,0 +1,115 @@
+{
+  "timestamp": "2026-10-06T05:25:00.000Z",
+  "status": "PASS",
+  "platform": {
+    "os": "linux",
+    "kernel": "7.1.10-200.fc44.x86_64",
+    "arch": "x64",
+    "node": "v24.16.0",
+    "npm": "12.0.2",
+    "scope_limitations": "Windows and macOS excluded per user direction; Linux deterministic review-corrections validation only"
+  },
+  "authority": "User approved Fix all findings cycle 1; S1, S2 helper fixes and W1-W5 docs/evidence repairs integrated",
+  "postcorrection_summary": {
+    "total_unique_tests": 309,
+    "passed": 285,
+    "failed": 0,
+    "skipped": 24,
+    "throwaway_smokes": 2,
+    "note": "Focused 40 activation tests are an exact subset included within the 309 advisor-controller tests; unique postcorrection suite count is 309 (285 pass, 24 skip, 0 fail), plus 2 separate memory-only throwaway smokes."
+  },
+  "postcorrection_checks": {
+    "focused_activation": {
+      "command": "node --test tests/advisor-controller/activation-qualification.test.cjs tests/advisor-controller/activation.test.cjs tests/advisor-controller/activation-cli.test.cjs",
+      "exit_code": 0,
+      "total_tests": 40,
+      "passed": 40,
+      "failed": 0,
+      "skipped": 0,
+      "duration_ms": 3467.86,
+      "breakdown": {
+        "activation-qualification.test.cjs": {
+          "tests": 7,
+          "passed": 7,
+          "scenarios": ["A02", "A03", "A04", "A05", "A14", "A17", "A19"],
+          "s1_migration_verified": "All 3 callers (A02, A14, A17) pass test context t to createBaselineStateFixture(t); immediate cleanup registered"
+        },
+        "activation.test.cjs": { "tests": 16, "passed": 16 },
+        "activation-cli.test.cjs": { "tests": 17, "passed": 17 }
+      }
+    },
+    "advisor_controller_full": {
+      "command": "npm run test:advisor-controller",
+      "invocation": "node --test tests/advisor-controller/*.test.cjs",
+      "exit_code": 0,
+      "total_tests": 309,
+      "passed": 285,
+      "failed": 0,
+      "skipped": 24,
+      "skip_reason": "Windows Job Object, console observation, and native boundary tests guarded by process.platform === 'win32'",
+      "duration_ms": 13105.66
+    },
+    "docs_validator": {
+      "command": "node .evcrate/source/.claude/scripts/validate-docs.cjs docs/",
+      "exit_code": 0,
+      "files_checked": 12,
+      "code_references_validated": 18,
+      "internal_links_working": 485,
+      "link_improvement": "Working links increased from 483 to 485 following sole-writer repairs",
+      "warnings_observed": {
+        "code_references_unresolved": 99,
+        "internal_links_broken": 6,
+        "config_keys_unmatched_in_dotenv": 105
+      },
+      "exact_broken_links": [
+        "../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0110-phase-07-native-windows-qualification.md in docs/codebase-summary.md:121",
+        "../plans/reports/code-review-261005-0231-phase-06-qualification-regeneration.md in docs/project-roadmap.md:9",
+        "../plans/reports/code-review-261005-0231-phase-06-qualification-regeneration.md in docs/project-roadmap.md:118",
+        "../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0110-phase-07-native-windows-qualification.md in docs/project-roadmap.md:119",
+        "../plans/261003-1527-advisor-node-only-launch/reports/code-review-261005-0110-phase-07-native-windows-qualification.md in docs/system-architecture.md:718",
+        "../plans/reports/code-review-261005-0231-phase-06-qualification-regeneration.md in docs/system-architecture.md:718"
+      ],
+      "baseline_note": "Warnings reported as observed; not claimed to be baseline zero"
+    },
+    "shared_docs_line_budgets": {
+      "limit_per_file": 800,
+      "files": {
+        "docs/system-architecture.md": 775,
+        "docs/project-overview-pdr.md": 628,
+        "docs/code-standards.md": 750,
+        "docs/codebase-summary.md": 686,
+        "docs/project-changelog.md": 792
+      },
+      "all_under_budget": true,
+      "total_lines": 3631
+    }
+  },
+  "throwaway_runtime_smokes": {
+    "smoke_1_teardown_safety": {
+      "description": "Intercept executeStateRequest on init operation before requiring fixture; induce init failure after root directory is created",
+      "status": "PASS",
+      "cleanup_registered_before_throw": true,
+      "exception_propagated": "INDUCED_INIT_FAILURE_AFTER_ROOT_CREATION",
+      "root_reaped_cleanly": true,
+      "no_leak_observed": true
+    },
+    "smoke_2_real_complete_and_get_cli": {
+      "description": "Create baseline fixture, advance state via completeStateFixtureWithBaseline, verify authentic completion receipt, test state get and CLI off/same-run rejections",
+      "status": "PASS",
+      "receipt_verified": "plans/test/reports/phase-01-completion-receipt.md created with task_run_id",
+      "state_get_status": "STATE_READY with gate_status completed",
+      "cli_off_mode": { "status": 0, "mode": "off", "reason": "NO_FINAL_FLAG", "run": null },
+      "cli_same_run_rejection": { "status": 1, "code": "ADVICE_RUN_COMPLETED" },
+      "teardown_reaped_cleanly": true
+    },
+    "scaffold_cleanup": "All smoke checks executed in memory via inline node eval; zero temporary files or test scaffolds left on disk"
+  },
+  "retained_prior_regression_baseline": {
+    "total_unique_tests": 628,
+    "passed": 604,
+    "skipped": 24,
+    "failed": 0,
+    "note": "Retained separately from initial regression validation pass; not repeated or inflated in fresh postcorrection counts"
+  },
+  "unresolved_questions": []
+}

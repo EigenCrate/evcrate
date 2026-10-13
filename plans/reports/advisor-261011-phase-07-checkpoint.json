@@ -1,0 +1,66 @@
+{
+  "protocol": "evcrate-advisor-controller",
+  "version": 2,
+  "correlation_id": "51301cd2-f6f7-4b55-9705-fcd1d9a176cb",
+  "task_run_id": "7ac38807-4f20-44af-a2ec-e5c34a68f5e3",
+  "checkpoint_id": "checkpoint-review-step-4",
+  "task_revision": 1,
+  "evidence_revision": 0,
+  "checkpoint_digest": "a55efe3e0080b19a4e878d674677c8892340036090b8b68f163821de522033d1",
+  "status": "ADVICE_READY",
+  "receipt": {
+    "backend": "omp",
+    "model": "openai-codex/gpt-6-astra",
+    "effort": "high",
+    "controller_version": 2,
+    "adapter_version": "18.8.7",
+    "build_identity": "evcrate-advisor-v2-16505a41eea260ae",
+    "elapsed_ms": 35206
+  },
+  "attempts": [
+    {
+      "attempt_id": "40f61c54-f913-4a83-ba8f-73af6e60f792",
+      "slot": "primary",
+      "route": {
+        "backend": "omp",
+        "model": "openai-codex/gpt-6-astra",
+        "effort": "high"
+      },
+      "phase": "model",
+      "model_started": true,
+      "elapsed_ms": 30231,
+      "terminal_classification": "success",
+      "retry_delay_ms": null,
+      "cleanup_outcome": "confirmed"
+    }
+  ],
+  "result": {
+    "protocol": "evcrate-advisor-result",
+    "version": 2,
+    "checkpoint": "review:step-4",
+    "status": "ADVICE_READY",
+    "recommendation": "Present the reported review findings for approval of the Linux-qualified reviewed-candidate handoff only. Make Step 5 finalization conditional on confirming its documentation/status-only scope and linking the existing qualification and preservation evidence; do not represent this approval as cross-platform acceptance, incident closure, or deployment authorization.",
+    "rationale": "The supplied results report 1,046 main-suite passes plus 13 qualification passes, zero failures, and 25 Windows-specific skips, alongside successful distribution, release, and documentation checks. The reported terminal review meets the stated 9.6/10 and zero-critical-issue criterion. The handoff excerpt explicitly separates Linux handoff readiness from pending Windows acceptance, blocked incident closure, and non-deployment; the architecture and standards excerpts consistently pin VS Code 1.140.0 / Copilot Chat 0.68.0 and identify mapAgentTools as the mapping authority. These support requesting bounded approval, with no demonstrated defect requiring a repair. They do not independently establish complete documentation accuracy, immutable-artifact preservation, or actual Linux runtime behavior: full diffs, preservation comparisons, runtime observations, and Step 5 details are not supplied. Passing tests and reviewer scoring cannot substitute for those facts.",
+    "must_fix": [],
+    "cautions": [
+      "Describe verification as 1,059 passed, zero failed, and 25 Windows-specific tests skipped; an unqualified '1,059/1,059' can conceal the unexecuted platform coverage.",
+      "Step 5 completion must not silently promote the candidate to cross-platform accepted, Windows incident resolved, or deployment authorized. Windows qualification and operator rollout authorization remain separate gates.",
+      "The sealed plan.md is evidence for the handoff policy, not an authorized editing target."
+    ],
+    "assumptions": [
+      "The reported verification and terminal review apply to the exact documentation revision being presented for approval.",
+      "The asserted preservation of candidate digest 81792bf29a3233edce95a2e604e7596064b4127d75d8792e5af7a0ff8ccd680b and sealed Phase 01–06 artifacts has a recorded comparison; none is included in this checkpoint.",
+      "Existing Linux qualification evidence contains observed behavior on the pinned product versions, not only automated test outcomes.",
+      "Step 5 is limited to authorized documentation and status finalization; its detailed procedure is absent from the checkpoint."
+    ],
+    "success_checks": [
+      "Before finalization, review the maintained-document and changelog changes omitted from the excerpts. Expected: consistent 1.140.0 / 0.68.0 contract, explicit Windows and deployment gates, and no claim that the Windows incident is resolved.",
+      "Locate the existing Linux runtime qualification record and connect it to the candidate digest and pinned versions. Expected: actual candidate loading and the documented tool-reference behavior observed on Linux. If that record is absent, obtain that specific runtime evidence before affirming Linux qualification.",
+      "Check the recorded candidate and sealed-baseline comparison for the reviewed revision. Expected: the exact required candidate digest and no changes to Phase 01–06 artifacts; finalization changes remain within authorized paths.",
+      "After user-approved Step 5 status updates, inspect the handoff and status reports together. Expected: finalized reviewed-candidate handoff, Windows qualification pending, Windows incident open/blocked, and production not deployed, with no status contradiction.",
+      "Validate documentation constraints for any additional Step 5 edits. Expected: every docs/*.md file remains strictly below 800 lines and documentation validation has zero fatal findings."
+    ],
+    "unresolved_questions": []
+  },
+  "audit_status": "recorded"
+}

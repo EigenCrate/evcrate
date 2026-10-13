@@ -1,0 +1,272 @@
+{
+  "taskRunId": "7ebd988b-8c5a-4b14-9318-acbd82568987",
+  "consultationId": "c7be77c5-e9c9-4283-8cc4-dbae08a7808e",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "c7be77c5-e9c9-4283-8cc4-dbae08a7808e",
+    "task_run_id": "7ebd988b-8c5a-4b14-9318-acbd82568987",
+    "checkpoint_id": "checkpoint-review-step-4-cycle-2",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "4910459c9fa9b6bc0ab3c3c24610ba265138b46032d2977a28edb6932e3b8b4c",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.154.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 38011
+    },
+    "attempts": [
+      {
+        "attempt_id": "416898d8-7d66-4a1d-960c-53243f28412c",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 37921,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Do not advance yet; perform one final read-only reconciliation that enumerates all eight Linux gates and confirms whether `.github/workflows/release.yml` changed during Phase 09 and, if so, that the change was explicitly authorized.",
+      "rationale": "The reported test and review outcomes strongly support technical readiness, but the approval record has two material traceability gaps: only four validation commands are explicitly listed despite the claim of eight gates, and a remediation to `.github/workflows/release.yml` is claimed although that file is absent from both authorized and intended changed paths. Resolving these discrepancies is the least-complex safe action and preserves the stated non-goals without requiring more implementation or permanent tests.",
+      "must_fix": [
+        "Enumerate all eight Linux gates with their exact commands, exit outcomes, and association to the stated success criteria.",
+        "Reconcile the claimed `.github/workflows/release.yml` line 311 remediation with the authorized-path boundary; either demonstrate it was not a Phase 09 change or provide explicit scope authorization.",
+        "Show explicit evidence that each invariant—including exact-ID artifact handoff, fail-closed predecessor transition, and exclusion of the Windows harness from Linux installer wildcards—was validated."
+      ],
+      "cautions": [
+        "A 10/10 review score and aggregate pass counts do not independently prove scope compliance or coverage of each invariant.",
+        "The reported 526/526 result is described as runnable tests, so skipped, excluded, or environment-inapplicable checks may remain outside that count.",
+        "Provided report digests establish identifiers only if independently matched to the reviewed file contents and revision."
+      ],
+      "assumptions": [
+        "The supplied excerpts accurately represent the complete reports, but their full contents are not included.",
+        "The four additional Linux gates may be documented in the reports but are not visible in the checkpoint validation results.",
+        "No production release, artifact publication, or irreversible transition occurs merely by entering Step 5."
+      ],
+      "success_checks": [
+        "The reconciliation lists exactly eight distinct Linux gate commands and shows exit code 0 for each.",
+        "Every invariant and WRQ-047 through WRQ-052 and WRQ-059 maps to concrete test or structural evidence.",
+        "The actual Phase 09 changed-path set contains only authorized paths, or an explicit authorization amendment covers the workflow file.",
+        "The reconciled evidence identifies the tested commit or revision and the report digests match that same revision.",
+        "No new implementation or permanent workflow-recording tests are introduced by this reconciliation."
+      ],
+      "unresolved_questions": [
+        "Was `.github/workflows/release.yml` modified within Phase 09 Cycle 2, and if so, who authorized that out-of-scope path?",
+        "What are the exact commands and outcomes for the four Linux gates omitted from `validation_results`?"
+      ]
+    },
+    "audit_status": "recorded"
+  },
+  "freshState": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "get",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "7ebd988b-8c5a-4b14-9318-acbd82568987",
+      "project_id": "fa0115be0f6877ca599febe95dcd3c8d6af52001867f4b5c96f92764decf9f3d",
+      "task_revision": 4,
+      "phase_id": "phase-09",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "c7be77c5-e9c9-4283-8cc4-dbae08a7808e",
+      "disposition": null,
+      "outcome": null,
+      "task": {
+        "goal": "Phase 09 Cycle 2 Review: Reconciled 8 Linux gates, remediated warning, 10/10 review score",
+        "non_goals": [
+          "Unrelated refactoring",
+          "Adding permanent tests solely to record workflow runs"
+        ],
+        "authorized_paths": [
+          "tests/distribution/release-orchestration.test.mjs",
+          "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "plans/reports/code-review-260915-1119-phase-09-integrated-qualification-cycle-2.md"
+        ],
+        "scope_rationale": "Phase 09 Cycle 2 verification deliverables and reconciled evidence reports",
+        "invariants": [
+          "Strict least-privilege CI permissions and exact-ID artifact handoff",
+          "Fail-closed predecessor transition without bootstrap fallback",
+          "Linux installer wildcard non-collection of Windows harness"
+        ],
+        "success_criteria": [
+          "All scoped Linux repository gates and release test suites pass 100%",
+          "Code review approved with score 10/10, zero critical issues, zero warnings"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "plans/reports/code-review-260915-1119-phase-09-integrated-qualification-cycle-2.md",
+          "digest": "37135b7ea583611652dbf8e7caae496217c8108cd6e76e1aa8e2f2e44284b172",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "digest": "eecea3f3e56ad30115fc56c279d2d3dd277d0775a599914287b45a9fece29b33",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "c6b72cd83d4bd6845d3b39687f6b0314ad5f634556701bfba2ab6384dc1813cb",
+          "status": "file",
+          "git": {
+            "status": "  ",
+            "identity": "|100644 8fc51e4d4342df9986dcb4369a4e44b4daac91db 0",
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "tests/distribution/release-orchestration.test.mjs",
+          "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "plans/reports/code-review-260915-1119-phase-09-integrated-qualification-cycle-2.md"
+        ],
+        "rationale": "Phase 09 Cycle 2 verification deliverables and reconciled evidence reports",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "plans/reports/code-review-260915-1119-phase-09-integrated-qualification-cycle-2.md",
+          "digest": "37135b7ea583611652dbf8e7caae496217c8108cd6e76e1aa8e2f2e44284b172",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "digest": "eecea3f3e56ad30115fc56c279d2d3dd277d0775a599914287b45a9fece29b33",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "c6b72cd83d4bd6845d3b39687f6b0314ad5f634556701bfba2ab6384dc1813cb",
+          "status": "file",
+          "git": {
+            "status": "  ",
+            "identity": "|100644 8fc51e4d4342df9986dcb4369a4e44b4daac91db 0",
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "c7be77c5-e9c9-4283-8cc4-dbae08a7808e",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-step-4-cycle-2",
+        "checkpoint_digest": "4910459c9fa9b6bc0ab3c3c24610ba265138b46032d2977a28edb6932e3b8b4c",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "4bab6f22c22f0d52adcb98e4847cf803e3f4e68264d7ae90dd4c805631a5c50d",
+        "envelope_digest": "3e642dd78c7284c25042ca2d4b976b9ac3f0881d7a5da5ca5ea58ffeade9ee57",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.154.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 38011
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "npm run test:release",
+          "npm run test:installer:linux",
+          "npm run test:distribution:rollout",
+          "npm run release:check"
+        ],
+        "intended_changed_paths": [
+          "tests/distribution/release-orchestration.test.mjs",
+          "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "plans/reports/code-review-260915-1119-phase-09-integrated-qualification-cycle-2.md"
+        ]
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "47457fdf-600a-45c6-bad7-1c5f6486e316",
+          "operation": "init",
+          "digest": "6ba27d8792a626693b7a165983b84db2baf95fc905c7502c5c32b851ef9b8ab5",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "92525b48-ee1b-4d98-9de5-228614aa849b",
+          "operation": "checkpoint",
+          "digest": "f65c952add6a5f59498b5d5d3dcf4eb6d3a6410116712b7c456516528b2b9f94",
+          "revision": 2,
+          "consultation_id": "c7be77c5-e9c9-4283-8cc4-dbae08a7808e",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "c7be77c5-e9c9-4283-8cc4-dbae08a7808e",
+          "operation": "attach",
+          "digest": "3e642dd78c7284c25042ca2d4b976b9ac3f0881d7a5da5ca5ea58ffeade9ee57",
+          "revision": 4,
+          "consultation_id": "c7be77c5-e9c9-4283-8cc4-dbae08a7808e",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "4910459c9fa9b6bc0ab3c3c24610ba265138b46032d2977a28edb6932e3b8b4c",
+          "result_digest": "4bab6f22c22f0d52adcb98e4847cf803e3f4e68264d7ae90dd4c805631a5c50d"
+        }
+      ],
+      "human_decisions": []
+    },
+    "pending_process_status": null
+  }
+}

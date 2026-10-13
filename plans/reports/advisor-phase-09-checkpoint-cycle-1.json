@@ -1,0 +1,285 @@
+{
+  "taskRunId": "65d52242-ed6b-4def-b1d3-41a1f47ec5f8",
+  "consultationId": "51deaec7-b964-45dd-80e8-07ffcd9accf1",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "51deaec7-b964-45dd-80e8-07ffcd9accf1",
+    "task_run_id": "65d52242-ed6b-4def-b1d3-41a1f47ec5f8",
+    "checkpoint_id": "checkpoint-review-step-4-cycle-1",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "47f80366000639469278033cc4bf296b9430c3a59a22d5b6c8a3c71ece92e2c8",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.154.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 18905
+    },
+    "attempts": [
+      {
+        "attempt_id": "3d5062d5-1227-4114-a485-c37297400787",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 18831,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Before Step 5 approval, produce a single read-only evidence reconciliation showing all eight claimed Linux gates, their outcomes, and the specific proof for each invariant and release-byte identity requirement.",
+      "rationale": "The supplied results support 52/52 passing tests across three named suites and a 9.5/10 review with zero critical issues, but they do not enumerate the claimed eight gates or include release-byte artifacts. A small evidence reconciliation is safer than rerunning or adding tests and preserves the non-goals and authorized scope.",
+      "must_fix": [
+        "Reconcile the claim that all eight Linux gates passed with the three validation suites currently listed.",
+        "Identify the recorded evidence that the remediated warning was re-reviewed and closed.",
+        "Link each invariant and WRQ-047..052/059 to an observable result, including byte-identity verification."
+      ],
+      "cautions": [
+        "Finalizing from summary statements alone could conceal a coverage or evidence-accounting gap.",
+        "Do not broaden scope, add permanent workflow-recording tests, or alter the least-privilege, exact-ID, fail-closed, or Linux wildcard invariants."
+      ],
+      "assumptions": [
+        "The two report digests identify the final reviewed versions.",
+        "The 52 passing tests were executed against the same candidate revision submitted for finalization.",
+        "The missing artifact list reflects omitted evidence metadata rather than absent release-byte verification."
+      ],
+      "success_checks": [
+        "All eight gates are named and recorded as passing with zero failures.",
+        "The three stated suites still total 52 passed and zero failed.",
+        "The 9.5/10 review and zero-critical-issue status apply after warning remediation.",
+        "Each invariant and required WRQ has explicit proof, with exact-ID byte identity covered.",
+        "No evidence or change falls outside the three authorized paths."
+      ],
+      "unresolved_questions": []
+    },
+    "audit_status": "recorded"
+  },
+  "freshState": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "get",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "65d52242-ed6b-4def-b1d3-41a1f47ec5f8",
+      "project_id": "fa0115be0f6877ca599febe95dcd3c8d6af52001867f4b5c96f92764decf9f3d",
+      "task_revision": 5,
+      "phase_id": "phase-09",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "51deaec7-b964-45dd-80e8-07ffcd9accf1",
+      "disposition": {
+        "consultation_id": "51deaec7-b964-45dd-80e8-07ffcd9accf1",
+        "evidence_revision": 0,
+        "action": "accept",
+        "rationale": "Accepted advisor recommendation; warning remediated in release.yml, proceeding to finalization.",
+        "correction": null
+      },
+      "outcome": null,
+      "task": {
+        "goal": "Integrated qualification, failure routing, and release-byte verification for Windows release candidate",
+        "non_goals": [
+          "Unrelated refactoring",
+          "Adding permanent tests solely to record workflow runs"
+        ],
+        "authorized_paths": [
+          "tests/distribution/release-orchestration.test.mjs",
+          "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "plans/reports/code-review-260915-1119-phase-09-integrated-qualification.md"
+        ],
+        "scope_rationale": "Phase 09 verification deliverables and evidence reports",
+        "invariants": [
+          "Strict least-privilege CI permissions and exact-ID artifact handoff",
+          "Fail-closed predecessor transition without bootstrap fallback",
+          "Linux installer wildcard non-collection of Windows harness"
+        ],
+        "success_criteria": [
+          "All scoped Linux repository gates and release test suites pass 100%",
+          "Code review approved with score >= 9/10 and zero critical issues"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "plans/reports/code-review-260915-1119-phase-09-integrated-qualification.md",
+          "digest": "ad9c9db1db6e2602dc6e10e75bf88dc7dbd795c338ab972348ebc183f2321fad",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "digest": "3e1e31ce98d54d2511523dacd27fd2d4dbefd1323ec879cd3d0820b910b2a3f2",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "c6b72cd83d4bd6845d3b39687f6b0314ad5f634556701bfba2ab6384dc1813cb",
+          "status": "file",
+          "git": {
+            "status": "  ",
+            "identity": "|100644 8fc51e4d4342df9986dcb4369a4e44b4daac91db 0",
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "tests/distribution/release-orchestration.test.mjs",
+          "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "plans/reports/code-review-260915-1119-phase-09-integrated-qualification.md"
+        ],
+        "rationale": "Phase 09 verification deliverables and evidence reports",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "plans/reports/code-review-260915-1119-phase-09-integrated-qualification.md",
+          "digest": "ad9c9db1db6e2602dc6e10e75bf88dc7dbd795c338ab972348ebc183f2321fad",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "digest": "3e1e31ce98d54d2511523dacd27fd2d4dbefd1323ec879cd3d0820b910b2a3f2",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "c6b72cd83d4bd6845d3b39687f6b0314ad5f634556701bfba2ab6384dc1813cb",
+          "status": "file",
+          "git": {
+            "status": "  ",
+            "identity": "|100644 8fc51e4d4342df9986dcb4369a4e44b4daac91db 0",
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "51deaec7-b964-45dd-80e8-07ffcd9accf1",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-step-4-cycle-1",
+        "checkpoint_digest": "47f80366000639469278033cc4bf296b9430c3a59a22d5b6c8a3c71ece92e2c8",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "50079201ef1026b94ef7f1a5f297c6a04b1435cdb7c39c40a0f70d5452859d28",
+        "envelope_digest": "f8202ecb68284955002292cfd1602ca6fe57b82e3a8fbdfe8b018406c2b2815c",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.154.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 18911
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "npm run test:release",
+          "npm run test:installer:linux",
+          "npm run test:distribution:rollout"
+        ],
+        "intended_changed_paths": [
+          "tests/distribution/release-orchestration.test.mjs",
+          "plans/reports/tester-260915-1119-phase-09-integrated-qualification.md",
+          "plans/reports/code-review-260915-1119-phase-09-integrated-qualification.md"
+        ]
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "b5a2c2bd-774d-439c-bbd3-dd1fd3909b8f",
+          "operation": "init",
+          "digest": "9fca8320b772fdb7201c788b97cb203668f7171b5b0098ebf69b989c497102fc",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "40283b76-8042-4123-98be-5e033cd4d1de",
+          "operation": "checkpoint",
+          "digest": "37df046f1c5fa78c4d5b264622745028a97340c776c50cae0d6cc3ac22a60733",
+          "revision": 2,
+          "consultation_id": "51deaec7-b964-45dd-80e8-07ffcd9accf1",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "51deaec7-b964-45dd-80e8-07ffcd9accf1",
+          "operation": "attach",
+          "digest": "f8202ecb68284955002292cfd1602ca6fe57b82e3a8fbdfe8b018406c2b2815c",
+          "revision": 4,
+          "consultation_id": "51deaec7-b964-45dd-80e8-07ffcd9accf1",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "47f80366000639469278033cc4bf296b9430c3a59a22d5b6c8a3c71ece92e2c8",
+          "result_digest": "50079201ef1026b94ef7f1a5f297c6a04b1435cdb7c39c40a0f70d5452859d28"
+        },
+        {
+          "operation_id": "3912ea1e-4dd5-479d-8544-5cd9a82b1f51",
+          "operation": "disposition",
+          "digest": "d183ff470d7a8d05c0966a7cb5d828f834aa52e87a2d04d16a735231fd15bf29",
+          "revision": 5,
+          "consultation_id": "51deaec7-b964-45dd-80e8-07ffcd9accf1",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        }
+      ],
+      "human_decisions": []
+    }
+  }
+}

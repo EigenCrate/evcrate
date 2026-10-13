@@ -1,0 +1,108 @@
+{
+  "protocol": "evcrate-advisor-checkpoint",
+  "version": 2,
+  "task_run_id": "c139abe1-9322-425a-9e23-72259af16e32",
+  "checkpoint_id": "checkpoint-review-step-4",
+  "phase_id": "phase-07",
+  "task_revision": 1,
+  "evidence_revision": 0,
+  "checkpoint": "review:step-4",
+  "kind": "review",
+  "question": "Which safe action should follow this terminal review?",
+  "task": {
+    "goal": "Configuration and Evaluations disclosures",
+    "non_goals": [
+      "Unrelated refactoring"
+    ],
+    "authorized_paths": [
+      "viewer/src/views/configuration-view.tsx",
+      "viewer/src/views/evaluations-view.tsx",
+      "viewer/src/views/evaluation-detail.tsx",
+      "viewer/src/styles.css"
+    ],
+    "scope_rationale": "Phase 07 bound source disclosures boundary",
+    "invariants": [
+      "Preserve existing tests and user baseline",
+      "Candidate blinding invariant"
+    ],
+    "success_criteria": [
+      "All relevant validation tests pass"
+    ]
+  },
+  "proposal": {
+    "next_action": "Proceed to user review approval and finalization",
+    "rationale": "Terminal review completed with score 8.8/10; all reviewer warnings addressed (responsive routes visibility, policy loading state, inspected evaluation drawer, focus restoration); 88/88 tests pass.",
+    "intended_changed_paths": [
+      "viewer/src/views/configuration-view.tsx",
+      "viewer/src/views/evaluations-view.tsx",
+      "viewer/src/views/evaluation-detail.tsx",
+      "viewer/src/styles.css"
+    ]
+  },
+  "evidence": {
+    "summary": "Review warnings resolved. 88/88 unit tests passed across EVCrate and DamHopper. Zero TypeScript errors. Production UI built cleanly.",
+    "files": [
+      {
+        "path": "viewer/src/views/configuration-view.tsx",
+        "excerpt": "export const ConfigurationView: FC<ConfigurationViewProps> = ({ state }) => { const { snapshot, historySummary, activityScope } = state; const routeGroups: readonly HistoryRouteGroupMetricV1[] = snapshot?.metricsResult?.metrics?.route_groups ?? historySummary?.metrics?.metrics?.route_groups ?? [];",
+        "digest": "af1fc6d445c789efe8e62aa49ca6b72685000ff9b08692397d89318fa7c078c9"
+      },
+      {
+        "path": "viewer/src/views/evaluations-view.tsx",
+        "excerpt": "export const EvaluationsView: FC<EvaluationsViewProps> = ({ state, onRevealChange, onCompareDescriptors, onInspectDescriptor }) => { const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);",
+        "digest": "9d17f935e4c9f4f388c620055327f0c322f60275b23bea27f5b896d866dd86a9"
+      },
+      {
+        "path": "viewer/src/views/evaluation-detail.tsx",
+        "excerpt": "useEffect(() => { const previousFocus = typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null; const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onClose(); } }; window.addEventListener('keydown', handleKeyDown, true); return () => { window.removeEventListener('keydown', handleKeyDown, true); if (previousFocus && typeof previousFocus.focus === 'function') { previousFocus.focus(); } }; }, [onClose]);",
+        "digest": "ba5c3a8f773dcad20a85d8d495bf6f42f3b5bbe79d58be9e7db7ce64095f6caa"
+      },
+      {
+        "path": "viewer/src/styles.css",
+        "excerpt": "@media (min-width: 640px) { .routes-cards-list { display: none; } .routes-table-wrapper { display: block; } }",
+        "digest": "06d2097db15d52b2d7e38ac1ce42c15d32000716c5574da13ee1bb1e2e77fc59"
+      }
+    ],
+    "validation_results": [
+      {
+        "suite": "viewer-phase-07",
+        "command": "node --test tests/viewer/phase-07-configuration-evaluations-ui.test.mjs",
+        "status": "passed",
+        "passed": 12,
+        "failed": 0,
+        "details": null
+      },
+      {
+        "suite": "viewer-suite",
+        "command": "node --test tests/viewer/compact-activity-views.test.mjs tests/viewer/hash-view.test.mjs tests/viewer/comparable-evaluations.test.mjs tests/viewer/metric-ratio-format.test.mjs tests/viewer/app-state-transitions.test.mjs tests/viewer/app-state-selectors.test.mjs tests/viewer/phase-04-viewer-scope-and-requests.test.mjs",
+        "status": "passed",
+        "passed": 43,
+        "failed": 0,
+        "details": null
+      },
+      {
+        "suite": "plugin-ui-state",
+        "command": "node --test tests/plugin/ui-state.test.mjs",
+        "status": "passed",
+        "passed": 20,
+        "failed": 0,
+        "details": null
+      },
+      {
+        "suite": "dam-hopper-workspace-host",
+        "command": "pnpm --filter @dam-hopper/ui exec vitest run src/components/organisms/WorkspaceAdvisorHost.test.tsx src/components/organisms/AdvisorPanelSlot.test.tsx src/lib/workspace-advisor-placement.test.ts",
+        "status": "passed",
+        "passed": 13,
+        "failed": 0,
+        "details": null
+      }
+    ],
+    "artifacts": []
+  },
+  "prior": {
+    "prior_consultation_id": null,
+    "prior_counsel": null,
+    "prior_disposition": null,
+    "observed_outcome": null
+  }
+}

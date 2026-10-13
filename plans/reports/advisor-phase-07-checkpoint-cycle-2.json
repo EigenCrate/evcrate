@@ -1,0 +1,227 @@
+{
+  "taskRunId": "e37a45d9-1bcd-421e-9829-cf6cdeca96f3",
+  "consultationId": "100bd9a7-c7e9-406b-844c-abf54d04bc66",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "100bd9a7-c7e9-406b-844c-abf54d04bc66",
+    "task_run_id": "e37a45d9-1bcd-421e-9829-cf6cdeca96f3",
+    "checkpoint_id": "checkpoint-review-step-4-cycle-2",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "071e727ee0127485a9489327bb3929424c1f0d7cfb21079f367a54cea27cd677",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.154.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 29897
+    },
+    "attempts": [
+      {
+        "attempt_id": "769ea71b-4a0f-4704-9217-432bad769775",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 29815,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Hold Step 5 and update the authorized review report with a compact, line-referenced verification table covering every Linux gate, action SHA, matrix row, publisher permission, and shell-bound expression, plus the complete test outcome including skipped or excluded tests.",
+      "rationale": "The reported 10/10 review and passing tests are encouraging but are conclusions, not sufficient direct evidence for the stated invariants. The supplied excerpt is truncated and provides no workflow source, line references, action SHA values, permissions, matrix definition, or shell/env mappings. A report-only evidence update stays within the authorized path and is the least complex safe way to make approval auditable without changing implementation.",
+      "must_fix": [
+        "Provide direct, line-referenced evidence for all 12 preserved Linux gates and all 8 exact action SHA pins.",
+        "Show the exact four matrix rows and demonstrate that publisher execution is conditioned on qualification of every required row.",
+        "Document job- and step-level permissions and prove the producer cannot publish while the publisher has only the permissions it needs.",
+        "Account for every GitHub expression that can influence a shell command, showing that untrusted or variable values enter through step environment variables and are safely quoted.",
+        "Reconcile “536/536 runnable tests” with the success criterion “all validation tests pass” by reporting skipped, excluded, or non-runnable tests explicitly."
+      ],
+      "cautions": [
+        "Step environment variables reduce expression-injection risk but do not by themselves prevent shell injection; quoting and downstream interpretation still matter.",
+        "Exact action SHA pinning is insufficient if reusable workflows, container images, downloaded binaries, or scripts remain mutable or unverified.",
+        "A verify-only publisher can still violate least privilege if its token permissions or artifact trust boundary are broader than necessary."
+      ],
+      "assumptions": [
+        "The review report is the only path authorized for this checkpoint action.",
+        "No omitted artifact contains the direct workflow evidence needed to independently substantiate the summary.",
+        "The test commands exercised the committed Cycle 2 workflow state corresponding to the reviewed revision.",
+        "“All 12 Linux gates” means semantically unchanged required gates, not merely jobs or steps with retained names."
+      ],
+      "success_checks": [
+        "The report maps each invariant to exact workflow lines and an observable verification result.",
+        "Every third-party action reference shown in the report is a full immutable commit SHA.",
+        "The documented matrix contains exactly four intended rows, and a failed or missing row prevents publisher execution.",
+        "No `${{ ... }}` expression carrying variable or untrusted data appears directly inside any shell `run` block.",
+        "Producer and publisher permissions are explicitly enumerated and publisher credentials are unavailable to producer steps.",
+        "Test totals reconcile passed, failed, skipped, and excluded cases, with zero failures among all required validation suites."
+      ],
+      "unresolved_questions": [
+        "Are reusable workflows, container images, downloaded tools, or generated artifacts part of the release trust chain, and if so, how are they pinned or integrity-verified?",
+        "What exact four matrix rows are required, and must publisher authorization require all four rather than only successful scheduled rows?",
+        "Which tests, if any, were excluded from the reported 536 runnable tests?"
+      ]
+    },
+    "audit_status": "recorded"
+  },
+  "freshState": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "get",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "e37a45d9-1bcd-421e-9829-cf6cdeca96f3",
+      "project_id": "fa0115be0f6877ca599febe95dcd3c8d6af52001867f4b5c96f92764decf9f3d",
+      "task_revision": 4,
+      "phase_id": "phase-07",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "100bd9a7-c7e9-406b-844c-abf54d04bc66",
+      "disposition": null,
+      "outcome": null,
+      "task": {
+        "goal": "Release workflow producer native matrix and publisher split Cycle 2",
+        "non_goals": [
+          "Unrelated refactoring"
+        ],
+        "authorized_paths": [
+          "plans/reports/code-review-260915-0155-phase-07-cycle-2.md"
+        ],
+        "scope_rationale": "Phase 07 review verification evidence baseline",
+        "invariants": [
+          "Preserve existing Linux gates and action pins",
+          "Zero expression injection in shell run blocks"
+        ],
+        "success_criteria": [
+          "All validation tests pass",
+          "Code review approved 10/10"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "plans/reports/code-review-260915-0155-phase-07-cycle-2.md",
+          "digest": "bbfb7a4ed1eb634460c08cfa68566b3d62e877bcc40cad30c742838fb0b57cde",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "plans/reports/code-review-260915-0155-phase-07-cycle-2.md"
+        ],
+        "rationale": "Phase 07 review verification evidence baseline",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "plans/reports/code-review-260915-0155-phase-07-cycle-2.md",
+          "digest": "bbfb7a4ed1eb634460c08cfa68566b3d62e877bcc40cad30c742838fb0b57cde",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "100bd9a7-c7e9-406b-844c-abf54d04bc66",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-step-4-cycle-2",
+        "checkpoint_digest": "071e727ee0127485a9489327bb3929424c1f0d7cfb21079f367a54cea27cd677",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "3b951f82dcc32265abd87fb3f36335cf8cc301dd587488ac290fcc3056ae2101",
+        "envelope_digest": "826fa9763f651aabbf6ab2108867cbd8dee78e0b22c8e871e80c1402f0bcb4bc",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.154.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 29897
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "npm run test:release",
+          "npm test"
+        ],
+        "intended_changed_paths": [
+          "plans/reports/code-review-260915-0155-phase-07-cycle-2.md"
+        ]
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "90acfdfd-38f1-4873-8eec-b72a182eaa2a",
+          "operation": "init",
+          "digest": "ea68786cf6e6251d5e731dbdcb9e508d2a487828c2e153b978311d725c36b8ad",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "d70e64b6-5b61-433d-9732-af2db8935de8",
+          "operation": "checkpoint",
+          "digest": "dcb1179c22ad9fbda90d378da3c414aae879ea99c251e3aba1bceeb354528d2b",
+          "revision": 2,
+          "consultation_id": "100bd9a7-c7e9-406b-844c-abf54d04bc66",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "100bd9a7-c7e9-406b-844c-abf54d04bc66",
+          "operation": "attach",
+          "digest": "826fa9763f651aabbf6ab2108867cbd8dee78e0b22c8e871e80c1402f0bcb4bc",
+          "revision": 4,
+          "consultation_id": "100bd9a7-c7e9-406b-844c-abf54d04bc66",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "071e727ee0127485a9489327bb3929424c1f0d7cfb21079f367a54cea27cd677",
+          "result_digest": "3b951f82dcc32265abd87fb3f36335cf8cc301dd587488ac290fcc3056ae2101"
+        }
+      ],
+      "human_decisions": []
+    },
+    "pending_process_status": null
+  }
+}

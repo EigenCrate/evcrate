@@ -1,0 +1,269 @@
+{
+  "taskRunId": "8e2c199f-93df-4167-943e-0586aaaf8ec8",
+  "consultationId": "1ef5cf15-2494-4965-8e5b-670e965bcb8f",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "1ef5cf15-2494-4965-8e5b-670e965bcb8f",
+    "task_run_id": "8e2c199f-93df-4167-943e-0586aaaf8ec8",
+    "checkpoint_id": "checkpoint-review-step-4",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "84367551b42b02e953a321acb181ad307bab4b0044480701515aec94a8201473",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.154.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 26041
+    },
+    "attempts": [
+      {
+        "attempt_id": "9b8eea53-92be-43bb-a40a-1a03af4b9f4c",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 25923,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Hold progression and perform one bounded checkpoint correction: explicitly authorize and attach the reviewed `.github/workflows/windows-smoke.yml` change, then reissue the terminal review against the corrected evidence set.",
+      "rationale": "The claimed 10/10 approval is not supported by a scope-consistent evidence package. The new Windows workflow is central to the goal and is described as reviewed, but it is absent from both `authorized_paths` and `intended_changed_paths`, and its source is not included in the evidence files. Advancing now would accept an out-of-scope, unverified change. Correcting the checkpoint is safer and less complex than altering implementation that reportedly passes all tests.",
+      "must_fix": [
+        "Resolve the scope mismatch for `.github/workflows/windows-smoke.yml`; it cannot be approved as a changed file while absent from `authorized_paths`.",
+        "Include direct workflow evidence sufficient to verify triggers, permissions, action SHA pinning, commit validation, and absence of publishing or artifact-upload behavior.",
+        "Include sufficient `.releaserc.json` evidence to verify the exact post-qualification asset labels; the supplied excerpt does not show them."
+      ],
+      "cautions": [
+        "A passing release-test suite and build do not independently prove GitHub Actions permission or trigger safety.",
+        "The review report references plan-file updates outside the authorized paths; confirm whether those were actual modifications or merely review observations.",
+        "Adding `shell: bash` to `npm ci` is optional and should not delay approval unless shell uniformity is an explicit invariant."
+      ],
+      "assumptions": [
+        "The Windows workflow was created or modified during this task, as stated in the review report.",
+        "The listed authorized paths are intended as an enforcement boundary rather than an incomplete summary.",
+        "The reported test counts and review score are accurate, but their assertions cannot replace missing source evidence."
+      ],
+      "success_checks": [
+        "The corrected checkpoint lists `.github/workflows/windows-smoke.yml` consistently under authorized, intended, reviewed, and evidenced paths.",
+        "Direct workflow evidence shows only approved triggers, read-only permissions, pinned actions, no secret exposure, and no publishing or candidate-artifact upload.",
+        "Direct release configuration evidence shows the exact required qualified labels.",
+        "The reissued terminal review remains approved 10/10 with all 32 release tests and the build passing."
+      ],
+      "unresolved_questions": [
+        "Should `.github/workflows/windows-smoke.yml` be added to the authorized scope, or was its modification unauthorized and therefore required to be excluded?",
+        "Were the two plan files named in the review report modified during this phase, and if so, should they also be authorized?"
+      ]
+    },
+    "audit_status": "recorded"
+  },
+  "freshState": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "get",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "8e2c199f-93df-4167-943e-0586aaaf8ec8",
+      "project_id": "fa0115be0f6877ca599febe95dcd3c8d6af52001867f4b5c96f92764decf9f3d",
+      "task_revision": 4,
+      "phase_id": "phase-08",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "1ef5cf15-2494-4965-8e5b-670e965bcb8f",
+      "disposition": null,
+      "outcome": null,
+      "task": {
+        "goal": "Unprivileged Windows PR smoke and qualified asset labels",
+        "non_goals": [
+          "Unrelated refactoring",
+          "Publishing PR artifacts"
+        ],
+        "authorized_paths": [
+          ".releaserc.json",
+          "tests/distribution/release-orchestration.test.mjs",
+          "plans/reports/code-review-260915-1042-phase-08-unprivileged-windows-pr-smoke-and-labels.md"
+        ],
+        "scope_rationale": "Phase 08 verification evidence baseline",
+        "invariants": [
+          "Unprivileged PR smoke with read-only permissions and pinned actions",
+          "Exact post-qualification labels in .releaserc.json",
+          "Preserve existing tests and user baseline"
+        ],
+        "success_criteria": [
+          "All validation tests pass",
+          "Code review approved 10/10"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": ".releaserc.json",
+          "digest": "1ef46399df2447f92022e9dada564f9d5cc87bfb9753b2c34cb77ef269c1a764",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 e055edc0239020437d6226be8f6472d698945979 e055edc0239020437d6226be8f6472d698945979|100644 e055edc0239020437d6226be8f6472d698945979 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/code-review-260915-1042-phase-08-unprivileged-windows-pr-smoke-and-labels.md",
+          "digest": "e8d0f244eaa7ce1ab648ec845f6665ec0b93d0af83d3a081dae10195defddee1",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "c6b72cd83d4bd6845d3b39687f6b0314ad5f634556701bfba2ab6384dc1813cb",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 39827e09c915f7004bdf7702eb832991ff014aff 39827e09c915f7004bdf7702eb832991ff014aff|100644 39827e09c915f7004bdf7702eb832991ff014aff 0",
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          ".releaserc.json",
+          "tests/distribution/release-orchestration.test.mjs",
+          "plans/reports/code-review-260915-1042-phase-08-unprivileged-windows-pr-smoke-and-labels.md"
+        ],
+        "rationale": "Phase 08 verification evidence baseline",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": ".releaserc.json",
+          "digest": "1ef46399df2447f92022e9dada564f9d5cc87bfb9753b2c34cb77ef269c1a764",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 e055edc0239020437d6226be8f6472d698945979 e055edc0239020437d6226be8f6472d698945979|100644 e055edc0239020437d6226be8f6472d698945979 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "plans/reports/code-review-260915-1042-phase-08-unprivileged-windows-pr-smoke-and-labels.md",
+          "digest": "e8d0f244eaa7ce1ab648ec845f6665ec0b93d0af83d3a081dae10195defddee1",
+          "status": "file",
+          "git": {
+            "status": "!!",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/distribution/release-orchestration.test.mjs",
+          "digest": "c6b72cd83d4bd6845d3b39687f6b0314ad5f634556701bfba2ab6384dc1813cb",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 39827e09c915f7004bdf7702eb832991ff014aff 39827e09c915f7004bdf7702eb832991ff014aff|100644 39827e09c915f7004bdf7702eb832991ff014aff 0",
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "1ef5cf15-2494-4965-8e5b-670e965bcb8f",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-step-4",
+        "checkpoint_digest": "84367551b42b02e953a321acb181ad307bab4b0044480701515aec94a8201473",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "a024dba51e7ec89cade82ea9304d19727b636c850fdcb033fa88b0dd7b4f5842",
+        "envelope_digest": "28b96c83a079dcdb3fdddc4ba52b30f44ee105e82347b7f27b149a2ca23d4637",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.154.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 26041
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "npm run test:release",
+          "npm run build"
+        ],
+        "intended_changed_paths": [
+          ".releaserc.json",
+          "tests/distribution/release-orchestration.test.mjs",
+          "plans/reports/code-review-260915-1042-phase-08-unprivileged-windows-pr-smoke-and-labels.md"
+        ]
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "4dd089cf-d034-44cf-b0ea-253dc860b520",
+          "operation": "init",
+          "digest": "de1f9f171826bd986daf64b4140fd0b39c47ecbc31459acf45d25505cb06d0ef",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "14509aa9-de7d-4bd4-97fb-78dbb7636634",
+          "operation": "checkpoint",
+          "digest": "b3e15eb4ab7c0279b2fe257d6680847074e4d3de2e034df9ef68a0b28022be60",
+          "revision": 2,
+          "consultation_id": "1ef5cf15-2494-4965-8e5b-670e965bcb8f",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "1ef5cf15-2494-4965-8e5b-670e965bcb8f",
+          "operation": "attach",
+          "digest": "28b96c83a079dcdb3fdddc4ba52b30f44ee105e82347b7f27b149a2ca23d4637",
+          "revision": 4,
+          "consultation_id": "1ef5cf15-2494-4965-8e5b-670e965bcb8f",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "84367551b42b02e953a321acb181ad307bab4b0044480701515aec94a8201473",
+          "result_digest": "a024dba51e7ec89cade82ea9304d19727b636c850fdcb033fa88b0dd7b4f5842"
+        }
+      ],
+      "human_decisions": []
+    },
+    "pending_process_status": null
+  }
+}

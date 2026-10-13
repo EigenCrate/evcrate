@@ -1,0 +1,344 @@
+{
+  "taskRunId": "afedf246-1d94-4f9b-a279-729a8faae788",
+  "envelope": {
+    "protocol": "evcrate-advisor-controller",
+    "version": 2,
+    "correlation_id": "8fd9d179-193e-4179-baa9-6df4e7283130",
+    "task_run_id": "afedf246-1d94-4f9b-a279-729a8faae788",
+    "checkpoint_id": "checkpoint-review-step-4",
+    "task_revision": 1,
+    "evidence_revision": 0,
+    "checkpoint_digest": "ec0ae0f5aa8990b741f8ca7c9976556374c5d35003ff7ab298e8c9dc7a7e204c",
+    "status": "ADVICE_READY",
+    "receipt": {
+      "backend": "codex",
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "controller_version": 2,
+      "adapter_version": "0.154.0",
+      "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+      "elapsed_ms": 23824
+    },
+    "attempts": [
+      {
+        "attempt_id": "c3b40084-3579-40b7-a236-cdc1fe6c03df",
+        "slot": "primary",
+        "route": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high"
+        },
+        "phase": "model",
+        "model_started": true,
+        "elapsed_ms": 23744,
+        "terminal_classification": "success",
+        "retry_delay_ms": null,
+        "cleanup_outcome": "confirmed"
+      }
+    ],
+    "result": {
+      "protocol": "evcrate-advisor-result",
+      "version": 2,
+      "checkpoint": "review:step-4",
+      "status": "ADVICE_READY",
+      "recommendation": "Hold the phase transition and perform one bounded validation gate that records Windows-fixture determinism and missing/tampered-predecessor fail-closed results, with exact test counts.",
+      "rationale": "The supplied validation results account for only 32 passing tests (17 release and 15 Linux), while the summary claims 38/38, and no Windows-specific or predecessor-tampering result is shown. Proceeding would therefore rely on an unsupported terminal-review conclusion. A focused validation-and-evidence correction is safer and less complex than changing implementation code.",
+      "must_fix": [
+        "Reconcile the 38/38 claim with the 32 tests explicitly reported.",
+        "Provide observable validation for both invariants: byte-for-byte deterministic Windows fixtures and rejection of missing or tampered predecessors."
+      ],
+      "cautions": [
+        "Do not modify implementation unless the focused validation exposes a failure.",
+        "Keep any correction within the authorized paths and avoid unrelated refactoring."
+      ],
+      "assumptions": [
+        "The omitted six tests may be Windows-specific, but their suite, command, and results were not supplied.",
+        "The reviewer score and zero-critical-issue claim are summaries without supporting review artifacts in this checkpoint.",
+        "Passing Linux installer tests does not by itself validate Windows fixture behavior."
+      ],
+      "success_checks": [
+        "Repeated Windows fixture generation with identical inputs produces identical file sets, bytes, and digests.",
+        "Missing predecessor input exits unsuccessfully without accepting or preparing a release.",
+        "Tampered predecessor bytes or digest exits unsuccessfully without accepting or preparing a release.",
+        "The recorded suite totals exactly match the terminal summary, with all relevant tests passing."
+      ],
+      "unresolved_questions": []
+    },
+    "audit_status": "recorded"
+  },
+  "freshState": {
+    "protocol": "evcrate-advisor-state",
+    "version": 1,
+    "operation": "get",
+    "status": "STATE_READY",
+    "state": {
+      "schema_version": 1,
+      "task_run_id": "afedf246-1d94-4f9b-a279-729a8faae788",
+      "project_id": "fa0115be0f6877ca599febe95dcd3c8d6af52001867f4b5c96f92764decf9f3d",
+      "task_revision": 4,
+      "phase_id": "phase-04",
+      "gate_status": "needs_evidence",
+      "unresolved_episode_id": null,
+      "correction_count": 0,
+      "pending_consultation_id": null,
+      "last_consultation_id": "8fd9d179-193e-4179-baa9-6df4e7283130",
+      "disposition": null,
+      "outcome": null,
+      "task": {
+        "goal": "Phase 04: Deterministic Windows Fixture and Predecessor Resolver",
+        "non_goals": [
+          "Unrelated refactoring"
+        ],
+        "authorized_paths": [
+          "scripts/release/prepare-windows-predecessor.mjs",
+          "scripts/release/predecessor-resolver-core.mjs",
+          "scripts/release/predecessor-downloader.mjs",
+          "tests/installers/fixtures/windows-release-fixture.mjs",
+          "tests/installers/fixtures/release-fixture-shared-helpers.mjs",
+          "tests/installers/fixtures/fixture-records.mjs",
+          "tests/installers/fixtures/private-release-fixture.mjs"
+        ],
+        "scope_rationale": "Owned task boundary for Phase 04",
+        "invariants": [
+          "Deterministic Windows fixture bytes",
+          "Fail closed on missing/tampered predecessor"
+        ],
+        "success_criteria": [
+          "All relevant validation tests pass"
+        ]
+      },
+      "initial_baseline": [
+        {
+          "path": "scripts/release/predecessor-downloader.mjs",
+          "digest": "61a017da95a24957ac063a6dca6f6c3dd4c85d762e0fbb267a97083e317294df",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/release/predecessor-resolver-core.mjs",
+          "digest": "82d06a6cdae0c123009ca36aad6510861c4af73be0535e63f5c7e87ff8a89693",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/release/prepare-windows-predecessor.mjs",
+          "digest": "ab31a1769da680711fde44fb2e0717ea7f3a219f7adb15092e35536746fa31c4",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/installers/fixtures/fixture-records.mjs",
+          "digest": "9ddf047cfa726fbdc48955771b98f1de200204d63c8ca32274b956b7fe22a653",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 6acd2d20ae2dc96a67daf10cce5997c091fa7afc 6acd2d20ae2dc96a67daf10cce5997c091fa7afc|100644 6acd2d20ae2dc96a67daf10cce5997c091fa7afc 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/installers/fixtures/private-release-fixture.mjs",
+          "digest": "6948e71a64b40f542b76c0505f0022330ca2bb3e978d02b44860955574fdc7d2",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 f60ad4b64278703c2cd6181338d04e145fa4e930 f60ad4b64278703c2cd6181338d04e145fa4e930|100644 f60ad4b64278703c2cd6181338d04e145fa4e930 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/installers/fixtures/release-fixture-shared-helpers.mjs",
+          "digest": "8d96ac1e22e4e13a8d0de9b2eb4e7c55ded35ea17380167abbebba2fd7853500",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/installers/fixtures/windows-release-fixture.mjs",
+          "digest": "c7cba7b0b545e2488c6d6049f9ad8976af0f3b629a4c0610a73730b84c034442",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        }
+      ],
+      "scope_revision": 0,
+      "scope": {
+        "authorized_paths": [
+          "scripts/release/prepare-windows-predecessor.mjs",
+          "scripts/release/predecessor-resolver-core.mjs",
+          "scripts/release/predecessor-downloader.mjs",
+          "tests/installers/fixtures/windows-release-fixture.mjs",
+          "tests/installers/fixtures/release-fixture-shared-helpers.mjs",
+          "tests/installers/fixtures/fixture-records.mjs",
+          "tests/installers/fixtures/private-release-fixture.mjs"
+        ],
+        "rationale": "Owned task boundary for Phase 04",
+        "added_baseline": []
+      },
+      "evidence_revision": 0,
+      "current_baseline": [
+        {
+          "path": "scripts/release/predecessor-downloader.mjs",
+          "digest": "61a017da95a24957ac063a6dca6f6c3dd4c85d762e0fbb267a97083e317294df",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/release/predecessor-resolver-core.mjs",
+          "digest": "82d06a6cdae0c123009ca36aad6510861c4af73be0535e63f5c7e87ff8a89693",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "scripts/release/prepare-windows-predecessor.mjs",
+          "digest": "ab31a1769da680711fde44fb2e0717ea7f3a219f7adb15092e35536746fa31c4",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/installers/fixtures/fixture-records.mjs",
+          "digest": "9ddf047cfa726fbdc48955771b98f1de200204d63c8ca32274b956b7fe22a653",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 6acd2d20ae2dc96a67daf10cce5997c091fa7afc 6acd2d20ae2dc96a67daf10cce5997c091fa7afc|100644 6acd2d20ae2dc96a67daf10cce5997c091fa7afc 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/installers/fixtures/private-release-fixture.mjs",
+          "digest": "6948e71a64b40f542b76c0505f0022330ca2bb3e978d02b44860955574fdc7d2",
+          "status": "file",
+          "git": {
+            "status": " M",
+            "identity": "1 .M N... 100644 100644 100644 f60ad4b64278703c2cd6181338d04e145fa4e930 f60ad4b64278703c2cd6181338d04e145fa4e930|100644 f60ad4b64278703c2cd6181338d04e145fa4e930 0",
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/installers/fixtures/release-fixture-shared-helpers.mjs",
+          "digest": "8d96ac1e22e4e13a8d0de9b2eb4e7c55ded35ea17380167abbebba2fd7853500",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        },
+        {
+          "path": "tests/installers/fixtures/windows-release-fixture.mjs",
+          "digest": "c7cba7b0b545e2488c6d6049f9ad8976af0f3b629a4c0610a73730b84c034442",
+          "status": "file",
+          "git": {
+            "status": "??",
+            "identity": null,
+            "original_path": null
+          }
+        }
+      ],
+      "pending": null,
+      "last_terminal": {
+        "consultation_id": "8fd9d179-193e-4179-baa9-6df4e7283130",
+        "status": "ADVICE_READY",
+        "checkpoint_id": "checkpoint-review-step-4",
+        "checkpoint_digest": "ec0ae0f5aa8990b741f8ca7c9976556374c5d35003ff7ab298e8c9dc7a7e204c",
+        "task_revision": 1,
+        "evidence_revision": 0,
+        "scope_revision": 0,
+        "result_digest": "db8540d7177fb2be903ca79c4e2334a442aef283b999cbb602c2304ce6aa0045",
+        "envelope_digest": "4057f52e5c3776dad13910e297c4c62beb84b0bb2222893a69ca66045bc4034a",
+        "receipt": {
+          "backend": "codex",
+          "model": "gpt-5.6-sol",
+          "effort": "high",
+          "controller_version": 2,
+          "adapter_version": "0.154.0",
+          "build_identity": "evcrate-advisor-v2-000ba4bbd935ddea",
+          "elapsed_ms": 23824
+        },
+        "has_concerns": true,
+        "validation_commands": [
+          "npm run test:release",
+          "npm run test:installer:linux"
+        ],
+        "intended_changed_paths": []
+      },
+      "correction": null,
+      "episode_validation_command": null,
+      "human_continuation": null,
+      "operation_ledger": [
+        {
+          "operation_id": "838a26a1-587a-41bf-9e33-0d23d46a5c88",
+          "operation": "init",
+          "digest": "2eca1e1f393b436a85237c2442b7eff417709f4036469a2f3db71135d6555999",
+          "revision": 1,
+          "consultation_id": null,
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "4525452e-8e16-44df-bba2-00afe0c70282",
+          "operation": "checkpoint",
+          "digest": "c9238e0bf7f8fa4fb229112da21c7cd5fe36a162a49c9bc37cbe5fecd6a9b77e",
+          "revision": 2,
+          "consultation_id": "8fd9d179-193e-4179-baa9-6df4e7283130",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": null,
+          "result_digest": null
+        },
+        {
+          "operation_id": "8fd9d179-193e-4179-baa9-6df4e7283130",
+          "operation": "attach",
+          "digest": "4057f52e5c3776dad13910e297c4c62beb84b0bb2222893a69ca66045bc4034a",
+          "revision": 4,
+          "consultation_id": "8fd9d179-193e-4179-baa9-6df4e7283130",
+          "action_id": null,
+          "episode_id": null,
+          "outcome_result": null,
+          "validation_command": null,
+          "checkpoint_digest": "ec0ae0f5aa8990b741f8ca7c9976556374c5d35003ff7ab298e8c9dc7a7e204c",
+          "result_digest": "db8540d7177fb2be903ca79c4e2334a442aef283b999cbb602c2304ce6aa0045"
+        }
+      ],
+      "human_decisions": []
+    },
+    "pending_process_status": null
+  }
+}
