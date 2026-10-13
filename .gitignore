@@ -62,6 +62,8 @@ repomix-output.xml
 .serena/cache
 plans/**/*
 !plans/templates/*
+!plans/261012-2156-general-sonar-remediation-cycles/
+!plans/261012-2156-general-sonar-remediation-cycles/**/*
 screenshots/*
 docs/screenshots/*
 docs/journals/*
