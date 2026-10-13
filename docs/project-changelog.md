@@ -5,11 +5,17 @@
 **Updated:** 2026-10-13
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-13 — docs(sonar): historical-report review, documentation, and partial offline handoff (Phase 08)
+
+- Reviewed preserved historical report metrics (56 tests, 46.48% line coverage, 63.91% branch coverage; focused change unanalyzed) and vendor documentation contracts (CLI session vs scanner token auth separation, exact CE task and analysis binding, complete paging, overall vs new code separation, human owner hotspot reviews, verified CI trigger before push, active TLS) without transplanting corporate defaults.
+- Updated extension README (`ext/sonarqube-test-quality/README.md`) and core documentation with explicit `--target agents|claude|both` installer semantics, 18 proposed assets and 2 skill entrypoints per selected root (36 destinations for `both`), offline verification receipts, duplicate-root ambiguity notes, and 5-point consumer server-success criteria.
+- Compiled local-only offline implementation handoff report (`reports/implementation-handoff.md`): recorded 114/114 passing package tests and isolated packed installer smoke as verified offline capabilities; recorded live consuming-host LLM runtime discovery and independent-child execution as blocked/unexercised; recorded actual consumer Sonar server-success as a separate future consumer prerequisite.
+
 ### 2026-10-13 — feat(sonar): behavioral evals catalog, contract alignment, and test suite (Phase 07)
 
 - Expanded standalone SonarQube behavioral evals catalog (`ext/sonarqube-test-quality/evals/evals.json`): 64 instruction scenarios with 195 authored prose assertions and monotonic integer IDs (1–64); covers four scanner lifecycle shapes, global budget $N$ enforcement, single correction batch invariant, two-round comparable no-progress escalation, neutral applicability and metric requirements, authority/auth invariants, and Stage $F$ server-verified success contracts with zero literal credentials or TLS bypass instructions.
 - Halting contracts & evals test suite: aligned `declined-upload` trigger across references (`remediation-cycles.md`) and report templates (`remediation-cycle-report.md`, `run-guidance-report.md`); added 15-test suite (`tests/evals.test.mjs`) validating catalog schema, assertion density, lifecycle shapes, static matrix traceability (A01–A09, D01–D09, C01–C12, E01–E08), and security invariants.
-- Verified package test and release inventory: all 114 package tests pass across 8 test suites (`tests/*.test.mjs`); release tarball packages exactly 23 verified entries (`package.json#files`). Packed installer extraction and offline scenario verification exercised; live LLM host execution and candidate qualification handoff remain Phase 07 unexercised gates pending Phase 08.
+- Verified package test and release inventory: all 114 package tests pass across 8 test suites (`tests/*.test.mjs`); release tarball packages exactly 23 verified entries (`package.json#files`). Packed installer extraction and offline scenario verification exercised; live LLM host execution and live Sonar server qualification remain unexercised boundaries.
 
 ### 2026-10-13 — feat(sonar): dual-root transactional two-skill installer and package (Phase 06)
 
@@ -773,25 +779,6 @@
 - `release-orchestration.test.mjs` passes 12/12; `npm run test:release` passes
   29/29; build and CLI help checks pass. Native Windows execution and live
   npm/GitHub publication remain downstream gates.
-
-### 2026-09-14 — feat(test): self-contained Windows qualification harness (Phase 05)
-
-**Status:** Phase 05 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
-**Plan:** [Phase 05 plan](../plans/260914-0636-windows-release-qualification/phase-05-self-contained-windows-qualification-harness.md)
-**Evidence:** [Cycle 2 review](../plans/reports/code-review-260914-2030-phase-05-self-contained-windows-qualification-harness-cycle-2.md)
-
-- Delivered the Node-builtins-only qualification CLI with strict host,
-  receipt, and exact-byte preflight; safe PowerShell/`cmd.exe` runners;
-  smoke/full lifecycle controllers; immutable-state and PATH observers; and
-  isolated negative scenarios.
-- Scoped checks passed 60/60: distribution/harness 28/28, release artifacts
-  17/17, and Linux installer wildcard 15/15. Direct `--help` invocation
-  exited 0, confirming the standalone entrypoint.
-- Native Windows smoke/full execution remains an explicit downstream Phase 09
-  evidence gate; Phase 07 workflow wiring is complete but does not execute hosted
-  rows. This deterministic host-independent evidence makes no runtime support claim.
-- Handoff advanced to Phase 06 — semantic-release candidate, receipt, and
-  publisher.
 
 ## Historical entries
 

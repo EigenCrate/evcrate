@@ -2,6 +2,15 @@
 
 Historical phase entries moved from [project-changelog.md](./project-changelog.md) to keep the maintained phase mirror below the repository's 800-line documentation limit. Paths and evidence are preserved; current Phase 09 milestone status remains in the main changelog.
 
+### 2026-09-14 — feat(test): self-contained Windows qualification harness (Phase 05)
+
+**Status:** Phase 05 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
+
+- Delivered the Node-builtins-only qualification CLI with strict host, receipt, and exact-byte preflight; safe PowerShell/`cmd.exe` runners; smoke/full lifecycle controllers; immutable-state and PATH observers; and isolated negative scenarios.
+- Scoped checks passed 60/60: distribution/harness 28/28, release artifacts 17/17, and Linux installer wildcard 15/15. Direct `--help` invocation exited 0, confirming the standalone entrypoint.
+- Native Windows smoke/full execution remains an explicit downstream Phase 09 evidence gate; Phase 07 workflow wiring is complete but does not execute hosted rows. This deterministic host-independent evidence makes no runtime support claim.
+- Handoff advanced to Phase 06 — semantic-release candidate, receipt, and publisher.
+
 ### 2026-09-14 — feat(release): deterministic Windows fixture and predecessor resolver (Phase 04)
 
 **Status:** Phase 04 DONE (2026-09-14; 100%); Cycle 2 review approved 10/10.
@@ -91,7 +100,6 @@ recorded.
 
 Phase 03, adapter qualification and terminal parsing, is ready to start and
 consumes the Phase 02 timing interface.
-
 
 ### Phase 04: Regeneration, documentation, and release gates
 
@@ -493,7 +501,6 @@ npm publication, deployment, or `main` merge.
 - Live vendor qualification and production `$HOME/.evcrate/` publication remain
   operator-gated; no live quality or rollout claim is made.
 
-
 ### 2026-09-08 — test(advisor): verify deterministic Phase 10 acceptance and establish synthetic improvement baseline (phase-10)
 
 **Status:** Phase 10 DONE for deterministic acceptance (272/272; 100%). Live
@@ -636,7 +643,6 @@ deterministic acceptance entry above; the v2.0.0 milestone is recorded above
   279/279 tests; this proves fixture-backed lifecycle and projection behavior,
   not paid inference, live vendor qualification, hostile-process containment,
   or HOME publication.
-
 
 ### 2026-09-08 — feat(advisor): add sanitized audit history and outcome review tools (phase-07)
 

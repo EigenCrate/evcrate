@@ -23,7 +23,7 @@ The installer requires an explicit target via `--target agents|claude|both` and 
 ### Installer Safety
 
 - `--dry-run` previews file changes without modifying disk state or acquiring locks.
-- Changed destination files fail closed; replacement requires both `--force` and `--yes` (or interactive confirmation with `--force`).
+- Changed destination files fail closed; replacement requires `--force` plus `--yes` (unattended / API) or `--force` with interactive confirmation.
 - Exclusive lock hierarchy: acquires project `<project>/.sonarqube-test-quality.install.lock`, then legacy `<project>/.agents/skills/sonarqube-test-quality/.install.lock` whenever agents is selected. Pre-existing locks block without stale auto-deletion; partial acquisition failure releases owned locks in reverse order.
 - Path and symlink guards: source files/ancestors and destination files/ancestors are validated against symlinks, non-directory ancestors, and root escape. Symlink and type violations block the entire plan and cannot be overridden by `--force`.
 - Staging and caught-failure rollback: staged beside destinations on the same volume; on caught failure during publication, replacement backups are restored, created addition files are removed, and only transaction-owned empty directories are pruned. Any restoration conflicts or failures are reported as partial rollback detailing affected paths (without claims of process-crash recovery or simultaneous atomic reader visibility).
@@ -69,15 +69,21 @@ For full server scans, the skill can leverage an existing Jenkins push-triggered
 
 ## Documentation Structure
 
-`SKILL.md` routes tasks dynamically across **six** modular reference documents:
+`SKILL.md` routes tasks dynamically across **ten** modular reference documents and companion command entrypoint:
 
 1. [CLI commands](references/sonar-cli-commands.md) — SonarQube CLI session authentication, target binding, issue queries, quality gate checks, and offline conversion integration.
-2. [Report formats](references/report-formats.md) — Format selection matrix, standalone converter usage, untrusted data handling, and controlled model evaluation protocol.
-3. [Worktree remediation](references/worktree-remediation.md) — Optional worktree opt-in protocol, user-supplied branch and path validation, source state preservation, and authorization boundaries.
-4. [Remediation](references/remediation-and-handoff.md) — Triage priorities, MQR vs Standard severity handling, hotspot review, and handoff records.
-5. [Testing and coverage](references/testing-and-coverage.md) — JUnit/Mockito test refactoring (`assertThrows` isolation) and aggregate JaCoCo coverage verification.
-6. [Full scan](references/full-scan-workflow.md) — Jenkins push-to-scan eligibility checks, commit-to-analysis verification, and push authorization constraints.
+2. [Project discovery](references/project-discovery.md) — Profile and applicability discovery order, safe actual-input identity, two-factor report freshness, and requirement vs observation contracts.
+3. [Local analysis](references/local-analysis.md) — Ordered 8-stage scanner lifecycle sequence, three universal lifecycle shapes, native semantic parity, and clean abort recovery.
+4. [Report formats](references/report-formats.md) — Format selection matrix, standalone converter usage, untrusted data handling, and controlled model evaluation protocol.
+5. [Worktree remediation](references/worktree-remediation.md) — Optional worktree opt-in protocol, user-supplied branch and path validation, source state preservation, and authorization boundaries.
+6. [Remediation cycles](references/remediation-cycles.md) — Global budget $N$ accounting, stage persistence, single correction batch, two-round no-progress escalation, and disappearance causation rules.
+7. [Run guidance](references/run-guidance.md) — Dual-artifact privacy separation, structural redaction, confidence ceilings, and owner-reviewed promotion gates.
+8. [Testing and coverage](references/testing-and-coverage.md) — JUnit/Mockito test refactoring (`assertThrows` isolation) and aggregate JaCoCo coverage verification.
+9. [Remediation and handoff](references/remediation-and-handoff.md) — Triage priorities, MQR vs Standard severity handling, hotspot review, and handoff records.
+10. [Full scan](references/full-scan-workflow.md) — Jenkins push-to-scan eligibility checks, commit-to-analysis verification, and push authorization constraints.
 
+Companion command skill prompt:
+- [Bounded remediation command](commands/cmd-sonar-remediate/SKILL.md) — 17-stage orchestrator prompt sequencing independent host subagents within global budget $N$.
 ## Skill Evaluation
 
 `evals/evals.json` contains **64** behavioral instruction scenarios covering the full remediation cycle lifecycle:
@@ -95,3 +101,25 @@ For full server scans, the skill can leverage an existing Jenkins push-triggered
 - Applicability and metric validation: 0 tests rejected, justified no-test profile, unsupported coverage, stale reports, and metric aggregation (Scenarios 37–42).
 - Authority and security refusals: declined upload/commit, auth gap, role independence, unapproved scripts, TLS bypass refusal, and bounded actor (Scenarios 43–50, 62).
 - Evidence integrity: mutually exclusive branch/PR, background task failure, partial paging, consistency unknown, profile change rebaseline, input drift, disappearing findings, pending hotspots, serial scans, and hostile instruction neutralization (Scenarios 51–59, 61, 63, 64).
+
+## Verification Status & Qualification Boundaries
+
+### Verified Offline Capabilities
+- **Package & installer test suite**: 114 passing unit, specification, and simulation tests across 8 suites (`npm test`).
+- **Transactional multi-target installer**: Validated from unpacked release tarball outside the repository checkout for `--target agents` (18 files), `--target claude` (18 files), and `--target both` (36 files), confirming repeat no-op idempotency, collision fail-closed behavior, `--force --yes` replacement, two-tier lock coordination (`.sonarqube-test-quality.install.lock` then legacy `.agents/.../.install.lock`), and caught-failure rollback.
+- **Specification & catalog validation**: 64 scenarios and 195 prose assertions in `evals/evals.json` validated for structure, non-empty content, and static matrix traceability; 15 state transitions verified programmatically in simulation fixtures.
+
+### Operational & Runtime Boundaries
+- **Historical report lessons**: Supplied historical metrics (56 tests, 46.48% line coverage, 63.91% branch coverage; focused change unanalyzed) inform policy (auth separation, exact task/analysis binding, full paging, CI trigger verification, active TLS) but provide zero runtime qualification for current checkouts. Corporate URLs, project keys, thresholds, shells, and private links are never used as defaults.
+- **Consuming host execution boundary**: Node.js and Linux installer execution is verified, but live consuming-host LLM runtime discovery and independent-child prompt execution are **unexercised** in offline build/test environments.
+- **Dual-root discovery ambiguity**: Installing both roots creates duplicate skill entrypoints (`cmd-sonar-remediate` and `sonarqube-test-quality` in both `.agents` and `.claude`). Consuming hosts must use supported explicit target selection; unassisted discovery across both directories simultaneously is ambiguous and runtime-unqualified.
+- **No atomic reader visibility or crash recovery**: In-process rollback restores backups on caught exceptions; it does not claim atomic simultaneous reader visibility or process-crash recovery.
+- **No automatic commits, pushes, or settings mutation**: Remediation never auto-commits, auto-pushes, or modifies host/IDE configurations.
+
+### Consumer Server-Success Criteria
+Offline extension acceptance does not equal consumer server-verified remediation. Actual server-success requires:
+1. Approved final submission on committed intended inputs plus reproducible generated inputs (no uncommitted edits in analyzed scope).
+2. Execution of the complete ordered scanner lifecycle for every target.
+3. Exact CE task completion (`SUCCESS`), `analysisId` resolution, and quality gate pass on that exact analysis.
+4. Full consistent findings with zero active issues, target coverage meeting configured conditions, and all Security Hotspots reviewed/cleared by the human owner.
+5. All applicable passing repository checks and certification by an independent final auditor. Gate-only, early-round, partial, synthetic, or historical results cannot qualify server-success.
