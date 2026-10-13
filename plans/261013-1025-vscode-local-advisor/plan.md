@@ -4,7 +4,7 @@ description: "Independent Copilot-backed advisor tool with consented new-session
 status: pending
 priority: P2
 effort: not-estimated
-branch: main
+branch: feat/vscode-local-advisor
 tags: [feature, vscode, copilot, advisor, api, experimental]
 created: 2026-10-13
 ---

@@ -64,6 +64,8 @@ plans/**/*
 !plans/templates/*
 !plans/261012-2156-general-sonar-remediation-cycles/
 !plans/261012-2156-general-sonar-remediation-cycles/**/*
+!plans/261013-1025-vscode-local-advisor/
+!plans/261013-1025-vscode-local-advisor/**/*
 screenshots/*
 docs/screenshots/*
 docs/journals/*
