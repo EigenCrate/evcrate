@@ -35,6 +35,10 @@ function printPlan(plan) {
     const marker = { add: '+', replace: '!', unchanged: '=', blocked: 'x' }[action.status];
     console.log(`  ${marker} ${action.relativePath}${action.reason ? ` (${action.reason})` : ''}`);
   }
+  for (const rAction of plan.retirementActions) {
+    const marker = { remove: '-', missing: 'o', blocked: 'x' }[rAction.status];
+    console.log(`  ${marker} ${rAction.relativePath}${rAction.reason ? ` (${rAction.reason})` : ''}`);
+  }
 }
 
 async function main() {
@@ -71,10 +75,17 @@ async function main() {
     directory: values.directory
   });
   printPlan(plan);
-  if (plan.blockers.length) throw new Error('Installation blocked by an unsafe destination.');
+
   if (values['dry-run']) {
+    if (plan.blockers.length) {
+      throw new Error(`Dry run detected blockers: ${plan.blockers.map(b => `${b.relativePath}: ${b.reason}`).join('; ')}`);
+    }
     console.log('Dry run complete; no files were written.');
     return;
+  }
+
+  if (plan.blockers.length) {
+    throw new Error(`Installation blocked by an unsafe destination: ${plan.blockers.map(b => `${b.relativePath}: ${b.reason}`).join('; ')}`);
   }
 
   let confirmed = values.yes;
@@ -95,7 +106,8 @@ async function main() {
   }
 
   const result = executeInstallation(plan, { force: values.force, yes: confirmed });
-  console.log(`Installed ${result.committed.length} file(s); ${result.unchanged.length} unchanged.`);
+  const removalSummary = result.removals.length > 0 ? `, retired ${result.removals.length} obsolete file(s)` : '';
+  console.log(`Installed ${result.committed.length} file(s); ${result.unchanged.length} unchanged${removalSummary}.`);
   if (plan.target === 'both') {
     console.log(`Discover the common skill in ${path.join(plan.installationRoot, '.agents', 'skills')} and ${path.join(plan.installationRoot, '.claude', 'skills')} using your agent's skill discovery.`);
   } else {

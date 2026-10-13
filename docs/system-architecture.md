@@ -259,8 +259,8 @@ qualification and independent audit, not a passing gate alone. Upload, commit an
 push authority remain separate; prompt restrictions are not a sandbox.
 
 The dual-root installer (`lib/install.js`, `bin/install.js`) explicitly selects `.agents/skills/`,
-`.claude/skills/`, or both for the 18-asset two-skill payload (`skills/sonarqube-test-quality/`
-and `skills/cmd-sonar-remediate/`). Both roots use one guarded in-process publish/rollback
+`.claude/skills/`, or both for the 21-asset two-skill payload (`skills/sonarqube-test-quality/`
+and `skills/cmd-sonar-remediate/`, 42 assets total for `--target both`). Both roots use one guarded in-process publish/rollback
 transaction, with shared project-level and legacy agents-lock coordination. This is not
 all-file atomic visibility or process-crash recovery. Duplicate host discovery requires
 observed path selection, not assumed precedence.
@@ -315,6 +315,19 @@ Phase 04 delivers reusable execution-root specification contracts and guidance (
 - **Windows toolchain guidance & exit code preservation**: Aligns PowerShell invocation of `mvn.cmd` with literal executable and whole-quoted string arrays via call-operator splatting (`& $mvnCmd @mvnArgs`), avoiding backtick continuations or `Invoke-Expression`. Native exit code (`$savedExitCode = $LASTEXITCODE`) is captured immediately before `finally` directory restoration, ensuring test failures halt the pipeline without triggering upload-capable scanner goals. Chained scanner examples mandate clean verification before upload.
 - **Dynamic task metadata discovery & saved resumption**: Discovers task file dynamically from effective build configuration (`target/sonar/report-task.txt` for Maven), persists metadata in `<evidence-destination>/resume-checkpoint.json` prior to cleanup, and resumes verified `ceTaskId` without re-uploading analysis or incrementing the fix round budget $N$.
 - **Verification status**: 206 total package tests pass across 13 suites (`npm test`), including 15 dedicated unit and fixture tests in `tests/execution-root-guidance.test.mjs` and 16 tests in `tests/evals.test.mjs` validating all 70 eval scenarios (210 assertions). Multi-platform qualification (exact Node 22.19.0, native Windows `pwsh`/`cmd`, macOS) and live Sonar server qualification remain unobserved Phase 06 qualification gates.
+#### Payload cutover and transactional retirement (Phase 05)
+
+Phase 05 delivers the payload cutover, transactional retirement, and documentation synchronization (plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` Phase 05):
+
+- **Payload cutover to pure Node ESM**: Installer payload cuts over from legacy PowerShell scripts to cross-platform Node ESM helpers (`scripts/fetch-sonar-issues.mjs`, `scripts/calculate-jacoco-coverage.mjs`) and vendored SAX parser runtime (`scripts/vendor/sax.cjs`, `scripts/vendor/sax.LICENSE`, `scripts/vendor/sax-provenance.json`). The legacy PowerShell scripts (`fetch-sonar-issues.ps1`, `calculate-jacoco-coverage.ps1`) are permanently retired and deleted from repository source, release tarball (27 packaged files), and installed skill roots (21 assets per root, 42 for `--target both`).
+- **Bounded transactional retirement**: `planInstallation()` and `executeInstallation()` in `lib/install.js` enforce an explicit known-release allowlist backed by `lib/retirement-provenance.json` (release `v3.0.0` commit `e2e2c284`). Retirement authorizes removing only the two exact obsolete paths in selected roots:
+  1. `skills/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1`
+  2. `skills/sonarqube-test-quality/scripts/calculate-jacoco-coverage.ps1`
+- **Fail-closed security & harmless absence**: Fresh installs and repeat upgrades treat missing legacy scripts as harmless (`missing`). Modified, customized, unknown copies, symlinks, or non-directory ancestors fail-closed across all roots before publication; `--force --yes` never bypasses retirement blockers. Dry-run CLI (`bin/install.js --dry-run`) previews additions, replacements, removals, missing paths, and blockers without acquiring locks or mutating filesystem state.
+- **Caught-failure rollback & exclusive restoration**: In-process multi-root rollback journal records original bytes and file modes before unlink; unlinks execute before active publication. On caught failure during publication or verification, active additions are removed, replacements restored from backup, and removed files restored exclusively (`COPYFILE_EXCL` / `O_EXCL` with explicit `fchmod`) only if destinations remain absent. Concurrent recreations or unsafe ancestors are preserved and reported as partial rollback.
+- **Complete closure & absence verification**: Installation returns success only after verifying all 21 active assets match packaged bytes and both retired paths are absent across every selected root.
+- **Verification status**: 227 total package tests pass across 14 suites (`npm test`). Exact released Node 22.19.0 binary execution, native Windows (`pwsh`/`cmd`) execution/ACLs, macOS verification, live Sonar queries/uploads, and consuming-host runtime discovery remain explicitly pending Phase 06 qualification gates.
+
 
 ## 3. TypeScript control plane
 

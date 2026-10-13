@@ -22,12 +22,12 @@ Follow pagination until exhausted before claiming a complete list; preserve all 
 
 Discover active server statuses rather than assuming fixed defaults (Standard defaults to `OPEN,CONFIRMED`; active server vocabulary may vary). Use severity filters only after checking server mode: Standard uses `BLOCKER,CRITICAL,MAJOR,MINOR,INFO`; MQR uses `BLOCKER,HIGH,MEDIUM,LOW,INFO`. Do not pass Standard values to MQR.
 
-### Issue-fetch helpers
+### Issue-fetch helper
 
 Cross-platform Node issue-fetch helper (`scripts/fetch-sonar-issues.mjs`, Node >=22.19.0 ESM):
 
 ```bash
-node <skill-dir>/scripts/fetch-sonar-issues.mjs --project-key <key> [--branch <branch>] [--format json] [--output <report-path>]
+node <installed-skill-root>/scripts/fetch-sonar-issues.mjs --project-key <key> [--branch <branch>] [--format json] [--output <report-path>]
 ```
 
 Supported options:
@@ -40,15 +40,7 @@ Supported options:
 - `--cwd <path>`: Execution directory for child process.
 - `--sonar-path <path>`: Explicit path to native Sonar CLI executable (rejects `.bat` and `.cmd`).
 
-*(Note: `fetch-sonar-issues.mjs` is delivered in package source in Phase 02; installer `ASSET_INVENTORY` remains frozen at 18 assets until the Phase 05 cutover.)*
-
-Legacy PowerShell helper (requires PowerShell / `pwsh`; retained until Phase 05 cutover):
-
-```powershell
-pwsh -File <skill-dir>/scripts/fetch-sonar-issues.ps1 -ProjectKey <key> -Branch <branch> -Format json -OutputFile <report-path>
-```
-
-Both helpers forward query filters and save output to disk; neither helper checks authentication, binds PRs, or exhausts pagination. Use direct Sonar CLI commands for those operations.
+The helper forwards query filters and saves output to disk; it does not check authentication, bind PRs, or exhaust pagination. Use direct Sonar CLI commands for those operations.
 
 ## Check the quality gate
 

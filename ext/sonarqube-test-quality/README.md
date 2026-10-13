@@ -4,9 +4,8 @@ Portable SonarQube triage, Java test-quality, JaCoCo coverage, and offline repor
 
 ## Runtime Requirements
 
-- **Node.js 22.19.0 or newer (required)**: Runs the portable installer (`bin/install.js`), the standalone offline report converter (`scripts/convert-sonar-report.mjs`), the native issue-fetch helper (`scripts/fetch-sonar-issues.mjs`), the offline JaCoCo coverage helper (`scripts/calculate-jacoco-coverage.mjs`), and the vendored structural XML parser (`scripts/vendor/sax.cjs`). All package components are self-contained with zero external npm dependencies. (The installer, report converter, parser, and coverage helper operate strictly offline; issue fetching forwards to the native Sonar CLI and requires active session authentication and server connectivity.)
-- **PowerShell / `pwsh` (optional)**: Only needed if running legacy PowerShell helper scripts (`scripts/fetch-sonar-issues.ps1` and `scripts/calculate-jacoco-coverage.ps1`). Core triage, Sonar CLI execution, issue fetching (`scripts/fetch-sonar-issues.mjs`), coverage calculation (`scripts/calculate-jacoco-coverage.mjs`), report conversion, and isolated worktree remediation do not require PowerShell. (Phase 02 delivered `scripts/fetch-sonar-issues.mjs` and Phase 03 delivered `scripts/calculate-jacoco-coverage.mjs`; remaining replacement Node ESM helpers will retire PowerShell helpers upon Phase 05 cutover.)
-
+- **Node.js 22.19.0 or newer (required)**: Runs the portable installer (`bin/install.js`), the standalone offline report converter (`scripts/convert-sonar-report.mjs`), the native issue-fetch helper (`scripts/fetch-sonar-issues.mjs`), the offline JaCoCo coverage helper (`scripts/calculate-jacoco-coverage.mjs`), and the vendored structural XML parser (`scripts/vendor/sax.cjs`). All package components are self-contained Node ESM with zero external npm dependencies. (The installer, report converter, parser, and coverage helper operate strictly offline; issue fetching forwards to the native Sonar CLI and requires active session authentication and server connectivity.)
+- **Zero PowerShell / `pwsh` dependency**: All functionality is pure cross-platform Node ESM. Legacy PowerShell helpers (`fetch-sonar-issues.ps1` and `calculate-jacoco-coverage.ps1`) are retired and automatically removed during upgrade from known release versions.
 ## Install
 
 Preview the installation before writing files:
@@ -18,17 +17,20 @@ node bin/install.js --target claude --directory /path/to/project
 node bin/install.js --target both --directory /path/to/project
 ```
 
-The installer requires an explicit target via `--target agents|claude|both` and target project root via `--directory`. It installs 18 payload files and exactly two skill entrypoints (`skills/sonarqube-test-quality/SKILL.md` and `skills/cmd-sonar-remediate/SKILL.md`) per selected root (36 files when `both` is selected). Selected-root-only payload writes ensure no unselected root payloads or native host registrations are created. Existing installations in other directories are preserved and not automatically uninstalled.
+The installer requires an explicit target via `--target agents|claude|both` and target project root via `--directory`. It installs 21 payload files and exactly two skill entrypoints (`skills/sonarqube-test-quality/SKILL.md` and `skills/cmd-sonar-remediate/SKILL.md`) per selected root (42 files when `both` is selected). Selected-root-only payload writes ensure no unselected root payloads or native host registrations are created. Existing installations in other directories are preserved and not automatically uninstalled.
 
-### Installer Safety
+### Installer Safety and Transactional Retirement
 
-- `--dry-run` previews file changes without modifying disk state or acquiring locks.
+- `--dry-run` previews file additions, replacements, unchanged files, retirement removals, harmless absences, and blockers without modifying disk state or acquiring locks.
 - Changed destination files fail closed; replacement requires `--force` plus `--yes` (unattended / API) or `--force` with interactive confirmation.
+- Exact-path trusted-release retirement: Automatically removes obsolete helpers (`skills/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1` and `skills/sonarqube-test-quality/scripts/calculate-jacoco-coverage.ps1`) only when installed files match exact known historical release SHA-256 digests (release `v3.0.0` commit `e2e2c284`).
+- Harmless absence: Missing obsolete helpers in fresh installs or repeat upgrades are harmless (`o` in dry-run/preview) and require no action.
+- Customized/unknown copy protection: If an obsolete path contains modified, unknown, or customized bytes, or if any path element or ancestor contains a symlink or non-directory, the entire installation blocks fail-closed. `--force` and `--yes` authorize replacing different active files but **never** override retirement blockers. The project owner must inspect and resolve customized files explicitly outside the installer.
 - Exclusive lock hierarchy: acquires project `<project>/.sonarqube-test-quality.install.lock`, then legacy `<project>/.agents/skills/sonarqube-test-quality/.install.lock` whenever agents is selected. Pre-existing locks block without stale auto-deletion; partial acquisition failure releases owned locks in reverse order.
 - Path and symlink guards: source files/ancestors and destination files/ancestors are validated against symlinks, non-directory ancestors, and root escape. Symlink and type violations block the entire plan and cannot be overridden by `--force`.
-- Staging and caught-failure rollback: staged beside destinations on the same volume; on caught failure during publication, replacement backups are restored, created addition files are removed, and only transaction-owned empty directories are pruned. Any restoration conflicts or failures are reported as partial rollback detailing affected paths (without claims of process-crash recovery or simultaneous atomic reader visibility).
+- Staging and caught-failure rollback: staged beside destinations on the same volume; before each retirement unlink, original bytes and file modes are snapshot into the rollback journal. Unlinks execute before active publication. On caught failure during publication or verification, active additions are removed, replacements are restored from backups, and retired files are restored exclusively (`COPYFILE_EXCL`) only if their destinations remain absent. If a removed path was concurrently recreated or an ancestor became unsafe, the recreation is preserved and reported as a partial rollback failure. Only transaction-owned empty directories are pruned.
+- Closure and absence verification: returns success only after verifying that all 21 active payload files match packaged bytes and both retired paths are absent in every selected root.
 - Unrelated files, concurrent user edits, and pre-existing directories are preserved; no harness configurations or native host settings are modified.
-
 Run focused installer tests with `npm test` from this package directory.
 
 ## Core Workflows
@@ -65,13 +67,12 @@ node scripts/fetch-sonar-issues.mjs --project-key <key> --branch <branch> --form
 
 ### 3. Cross-Platform Offline JaCoCo Coverage Calculation
 
-Calculate class-level line and branch coverage offline using the standalone Node ESM helper (`scripts/calculate-jacoco-coverage.mjs`, invoked from repository source or unpacked package root; installer deployment cutover occurs in Phase 05):
+Calculate class-level line and branch coverage offline using the standalone Node ESM helper (`scripts/calculate-jacoco-coverage.mjs` installed under `<installed-skill-root>/scripts/calculate-jacoco-coverage.mjs`):
 
 ```bash
 # Calculate combined line and branch coverage offline with strict threshold
-node scripts/calculate-jacoco-coverage.mjs --report-path target/site/jacoco/jacoco.xml --threshold 95 --include-pattern "^com/example/"
+node <installed-skill-root>/scripts/calculate-jacoco-coverage.mjs --report-path target/site/jacoco/jacoco.xml --threshold 95 --include-pattern "^com/example/"
 ```
-
 - **Structural SAX streaming**: Incremental parsing with fatal UTF-8 decoding, strict entities, and internal subset / custom entity rejection (ordinary external DOCTYPE accepted without fetching).
 - **Direct-counter class aggregation**: Sums direct child `LINE` and `BRANCH` counters of matched classes only; ignores method, sourcefile, package, group, and report totals. Requires direct `LINE` counter per evaluated class (exit 1 if missing).
 - **Exact rational arithmetic**: Evaluates strict predicate `100n * covered * q > p * total` via BigInt cross-multiplication; display percentages are rounded for output only and never influence the verdict.
@@ -132,19 +133,18 @@ Companion command skill prompt:
 ## Verification Status & Qualification Boundaries
 
 ### Verified Offline Capabilities
-- **Package & installer test suite**: 206 passing unit, specification, and simulation tests across 13 suites (`npm test`).
-- **Transactional multi-target installer**: Validated from unpacked release tarball outside the repository checkout for `--target agents` (18 files), `--target claude` (18 files), and `--target both` (36 files), confirming repeat no-op idempotency, collision fail-closed behavior, `--force --yes` replacement, two-tier lock coordination (`.sonarqube-test-quality.install.lock` then legacy `.agents/.../.install.lock`), and caught-failure rollback.
+- **Package & installer test suite**: Passing unit, specification, simulation, and transactional retirement regression tests across 14 suites (`npm test`).
+- **Transactional multi-target installer**: Validated from unpacked release tarball outside the repository checkout for `--target agents` (21 files), `--target claude` (21 files), and `--target both` (42 files), confirming repeat no-op idempotency, collision fail-closed behavior, `--force --yes` replacement, two-tier lock coordination (`.sonarqube-test-quality.install.lock` then legacy `.agents/.../.install.lock`), transactional retirement of legacy PowerShell helpers, and caught-failure rollback.
 - **Specification & catalog validation**: 70 scenarios and 210 prose assertions in `evals/evals.json` validated for structure, non-empty content, and static matrix traceability; 15 state transitions verified programmatically in simulation fixtures.
 
 ### Operational & Runtime Boundaries
 - **Historical report lessons**: Supplied historical metrics (56 tests, 46.48% line coverage, 63.91% branch coverage; focused change unanalyzed) inform policy (auth separation, exact task/analysis binding, full paging, CI trigger verification, active TLS) but provide zero runtime qualification for current checkouts. Corporate URLs, project keys, thresholds, shells, and private links are never used as defaults.
 - **Consuming host execution boundary**: Node.js and Linux installer execution is verified, but live consuming-host LLM runtime discovery and independent-child prompt execution are **unexercised** in offline build/test environments.
 - **Minimum runtime qualification boundary**: Standalone extension metadata, installer guard, and test suite declare and enforce Node.js `>=22.19.0`. Current test execution on active development environments (e.g., Node 24.x) confirms configuration feasibility, but exact released Node 22.19.0 execution receipts and multi-platform (Windows/macOS) qualification remain separate operational gates.
-- **Installed payload boundary**: Phase 01 vendored parser assets, Phase 02 native issue-fetch helper (`scripts/fetch-sonar-issues.mjs`), and Phase 03 native JaCoCo coverage helper (`scripts/calculate-jacoco-coverage.mjs`) are present in package source and the release tarball (28 packaged files total); installer `ASSET_INVENTORY` remains frozen at 18 assets until the Phase 05 transactional cutover.
+- **Installed payload closure**: All active components (installer, report converter, native issue-fetch helper, native JaCoCo coverage helper, vendored SAX parser, license, and provenance) are deployed in every selected root (21 assets per root); legacy `.ps1` helpers are retired and absent from source, release tarball (27 packaged files total), and installed payload.
 - **Dual-root discovery ambiguity**: Installing both roots creates duplicate skill entrypoints (`cmd-sonar-remediate` and `sonarqube-test-quality` in both `.agents` and `.claude`). Consuming hosts must use supported explicit target selection; unassisted discovery across both directories simultaneously is ambiguous and runtime-unqualified.
 - **No atomic reader visibility or crash recovery**: In-process rollback restores backups on caught exceptions; it does not claim atomic simultaneous reader visibility or process-crash recovery.
 - **No automatic commits, pushes, or settings mutation**: Remediation never auto-commits, auto-pushes, or modifies host/IDE configurations.
-
 ### Consumer Server-Success Criteria
 Offline extension acceptance does not equal consumer server-verified remediation. Actual server-success requires:
 1. Approved final submission on committed intended inputs plus reproducible generated inputs (no uncommitted edits in analyzed scope).
