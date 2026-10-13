@@ -14,7 +14,7 @@ This specification defines the contract, execution boundaries, operating modes, 
 
 ### 1.2 Execution and Permission Boundaries
 - **Bounded Writes:** Permitted to write strictly to:
-  1. Designated build/scanner working directories (e.g., `.scannerwork/`, `.sonar/`).
+  1. Designated build/scanner working directories (e.g., `.scannerwork/`, `.sonar/`, `target/sonar/`, or configured scanner metadata directory).
   2. Approved project coverage and test report directories.
   3. The authorized private evidence destination directory (`<evidence-destination>/`), which must be outside the working tree or in an approved ignored location, non-symlinked, and restricted to owner access (mode 0700). Raw evidence JSON files are retained locally and **never** inlined into shared reports.
 - **Strictly Prohibited Actions:**
@@ -105,16 +105,24 @@ Every invocation of the evidence actor requires a structured request payload:
   "stage": "CK_UPLOAD",
   "round": 1,
   "target_server": "https://sonar.example.com",
+  "execution_context": {
+    "installed_skill_root": "/opt/evcrate/installed/skills/sonarqube-test-quality",
+    "checkout_root": "/workspace/repo"
+  },
   "target_set": [
     {
       "target_project_key": "com.example:core",
       "target_selector": { "branch": "feat/my-feature" },
+      "execution_root": "/workspace/repo/core",
+      "manifest_path": "/workspace/repo/core/pom.xml",
       "scanner_command": "sonar-scanner -Dsonar.projectKey=com.example:core",
       "coverage_report_path": "core/coverage/lcov.info"
     },
     {
       "target_project_key": "com.example:api",
       "target_selector": { "branch": "feat/my-feature" },
+      "execution_root": "/workspace/repo/api",
+      "manifest_path": "/workspace/repo/api/pom.xml",
       "scanner_command": "sonar-scanner -Dsonar.projectKey=com.example:api",
       "coverage_report_path": "api/coverage/lcov.info"
     }
@@ -188,6 +196,7 @@ Before performing any action, the evidence actor must validate:
 5. **Destination Security:** Verify that `evidence_destination` is located outside the Git checkout (or in an already-approved ignored path), is a regular directory (not a symlink), and is owner-restricted (mode 0700).
 6. **Upload Authorization Gating:** If `mode` is `verify-upload` or `verify-final`, verify that `upload_authorization.authorized` is `true` and that the approved server URL, project keys, and selectors match the request. If authorization is absent or mismatched, reject immediately with `result_status: "unavailable"`, `canonical_outcome: "blocked/incomplete"`, `halting_trigger: "test-or-build-failed"`, `blockers: ["unauthorized-upload-attempted"]`.
 7. **Stage-Scoped Prerequisite Gating:** Verify stage-appropriate prerequisites as defined in §2.2 and §2.3. Reject unapproved execution attempts.
+8. **Three-Root Context and Git Top-Level Validation:** Verify `execution_root` is contained within `checkout_root` using path-component-aware containment ([Project discovery §2](../references/project-discovery.md#2-safe-actual-input-identity-and-three-root-execution-context)). If containment fails, reject with `blockers: ["containment-violation"]`. For local verification and upload modes, execute `git -C <execution_root> rev-parse --show-toplevel` and verify that canonical path strictly equals canonical `checkout_root`. Reject foreign repositories (`blockers: ["foreign-repository-rejected"]`). In build and upload modes where manifests are required for execution (e.g. Maven), verify `manifest_path` resolves to a regular file whose canonical path (`realpath`) is contained within canonical `checkout_root` (allowing module POMs in `execution_root` or reactor POMs at `checkout_root`), explicitly rejecting symlinks that escape the repository tree; missing or escaping manifest blocks with `blockers: ["manifest-missing"]`. Snapshot mode requires only context appropriate to its read-only scope. Accept monorepo service directories and explicitly selected worktrees; never require `execution_root == checkout_root`.
 
 ---
 
@@ -206,15 +215,16 @@ Execution must follow the exact ordered sequence defined in the approved executi
    - *Factor 2 (Provenance Binding):* Report must be cryptographically and temporally bound to current commit SHA and active input content digest. Stale or mismatched reports abort execution immediately (`halting_trigger: resume-checkpoint-drift`, `blockers: ["stale-coverage-report"]`).
 3. **Mandatory Native Semantic Parity:** When scanner wrappers, build wrappers, or instrumentation alter compiler flags, preprocessors, or runtime analyzers (e.g., C/C++ build-wrapper, .NET `begin` steps), a separate clean uninstrumented native verification (`clean build` + full test suite) must execute and pass to confirm clean native semantics ([Local analysis §3](../references/local-analysis.md#3-native-semantic-parity-verification)).
 4. **Pre-Upload Drift Check (Mandatory Pre-Upload Gate):** Immediately after native build, test execution, and coverage generation, and **BEFORE** invoking any upload-capable command, re-evaluate the source checkpoint (`commit_sha`, `active_input_digest`, `generated_input_digest`). If any input or generated file modified during build/tests, abort execution immediately before upload (`halting_trigger: resume-checkpoint-drift`, `blockers: ["resume-checkpoint-drift"]`, `dirty_tree_state: drift-invalidated`).
-5. **Post-Lifecycle Drift Check:** Upon completion of all scanner commands, re-evaluate the source checkpoint. If any drift occurred, invalidate the scan immediately (`halting_trigger: resume-checkpoint-drift`, `blockers: ["resume-checkpoint-drift"]`).
-6. **Multi-Target Serial Execution:** In multi-target runs, all targets execute serially within the single checkout. If any target fails, times out, or drifts, the aggregate run halts with `blocked/incomplete` (`blockers: ["target-failure:<target_key>"]`).
+5. **Per-Launch Context Re-Check:** Before dispatching each child process command in the lifecycle, re-verify the child working directory (`cwd: execution_root`), path-component containment, and Git top-level identity. Do not rely on persistent terminal state or prior directory changes.
+6. **Post-Lifecycle Drift Check:** Upon completion of all scanner commands, re-evaluate the source checkpoint. If any drift occurred, invalidate the scan immediately (`halting_trigger: resume-checkpoint-drift`, `blockers: ["resume-checkpoint-drift"]`).
+7. **Multi-Target Serial Execution:** In multi-target runs, all targets execute serially within the single checkout. If any target fails, times out, or drifts, the aggregate run halts with `blocked/incomplete` (`blockers: ["target-failure:<target_key>"]`).
 
 ---
 
 ## 5. Background Task Tracking, Crash Windows, and Resume Contracts
 
 ### 5.1 Submission Task Discovery and Verification
-1. **Task ID Capture:** Capture the background compute engine task ID (`ceTaskId`) from scanner standard output or scanner-generated task files (e.g., `.scannerwork/report-task.txt`, `.sonar/report-task.txt`).
+1. **Task ID Capture:** Capture the background compute engine task ID (`ceTaskId`) from scanner standard output or scanner-generated task files (e.g., Maven default `${project.build.directory}/sonar/report-task.txt`, `.scannerwork/report-task.txt`, or configured metadata path). Discover actual task path from effective scanner configuration rather than assuming fixed `.scannerwork/`.
 2. **Task File Verification:** Verify that the task file:
    - Was created strictly after the recorded scanner invocation start timestamp.
    - Matches the requested `target_project_key` and `target_server`.
@@ -416,11 +426,12 @@ Every invocation returns a structured terminal result payload conforming to cano
 - **`halting_trigger` (10 Closed Values):**
   - `"none"`, `"budget-n-exhausted"`, `"two-round-no-progress"`, `"failed-rereview"`, `"declined-commit"`, `"test-or-build-failed"`, `"task-failed"`, `"task-timeout"`, `"resume-checkpoint-drift"`, `"consistency-unknown"`.
 - **Closed Blocker Set:**
-  `"unauthorized-upload-attempted"`, `"invalid-target-selector"`, `"stale-coverage-report"`, `"test-or-build-failed"`, `"resume-checkpoint-drift"`, `"submission-unverified"`, `"task-failed"`, `"window-exceeded-blocked"`, `"analysis-changed-invalidated"`, `"consistency-unknown-blocked"`, `"target-failure:<key>"`, `"role-independence-violation"`.
+  `"unauthorized-upload-attempted"`, `"invalid-target-selector"`, `"stale-coverage-report"`, `"test-or-build-failed"`, `"resume-checkpoint-drift"`, `"submission-unverified"`, `"task-failed"`, `"window-exceeded-blocked"`, `"analysis-changed-invalidated"`, `"consistency-unknown-blocked"`, `"target-failure:<key>"`, `"role-independence-violation"`, `"foreign-repository-rejected"`, `"containment-violation"`, `"manifest-missing"`.
 - **Halting Trigger Mapping Contract:**
   | Halting Condition / Blocker | Mapped Canonical `halting_trigger` |
   |---|---|
   | Unauthorized upload, invalid selector, role independence violation | `"test-or-build-failed"` |
+  | Foreign repository rejected, containment violation, manifest missing | `"test-or-build-failed"` |
   | Native build or test failure | `"test-or-build-failed"` |
   | Stale coverage report, pre-upload drift, post-scan drift, concurrent analysis change | `"resume-checkpoint-drift"` |
   | Compute engine task failure or cancellation | `"task-failed"` |

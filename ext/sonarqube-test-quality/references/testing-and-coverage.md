@@ -43,7 +43,7 @@ mvn '-Dtest=ClassName#methodName' test
 Confirm Surefire executed the target method and record counts.
 
 ### Clean module lifecycle and XML generation
-Run `mvn clean test` (or `mvn clean verify` when coverage report generation is bound to verification/integration phases) to ensure fresh XML at `target/site/jacoco/jacoco.xml` or aggregated multi-module path.
+Run `mvn clean test` (or `mvn clean verify` when coverage report generation is bound to verification/integration phases) in the approved target `execution_root` to ensure fresh XML at `target/site/jacoco/jacoco.xml` (or aggregated multi-module path `target/site/jacoco-aggregate/jacoco.xml`). Standalone offline coverage parsing does not require Git; relative report paths resolve against the caller's initial directory, while delegated invocations pass absolute report paths bound to the verified `execution_root` per [Project discovery §2](project-discovery.md#2-three-root-execution-context-and-identity-validation).
 
 ### Local JaCoCo calculation helpers
 

@@ -94,8 +94,17 @@ For full analysis through Jenkins, read [full scan](full-scan-workflow.md).
 For an explicitly requested local Maven scan (integrated build/scanner shape, requiring recorded preflight upload authorization per [Local analysis](local-analysis.md)):
 
 ```powershell
-mvn -B clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:<configured-version>:sonar
+# Step 1: Clean native build, test, and fresh coverage verification
+mvn -B clean verify
+
+# Step 2: Intermediate inspection - verify test execution logs, validate two-factor
+# fresh coverage reports, and confirm zero working copy drift before any upload
+
+# Step 3: Integrated scanner goal execution with identical reactor/modules/profiles and NO clean
+mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:<configured-version>:sonar
 ```
+
+On Windows or when executing across service directories, run from the approved `execution_root`, pass explicit `-f <manifest-path>`, and use PowerShell argument splatting with whole quoted `-Dkey=value` strings per [Local analysis §3.2](local-analysis.md#windows-maven-recipe-and-cross-platform-process-boundaries).
 
 Use project-configured version/goals, scope, branch/PR binding, and secured scanner credentials. CLI keychain login is not Maven authentication; never put tokens on command lines.
 

@@ -301,6 +301,21 @@ Phase 03 delivers the cross-platform Node ESM JaCoCo coverage calculation helper
 - **Packaging allowlist vs. installer boundary**: Release tarball contains 28 files (`package.json#files` includes `scripts/calculate-jacoco-coverage.mjs`), while installed `ASSET_INVENTORY` remains frozen at 18 assets; vendored files and Node helpers are not yet deployed to destination skill roots until Phase 05 transactional cutover.
 - **Verification status**: 191 total package tests pass across 11 suites (`npm test`), including 39 dedicated unit, argument validation, hierarchy traversal, exact rational arithmetic, malformed XML rejection, DTD/entity protection, and stream chunk splitting tests in `tests/calculate-jacoco-coverage.test.mjs`. Multi-platform qualification (exact Node 22.19.0, native Windows `pwsh`/`cmd`, macOS) and live Sonar server qualification remain unobserved Phase 06 qualification gates.
 
+#### Reusable execution root guidance (Phase 04)
+
+Phase 04 delivers reusable execution-root specification contracts and guidance (plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` Phase 04) across references, prompts, and behavioral evals:
+
+- **Three-root execution model**: Disentangles extension and workspace locations:
+  - `installed_skill_root`: Directory containing extension assets (e.g. `<installed-root>/skills/sonarqube-test-quality`), resolved strictly from the loaded entrypoint file, never `process.cwd()`.
+  - `checkout_root`: Expected Git checkout or worktree root, bound to commit SHA and ref checkpoint. In Git worktrees, this is the worktree working directory, not the shared `.git` administrative root.
+  - `execution_root`: Child process working directory (CWD) where native build, test, and scanner commands execute. Legitimately differs from `checkout_root` in monorepo service subdirectories.
+  - `manifest_path`: Absolute path to the approved regular build manifest (e.g., `<execution_root>/pom.xml`).
+- **Path-component containment & Git identity verification**: Paths are canonicalized via `path.resolve` / `fs.realpathSync`. Containment checks enforce path-component boundaries (`..` check), strictly preventing sibling prefix collisions. In local verification/upload modes, `git -C <execution_root> rev-parse --show-toplevel` must strictly match canonical `checkout_root`, rejecting foreign nested Git clones (`foreign-repository-rejected`).
+- **Context freezing and child launch re-checks**: Approved execution profile freezes absolute paths, manifest path, approved launcher, and literal argv. Per-launch checks re-verify child CWD and containment; interactive shell directory mutations do not alter frozen dispatch parameters.
+- **Windows toolchain guidance & exit code preservation**: Aligns PowerShell invocation of `mvn.cmd` with literal executable and whole-quoted string arrays via call-operator splatting (`& $mvnCmd @mvnArgs`), avoiding backtick continuations or `Invoke-Expression`. Native exit code (`$savedExitCode = $LASTEXITCODE`) is captured immediately before `finally` directory restoration, ensuring test failures halt the pipeline without triggering upload-capable scanner goals. Chained scanner examples mandate clean verification before upload.
+- **Dynamic task metadata discovery & saved resumption**: Discovers task file dynamically from effective build configuration (`target/sonar/report-task.txt` for Maven), persists metadata in `<evidence-destination>/resume-checkpoint.json` prior to cleanup, and resumes verified `ceTaskId` without re-uploading analysis or incrementing the fix round budget $N$.
+- **Verification status**: 206 total package tests pass across 13 suites (`npm test`), including 15 dedicated unit and fixture tests in `tests/execution-root-guidance.test.mjs` and 16 tests in `tests/evals.test.mjs` validating all 70 eval scenarios (210 assertions). Multi-platform qualification (exact Node 22.19.0, native Windows `pwsh`/`cmd`, macOS) and live Sonar server qualification remain unobserved Phase 06 qualification gates.
+
 ## 3. TypeScript control plane
 
 The source is organized around narrow contracts:

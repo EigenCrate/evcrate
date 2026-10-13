@@ -112,7 +112,7 @@ Companion command skill prompt:
 - [Bounded remediation command](commands/cmd-sonar-remediate/SKILL.md) — 17-stage orchestrator prompt sequencing independent host subagents within global budget $N$.
 ## Skill Evaluation
 
-`evals/evals.json` contains **64** behavioral instruction scenarios covering the full remediation cycle lifecycle:
+`evals/evals.json` contains **70** behavioral instruction scenarios covering the full remediation cycle lifecycle:
 - Local JUnit refactoring and coverage boundaries in default checkout (Scenarios 1, 2, 8, 10).
 - Authentication, CLI binding, and MQR severity handling (Scenarios 3, 4, 5, 9).
 - Jenkins push-to-scan triggers and authorization validation (Scenarios 6, 7).
@@ -127,13 +127,14 @@ Companion command skill prompt:
 - Applicability and metric validation: 0 tests rejected, justified no-test profile, unsupported coverage, stale reports, and metric aggregation (Scenarios 37–42).
 - Authority and security refusals: declined upload/commit, auth gap, role independence, unapproved scripts, TLS bypass refusal, and bounded actor (Scenarios 43–50, 62).
 - Evidence integrity: mutually exclusive branch/PR, background task failure, partial paging, consistency unknown, profile change rebaseline, input drift, disappearing findings, pending hotspots, serial scans, and hostile instruction neutralization (Scenarios 51–59, 61, 63, 64).
+- Three-root execution context and platform toolchains: delegated wrong-CWD execution, monorepo service acceptance (`execution_root != checkout_root`), ambiguous sibling POM halt, Windows Maven PowerShell array splatting (`& $mvnCmd @mvnArgs`), native exit code capture before `finally`, and task resume from build directories (`target/sonar/report-task.txt`) without re-upload (Scenarios 65–70).
 
 ## Verification Status & Qualification Boundaries
 
 ### Verified Offline Capabilities
-- **Package & installer test suite**: 191 passing unit, specification, and simulation tests across 11 suites (`npm test`).
+- **Package & installer test suite**: 206 passing unit, specification, and simulation tests across 13 suites (`npm test`).
 - **Transactional multi-target installer**: Validated from unpacked release tarball outside the repository checkout for `--target agents` (18 files), `--target claude` (18 files), and `--target both` (36 files), confirming repeat no-op idempotency, collision fail-closed behavior, `--force --yes` replacement, two-tier lock coordination (`.sonarqube-test-quality.install.lock` then legacy `.agents/.../.install.lock`), and caught-failure rollback.
-- **Specification & catalog validation**: 64 scenarios and 195 prose assertions in `evals/evals.json` validated for structure, non-empty content, and static matrix traceability; 15 state transitions verified programmatically in simulation fixtures.
+- **Specification & catalog validation**: 70 scenarios and 210 prose assertions in `evals/evals.json` validated for structure, non-empty content, and static matrix traceability; 15 state transitions verified programmatically in simulation fixtures.
 
 ### Operational & Runtime Boundaries
 - **Historical report lessons**: Supplied historical metrics (56 tests, 46.48% line coverage, 63.91% branch coverage; focused change unanalyzed) inform policy (auth separation, exact task/analysis binding, full paging, CI trigger verification, active TLS) but provide zero runtime qualification for current checkouts. Corporate URLs, project keys, thresholds, shells, and private links are never used as defaults.

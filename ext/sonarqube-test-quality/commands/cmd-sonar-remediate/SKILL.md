@@ -61,7 +61,7 @@ Before entering any remediation stage, the parent orchestrator binds available r
 
 ### 2.1 Preflight Discovery
 1. Load sibling discovery policy: `skills/sonarqube-test-quality/references/project-discovery.md`.
-2. Determine repository root, current commit SHA, target selector (`branch` XOR `pull_request`), and nonsecret scanner configuration. Redact all secret tokens (`sonar.token`, passwords, auth headers).
+2. Determine repository root and validate three-root execution context (`installed_skill_root`, `checkout_root`, `execution_root`) per `project-discovery.md §2`. Validate path-component containment and Git identity (`git -C <execution_root> rev-parse --show-toplevel` equals `checkout_root`), rejecting foreign repositories. Determine current commit SHA, target selector (`branch` XOR `pull_request`), and nonsecret scanner configuration. Redact all secret tokens (`sonar.token`, passwords, auth headers).
 3. Discover toolchain capabilities, test commands, coverage report paths, and requirement contracts (`required`, `optional`, or justified `not-applicable`).
 4. Validate that `evidence_destination` is outside the git tree or ignored, regular directory, mode `0700`. Authoritative private checkpoint JSON must never contain tokens, passwords, or authentication headers.
 ### 2.2 Establishing Baseline (`C0_BASELINE`)
@@ -71,7 +71,7 @@ Before entering any remediation stage, the parent orchestrator binds available r
 - **Zero-Issue Baseline:** If baseline analysis reveals zero active in-scope issues and all quality gates pass, bypass fix rounds `Ck` and advance directly to Stage `F` for committed-source final qualification.
 
 ### 2.3 Freezing Run Context
-- Freeze target set, quality profile, quality gate metric thresholds, active status vocabulary, and path exclusions.
+- Freeze absolute roots (`installed_skill_root`, `checkout_root`, per-target `execution_root`), `manifest_path`, target set, quality profile, quality gate metric thresholds, active status vocabulary, and path exclusions.
 - Any mid-run modification to these frozen settings invalidates comparative deltas, requires owner approval, and forces establishing a new `C0_BASELINE` without resetting previously entered rounds against `N`.
 
 ---
@@ -113,7 +113,7 @@ Before entering any remediation stage, the parent orchestrator binds available r
 1. Verify pre-upload source checkpoint (`commit_sha`, `active_input_digest`, `generated_input_digest`). If any input or generated file drifted during build/tests, abort immediately (`Trigger: resume-checkpoint-drift`).
 2. Verify explicit upload authorization naming target server URL, project keys, and selectors.
 3. Dispatch `evidence_actor_id` in mode `verify-upload` at stage `CK_UPLOAD`.
-4. Evidence actor executes approved lifecycle commands in declared order, writes `.scannerwork/`, uploads payload over TLS, and captures `ceTaskId`.
+4. Evidence actor executes approved lifecycle commands in declared order, writes scanner working directory (e.g., discovered `${project.build.directory}/sonar/` or `.scannerwork/`), uploads payload over TLS, and captures `ceTaskId`.
 
 ### 3.7 Background Task Tracking (`CK_TASK_WAIT`)
 1. Persist `ceTaskId` and submission metadata to `resume-checkpoint.json` before polling.

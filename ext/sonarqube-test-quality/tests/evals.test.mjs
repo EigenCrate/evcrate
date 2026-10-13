@@ -15,13 +15,13 @@ describe('Behavioral Evals Catalog Verification and Matrix Traceability', () => 
   test('catalog has valid schema and root properties', () => {
     assert.equal(catalog.skill_name, 'sonarqube-test-quality');
     assert.ok(Array.isArray(catalog.evals), 'evals property must be an array');
-    assert.equal(catalog.evals.length, 64, 'catalog must contain exactly 64 scenarios');
+    assert.equal(catalog.evals.length, 70, 'catalog must contain exactly 70 scenarios');
   });
 
-  test('all scenarios have monotonic unique integer IDs from 1 to 64', () => {
+  test('all scenarios have monotonic unique integer IDs from 1 to 70', () => {
     const ids = catalog.evals.map(e => e.id);
-    const expectedIds = Array.from({ length: 64 }, (_, i) => i + 1);
-    assert.deepEqual(ids, expectedIds, 'IDs must be 1 through 64 in order');
+    const expectedIds = Array.from({ length: 70 }, (_, i) => i + 1);
+    assert.deepEqual(ids, expectedIds, 'IDs must be 1 through 70 in order');
   });
 
   test('all scenarios contain non-empty prompt and expected_output strings', () => {
@@ -147,6 +147,32 @@ describe('Behavioral Evals Catalog Verification and Matrix Traceability', () => 
     assert.match(byId(64).expected_output, /human owner review/i);
   });
 
+  test('covers execution roots, Windows Maven recipe, and recovery consumer decisions', () => {
+    // 65: Wrong delegated CWD
+    assert.match(byId(65).expected_output, /frozen absolute `execution_root`/i);
+    assert.match(byId(65).expected_output, /cwd: \/workspace\/repo\/services\/billing-service/i);
+
+    // 66: Monorepo service directory vs Git checkout root
+    assert.match(byId(66).expected_output, /execution root is never required to equal the Git checkout root/i);
+    assert.match(byId(66).expected_output, /rev-parse --show-toplevel/i);
+
+    // 67: Ambiguous target discovery
+    assert.match(byId(67).expected_output, /blocked\/incomplete/i);
+    assert.match(byId(67).expected_output, /explicit target selection/i);
+
+    // 68: Windows Maven argument array & splatting
+    assert.match(byId(68).expected_output, /whole `-Dkey=value` strings in a PowerShell array/i);
+    assert.match(byId(68).expected_output, /call operator with splatting/i);
+
+    // 69: Failed native code preservation
+    assert.match(byId(69).expected_output, /\$savedExitCode = \$LASTEXITCODE/i);
+    assert.match(byId(69).expected_output, /preserving the native exit code 1/i);
+
+    // 70: Saved-task recovery without re-upload
+    assert.match(byId(70).expected_output, /target\/sonar\/report-task\.txt/i);
+    assert.match(byId(70).expected_output, /does not re-upload analysis and does not increment the remediation round budget N/i);
+  });
+
   test('security audit: catalog contains zero literal credentials or unauthorized TLS bypass instructions', () => {
     const raw = JSON.stringify(catalog);
     assert.ok(!raw.includes('squ_'), 'Must not contain SonarQube user tokens');
@@ -170,10 +196,10 @@ describe('Behavioral Evals Catalog Verification and Matrix Traceability', () => 
       'A07': [19, 20, 21, 22],
       'A08': [1, 6, 7, 8],
       'A09': [27, 30, 43, 50],
-      'D01': [47],
-      'D02': [9, 26, 51],
-      'D03': [23, 24, 25, 26],
-      'D04': [42],
+      'D01': [47, 67],
+      'D02': [9, 26, 51, 66],
+      'D03': [23, 24, 25, 26, 65, 68],
+      'D04': [42, 69],
       'D05': [37, 38],
       'D06': [2, 10, 39, 40, 41],
       'D07': [13, 57],
@@ -182,7 +208,7 @@ describe('Behavioral Evals Catalog Verification and Matrix Traceability', () => 
       'C01': [60],
       'C02': [30],
       'C03': [32, 33],
-      'C04': [31, 53],
+      'C04': [31, 53, 70],
       'C05': [34],
       'C06': [56],
       'C07': [13, 27, 44, 57],
