@@ -235,22 +235,56 @@ describe('SonarQube common skill installer', () => {
     assert.equal(fs.readFileSync(path.join(skillRoot(project), 'SKILL.md'), 'utf8'), 'new user evidence');
   });
 
-  test('enforces Node.js >=18.11.0 compatibility in metadata and runtime validator', () => {
+  test('enforces Node.js >=22.19.0 compatibility in metadata and runtime validator', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
-    assert.equal(pkg.engines.node, '>=18.11.0');
-    assert.equal(MIN_NODE_VERSION, '18.11.0');
+    assert.equal(pkg.engines.node, '>=22.19.0');
+    assert.equal(MIN_NODE_VERSION, '22.19.0');
     assert.equal(isSupportedNodeVersion('18.0.0'), false);
-    assert.equal(isSupportedNodeVersion('18.10.0'), false);
-    assert.equal(isSupportedNodeVersion('18.10.9'), false);
-    assert.equal(isSupportedNodeVersion('18.11.0'), true);
-    assert.equal(isSupportedNodeVersion('18.11.0-alpha.1'), true);
-    assert.equal(isSupportedNodeVersion('18.10.0-rc.1'), false);
-    assert.equal(isSupportedNodeVersion('v18.11.0'), true);
-    assert.equal(isSupportedNodeVersion('v18.10.0'), false);
-    assert.equal(isSupportedNodeVersion('18.12.0'), true);
-    assert.equal(isSupportedNodeVersion('20.0.0'), true);
+    assert.equal(isSupportedNodeVersion('18.11.0'), false);
+    assert.equal(isSupportedNodeVersion('20.0.0'), false);
+    assert.equal(isSupportedNodeVersion('21.0.0'), false);
+    assert.equal(isSupportedNodeVersion('22.0.0'), false);
+    assert.equal(isSupportedNodeVersion('22.18.0'), false);
+    assert.equal(isSupportedNodeVersion('22.18.9'), false);
+    assert.equal(isSupportedNodeVersion('22.18.9-rc.1'), false);
+    assert.equal(isSupportedNodeVersion('v22.18.0'), false);
+    assert.equal(isSupportedNodeVersion('v22.18.9'), false);
     assert.equal(isSupportedNodeVersion('22.19.0'), true);
+    assert.equal(isSupportedNodeVersion('22.19.0-alpha.1'), true);
+    assert.equal(isSupportedNodeVersion('v22.19.0'), true);
+    assert.equal(isSupportedNodeVersion('v22.19.0-rc.1'), true);
+    assert.equal(isSupportedNodeVersion('22.19.1'), true);
+    assert.equal(isSupportedNodeVersion('22.19.9'), true);
+    assert.equal(isSupportedNodeVersion('22.20.0'), true);
+    assert.equal(isSupportedNodeVersion('23.0.0'), true);
+    assert.equal(isSupportedNodeVersion('24.16.0'), true);
+    assert.equal(isSupportedNodeVersion('24.21.0'), true);
     assert.equal(isSupportedNodeVersion(), true);
+    assert.equal(isSupportedNodeVersion(null), false);
+    assert.equal(isSupportedNodeVersion(123), false);
+  });
+
+  test('installer exits status 1 with diagnostic on unsupported Node version without mutation', () => {
+    const project = path.join(tempRoot, 'project-guard');
+    const preload = path.join(tempRoot, 'mock-unsupported-node.cjs');
+    fs.writeFileSync(preload, [
+      'Object.defineProperty(process.versions, "node", { value: "22.18.9", configurable: true });',
+      'Object.defineProperty(process, "version", { value: "v22.18.9", configurable: true });'
+    ].join('\n'));
+
+    const result = spawnSync(process.execPath, [
+      '--require', preload,
+      cliPath,
+      '--target', 'agents',
+      '--directory', project
+    ], {
+      cwd: tempRoot,
+      encoding: 'utf8'
+    });
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Error: Node\.js >=22\.19\.0 is required \(current: v22\.18\.9\)\./);
+    assert.equal(fs.existsSync(project), false, 'Must perform no filesystem mutation on unsupported runtime');
   });
 
   test('exits with status 1 and leaves files untouched when interactive replacement is rejected', () => {

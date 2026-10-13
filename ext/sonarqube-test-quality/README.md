@@ -4,8 +4,8 @@ Portable SonarQube triage, Java test-quality, JaCoCo coverage, and offline repor
 
 ## Runtime Requirements
 
-- **Node.js 18.11.0 or newer (required)**: Runs the portable installer (`bin/install.js`) and the standalone offline report converter (`scripts/convert-sonar-report.mjs`). Both are dependency-free, pure ESM scripts requiring no external npm packages or network access.
-- **PowerShell / `pwsh` (optional)**: Only needed if running legacy PowerShell helper scripts (`scripts/fetch-sonar-issues.ps1` and `scripts/calculate-jacoco-coverage.ps1`). Core triage, Sonar CLI execution, report conversion, and isolated worktree remediation do not require PowerShell.
+- **Node.js 22.19.0 or newer (required)**: Runs the portable installer (`bin/install.js`), the standalone offline report converter (`scripts/convert-sonar-report.mjs`), and the vendored structural XML parser (`scripts/vendor/sax.cjs`). All package components are self-contained, offline scripts requiring no external npm packages or network access.
+- **PowerShell / `pwsh` (optional)**: Only needed if running legacy PowerShell helper scripts (`scripts/fetch-sonar-issues.ps1` and `scripts/calculate-jacoco-coverage.ps1`). Core triage, Sonar CLI execution, report conversion, and isolated worktree remediation do not require PowerShell. (Replacement Node ESM helpers are planned to retire PowerShell helpers upon Phase 05 cutover.)
 
 ## Install
 
@@ -105,13 +105,15 @@ Companion command skill prompt:
 ## Verification Status & Qualification Boundaries
 
 ### Verified Offline Capabilities
-- **Package & installer test suite**: 114 passing unit, specification, and simulation tests across 8 suites (`npm test`).
+- **Package & installer test suite**: 121 passing unit, specification, and simulation tests across 9 suites (`npm test`).
 - **Transactional multi-target installer**: Validated from unpacked release tarball outside the repository checkout for `--target agents` (18 files), `--target claude` (18 files), and `--target both` (36 files), confirming repeat no-op idempotency, collision fail-closed behavior, `--force --yes` replacement, two-tier lock coordination (`.sonarqube-test-quality.install.lock` then legacy `.agents/.../.install.lock`), and caught-failure rollback.
 - **Specification & catalog validation**: 64 scenarios and 195 prose assertions in `evals/evals.json` validated for structure, non-empty content, and static matrix traceability; 15 state transitions verified programmatically in simulation fixtures.
 
 ### Operational & Runtime Boundaries
 - **Historical report lessons**: Supplied historical metrics (56 tests, 46.48% line coverage, 63.91% branch coverage; focused change unanalyzed) inform policy (auth separation, exact task/analysis binding, full paging, CI trigger verification, active TLS) but provide zero runtime qualification for current checkouts. Corporate URLs, project keys, thresholds, shells, and private links are never used as defaults.
 - **Consuming host execution boundary**: Node.js and Linux installer execution is verified, but live consuming-host LLM runtime discovery and independent-child prompt execution are **unexercised** in offline build/test environments.
+- **Minimum runtime qualification boundary**: Standalone extension metadata, installer guard, and test suite declare and enforce Node.js `>=22.19.0`. Current test execution on active development environments (e.g., Node 24.x) confirms configuration feasibility, but exact released Node 22.19.0 execution receipts and multi-platform (Windows/macOS) qualification remain separate operational gates.
+- **Installed payload boundary**: The vendored parser (`scripts/vendor/sax.cjs`), license, and provenance are present in the package source for Phase 01 contracts; installer `ASSET_INVENTORY` remains at 18 assets until the Phase 05 transactional cutover.
 - **Dual-root discovery ambiguity**: Installing both roots creates duplicate skill entrypoints (`cmd-sonar-remediate` and `sonarqube-test-quality` in both `.agents` and `.claude`). Consuming hosts must use supported explicit target selection; unassisted discovery across both directories simultaneously is ambiguous and runtime-unqualified.
 - **No atomic reader visibility or crash recovery**: In-process rollback restores backups on caught exceptions; it does not claim atomic simultaneous reader visibility or process-crash recovery.
 - **No automatic commits, pushes, or settings mutation**: Remediation never auto-commits, auto-pushes, or modifies host/IDE configurations.

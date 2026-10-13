@@ -22,7 +22,7 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=18.11.0"
+    "node": ">=22.19.0"
   },
   "keywords": [
     "sonarqube",

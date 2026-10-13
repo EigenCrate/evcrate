@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const SKILL_NAME = 'sonarqube-test-quality';
-export const MIN_NODE_VERSION = '18.11.0';
+export const MIN_NODE_VERSION = '22.19.0';
 
 export function isSupportedNodeVersion(version = process.versions.node) {
   if (typeof version !== 'string') return false;

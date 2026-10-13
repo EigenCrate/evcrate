@@ -2,8 +2,15 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-13
-**Status:** Core package release history; General Sonar remediation cycles partial offline handoff (8/8 phases offline verified; live host unexercised); General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+**Updated:** 2026-10-14
+**Status:** Core package release history; Cross-platform Sonar helpers Phase 01 contracts and parser runtime delivered (121/121 tests passing; Node >=22.19.0 baseline; Phase 06 platform qualification unobserved); General Sonar remediation cycles partial offline handoff (8/8 phases offline verified; live host unexercised); General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-14 — feat(sonar): helper contracts, parser runtime, and qualification boundaries (Phase 01)
+
+- **Cross-platform Sonar helpers & runtime baseline (Phase 01)**: Completed Phase 01 of plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` (`plans/261013-1920-sonar-cross-platform-helpers-and-root-guidance/phase-01-helper-contracts-and-parser-runtime.md`). Uplifted standalone extension runtime baseline to Node `>=22.19.0` across `ext/sonarqube-test-quality/package.json#engines.node` and `ext/sonarqube-test-quality/lib/install.js:MIN_NODE_VERSION` ('22.19.0'), superseding historical Node 18.11 compatibility. Direct converter (`scripts/convert-sonar-report.mjs`) and future migrated helpers share this declared runtime floor; installer entrypoint (`bin/install.js`) asserts runtime early and exits 1 before filesystem mutation.
+- **Vendored SAX parser runtime and provenance closure**: Vendored upstream `sax@1.6.1` CommonJS implementation byte-for-byte from `lib/sax.js` as `ext/sonarqube-test-quality/scripts/vendor/sax.cjs` (50,818 bytes; SHA-256 `1cdc1270d987cb0f6ee66dd8efb01c50511aa14d17b6163bbbffb21df8cf1c06`), accompanied by BlueOak-1.0.0 license (`sax.LICENSE`) and authoritative provenance metadata (`sax-provenance.json`, upstream git commit `961ceeefcc5186005466f2085aeb36f31b161e37`, tarball integrity `sha512-42tBVwLWnaQvW5zc4HbZrTuWccECCZfBi92FDuwtqxasH+JbPB3/FOKb1m222K42R4WxuxzzMsTswfzgtSu64Q==`, advisories clean as of 2026-10-13 check). Pinned CommonJS module imports into ESM with zero runtime npm dependencies, zero repository modules, and no external bundler. Offline JaCoCo DOCTYPE header is accepted; internal DTD subset rejection is verified in test fixtures and will be enforced by the consuming Phase 03 JaCoCo helper; strict entity mode fails fast on undeclared entities.
+- **Packaging allowlist vs. installation inventory boundary**: Packed release tarball contains exactly 26 files (including the 3 vendor files under `scripts/vendor/`), while installed `ASSET_INVENTORY` remains frozen at 18 assets; vendored files are not yet deployed to destination skill roots until Phase 05 payload cutover.
+- **Verification and qualification boundaries**: Test suite expanded to 121 passing tests across 9 suites (added `tests/parser-runtime.test.mjs` verifying byte integrity, isolated-tmpdir load, JaCoCo DTD acceptance, and malformed XML rejection; updated `tests/install.test.mjs` asserting `22.18.x` rejection, `22.19.x` acceptance, and early exit 1 guard behavior). All 121 tests pass on active development environment (Node v24.16.0). Exact released Node 22.19.0 binary execution, Windows (`pwsh`/`cmd`) execution, macOS verification, and live Sonar server qualification remain unobserved Phase 06 qualification gates, not established support claims.
 
 ### 2026-10-13 — fix(release): normalize release version in companion input digests and guard manifest parity
 
@@ -726,51 +733,13 @@
 
 ### 2026-09-22 — feat(plugin): qualify E04 independent package and Gate G3
 
-**Status:** Phase E04 DONE (2026-09-22); Gate G3 **QUALIFIED**; review approved **9.3/10**.  
-**Plan:** [Phase E04 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-04-independent-package.md)  
-**Evidence:** [G3 qualification receipt](../plans/260920-1603-dam-hopper-advisor-plugin/reports/g3-qualification-receipt.md); [lifecycle review](../plans/reports/code-review-260922-2336-g3-qualification-lifecycle.md)
-
-- Verified the independently installable matched package `evcrate.advisor`
-  v0.1.0: **45 logical members**, **176,842 bytes compressed** (747,008 bytes
-  expanded), code-point-sorted exact closure, and archive SHA-256
-  `1ada5334671ae854e6c406930f8705de02d85e02198adcb07c41936002011f9a`
-  (`1ada5334...`).
-- Verified transactional stage/approve, matched UI/backend activation,
-  update/disable/remove, worker drain and context revocation, crash recovery,
-  and clean restart without DamHopper rebuild or EVCrate source mutation.
-- Verified rollback safety: current revoked grants and disabled intent dominate
-  restored package/settings; activation generations never rewind and restored
-  non-security settings are revalidated.
-- Verified root exact-7 release isolation: plugin staging is excluded from root
-  npm packaging and cannot become an eighth release asset.
-- Qualification evidence: plugin lifecycle **5/5**, package integrity/hostile
-  archive **5/5**, root isolation **1/1**, and companion DamHopper lifecycle
-  **8/8**. Standalone viewer retirement remains gated on E05/D06 G4.
+- Qualified independently installable package `evcrate.advisor` v0.1.0: 45 members, 176,842 bytes compressed, archive SHA-256 `1ada5334...`. Staging excluded from root npm packaging.
+- Qualification evidence: plugin lifecycle 5/5, package integrity 5/5, root isolation 1/1, companion DamHopper lifecycle 8/8. Gate G3 qualified; review approved 9.3/10.
 
 ### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
 
-**Status:** Phase 08 DONE (2026-09-19; 100%); **39/39 focused tests passed**.
-**Plan:** [Phase 08 plan](../plans/260917-2308-advisor-visual-metrics/phase-08-packaging-csp-preview-and-release-inventory.md)
-**Evidence:** `tests/viewer/package-inventory.test.mjs`; `tests/distribution/private-release-artifacts.test.mjs`
-
-- Added the viewer TypeScript, Vite, and Playwright boundaries: strict ES2020
-  browser typechecking, relative static assets, no sourcemaps, and one Chromium
-  project served from the built preview.
-- Added `build:viewer`, `build:all`, `viewer:preview`, and
-  `test:advisor-viewer`; release preparation now builds the root and viewer
-  together before collecting package inventory.
-- Preview binds strictly to loopback `127.0.0.1:4173` and emits the exact HTTP
-  CSP: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'
-  data:; connect-src 'none'; object-src 'none'; base-uri 'none';
-  frame-ancestors 'none'`.
-- Package inventory includes only built `viewer/dist/**` viewer assets; source,
-  configs, tests, maps, and `node_modules` remain excluded. The measured bundle
-  is **298.5 kB <= 5 MiB**.
-- Exact-seven top-level release assets and the exact 33-file controller closure
-  remain unchanged. The viewer is packed inside platform archives, never added
-  as a release asset.
-- Handoff: **Phase 09 — Focused qualification and performance benchmark**.
-
+- Added viewer TypeScript, Vite, and Playwright boundaries: strict ES2020 browser typechecking, loopback HTTP CSP on `127.0.0.1:4173`, and 298.5 kB package inventory.
+- Package inventory includes only built `viewer/dist/**` assets; exact 7 release assets and 33-file controller closure unchanged. 39/39 focused tests passed.
 ### 2026-09-19 — feat(viewer): historical React Explorer and view architecture (Phase 07)
 
 - Added private static React explorer under `viewer/src/` with unified reducer, tab navigation, and telemetry-free view contracts. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
