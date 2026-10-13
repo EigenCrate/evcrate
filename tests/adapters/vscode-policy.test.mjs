@@ -98,6 +98,55 @@ test('tool-inputs: normalizes terminal operations and extracts lexical operands'
   assert.ok(norm.operands.includes('dist/bundle.js'));
   assert.ok(!norm.operands.includes('--verbose'));
 });
+test('tool-inputs: normalizes execute/ terminal operations and helpers with behavioral parity', () => {
+  // Qualified runner
+  const normExec = normalizeLocalTool('execute/runInTerminal', {
+    command: 'cat "src/secret config.json" ./dist/bundle.js --verbose'
+  });
+  assert.equal(normExec.kind, 'terminal');
+  assert.ok(normExec.operands.includes('src/secret config.json'));
+  assert.ok(normExec.operands.includes('dist/bundle.js'));
+  assert.ok(!normExec.operands.includes('--verbose'));
+
+  // Failing closed on empty/missing command
+  const emptyExec = normalizeLocalTool('execute/runInTerminal', { command: '   ' });
+  assert.equal(emptyExec.kind, 'unqualified');
+  assert.ok(emptyExec.reason.includes('requires a non-empty command string'));
+  assert.equal(evaluateLocalPolicies(emptyExec).decision, 'deny');
+
+  const missingExec = normalizeLocalTool('execute/runInTerminal', {});
+  assert.equal(missingExec.kind, 'unqualified');
+  assert.equal(evaluateLocalPolicies(missingExec).decision, 'deny');
+
+  // Policy enforcement on qualified runner: scout blocks node_modules
+  const blockedExec = evaluateLocalPolicies(normalizeLocalTool('execute/runInTerminal', {
+    command: 'cat node_modules/lodash/index.js'
+  }));
+  assert.equal(blockedExec.decision, 'deny');
+  assert.ok(blockedExec.reason.includes('Scout policy blocked'));
+
+  // Build command allowed
+  const buildExec = evaluateLocalPolicies(normalizeLocalTool('execute/runInTerminal', {
+    command: 'npm test node_modules/jest'
+  }));
+  assert.equal(buildExec.decision, 'none');
+
+  // Output/kill helpers normalize to unrelated and do not grant command execution
+  const normOutput = normalizeLocalTool('execute/getTerminalOutput', { terminalId: 'term-01' });
+  assert.equal(normOutput.kind, 'unrelated');
+  assert.deepEqual(normOutput.operands, []);
+  assert.equal(evaluateLocalPolicies(normOutput).decision, 'none');
+
+  const normKill = normalizeLocalTool('execute/killTerminal', { terminalId: 'term-01' });
+  assert.equal(normKill.kind, 'unrelated');
+  assert.deepEqual(normKill.operands, []);
+  assert.equal(evaluateLocalPolicies(normKill).decision, 'none');
+
+  // Legacy helper names retain unrelated classification
+  assert.equal(normalizeLocalTool('getTerminalOutput', { terminalId: 't1' }).kind, 'unrelated');
+  assert.equal(normalizeLocalTool('killTerminal', { terminalId: 't1' }).kind, 'unrelated');
+});
+
 
 test('tool-inputs: normalizes search, subagent, and unrelated tools', () => {
   // Grep
@@ -581,7 +630,17 @@ test('policy: TypeScript and generated CommonJS runtime maintain exact fallback 
     ['read/getNotebookSummary', { filePath: 'notebooks/a.ipynb' }],
     ['constructor', { filePath: 'src/index.ts', editType: 'edit', cellId: 'c1' }],
     ['toString', { filePath: 'src/index.ts' }],
-    ['__proto__', { filePath: 'src/index.ts' }]
+    ['__proto__', { filePath: 'src/index.ts' }],
+    // Terminal and helper cases
+    ['execute/runInTerminal', { command: 'echo hello' }],
+    ['execute/runInTerminal', { command: 'cat node_modules/a' }],
+    ['execute/runInTerminal', { command: '' }],
+    ['execute/runInTerminal', {}],
+    ['runInTerminal', { command: 'echo legacy' }],
+    ['execute/getTerminalOutput', { terminalId: 'term-1' }],
+    ['getTerminalOutput', { terminalId: 'term-1' }],
+    ['execute/killTerminal', { terminalId: 'term-1' }],
+    ['killTerminal', { terminalId: 'term-1' }],
   ];
 
   for (const [toolName, input] of testCases) {

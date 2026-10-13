@@ -4,8 +4,8 @@
  * Distinct namespaces:
  * 1. Canonical source tool intent: authoring names (Read, Glob, Grep, LS, Bash, Edit, Write, Task, TodoWrite, etc.)
  * 2. Host frontmatter tool references: declarations emitted in agent frontmatter (e.g. read/readFile,
- *    search/fileSearch, search/textSearch, search/listDirectory, runInTerminal, getTerminalOutput,
- *    killTerminal, agent/runSubagent, todo, editFiles, createFile, multiReplaceString). Resolved by
+ *    search/fileSearch, search/textSearch, search/listDirectory, execute/runInTerminal, execute/getTerminalOutput,
+ *    execute/killTerminal, agent/runSubagent, todo, editFiles, createFile, multiReplaceString). Resolved by
  *    LanguageModelToolsService.
  * 3. Model-facing invocation names: identifiers used by LLM prompts/schemas (e.g. copilot_readFile,
  *    manage_todo_list).
@@ -24,10 +24,10 @@ export const VSCODE_LOCAL_TOOL_MAP: Readonly<Record<string, readonly string[]>> 
     edit: Object.freeze(['editFiles']),
     write: Object.freeze(['createFile', 'editFiles']),
     multiedit: Object.freeze(['multiReplaceString']),
-    bash: Object.freeze(['runInTerminal']),
-    bashoutput: Object.freeze(['getTerminalOutput']),
-    killbash: Object.freeze(['killTerminal']),
-    killshell: Object.freeze(['killTerminal']),
+    bash: Object.freeze(['execute/runInTerminal']),
+    bashoutput: Object.freeze(['execute/getTerminalOutput']),
+    killbash: Object.freeze(['execute/killTerminal']),
+    killshell: Object.freeze(['execute/killTerminal']),
     grep: Object.freeze(['search/textSearch']),
     glob: Object.freeze(['search/fileSearch']),
     ls: Object.freeze(['search/listDirectory']),

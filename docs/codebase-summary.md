@@ -140,8 +140,8 @@ Phase 09 establishes documentation, controlled rollout, and lifecycle governance
 - Explicit stop-trigger criteria for version drift and announced upstream Local retirement.
 ### VS Code subagent tool reference normalization
 
-- **Namespace decoupling:** `src/adapters/vscode/metadata-tools.ts` separates canonical source tool intent, host frontmatter tool references (`read/readFile`, `runInTerminal`, `search/fileSearch`, `search/textSearch`, `search/listDirectory`, `todo`, `web/fetch`, `edit/editNotebook`), model invocation spellings, and hook event names.
-- **Dual-authority parameter normalization:** `src/adapters/vscode/tool-inputs.ts` and `runtime-sources.ts:LOCAL_TOOL_INPUTS_SOURCE` (projected to `.evcrate-vscode/evcrate/runtime/local-tool-inputs.cjs`) normalize host `filePath`, `FilePath`, `dirPath`, batch edit paths (`files`, `replacements`), notebook `filePath`/`editType`/`cellId`, `web/fetch` HTTP(S) `urls`/`query`, and terminal helper tools (`getTerminalOutput`, `killTerminal`).
+- **Namespace decoupling:** `src/adapters/vscode/metadata-tools.ts` separates canonical source tool intent, host frontmatter tool references (`read/readFile`, `execute/runInTerminal`, `search/fileSearch`, `search/textSearch`, `search/listDirectory`, `todo`, `web/fetch`, `edit/editNotebook`), model invocation spellings, and hook event names.
+- **Dual-authority parameter normalization:** `src/adapters/vscode/tool-inputs.ts` and `runtime-sources.ts:LOCAL_TOOL_INPUTS_SOURCE` (projected to `.evcrate-vscode/evcrate/runtime/local-tool-inputs.cjs`) normalize host `filePath`, `FilePath`, `dirPath`, batch edit paths (`files`, `replacements`), notebook `filePath`/`editType`/`cellId`, `web/fetch` HTTP(S) `urls`/`query`, and terminal helper tools (`execute/getTerminalOutput`, `execute/killTerminal`).
 
 ### VS Code runtime model bindings companion (Phases 01–08 implemented; Phase 09 isolated qualification partial)
 

@@ -43,33 +43,33 @@
     },
     "bash": {
       "canonical_intent": "Bash",
-      "host_reference": "runInTerminal",
+      "host_reference": "execute/runInTerminal",
       "accepted_aliases": [],
-      "tool_set": "terminal",
+      "tool_set": "execute",
       "model_name": "run_in_terminal",
       "category": "terminal"
     },
     "bashoutput": {
       "canonical_intent": "BashOutput",
-      "host_reference": "getTerminalOutput",
+      "host_reference": "execute/getTerminalOutput",
       "accepted_aliases": [],
-      "tool_set": "terminal",
+      "tool_set": "execute",
       "model_name": "getTerminalOutput",
       "category": "terminal"
     },
     "killbash": {
       "canonical_intent": "KillBash",
-      "host_reference": "killTerminal",
+      "host_reference": "execute/killTerminal",
       "accepted_aliases": [],
-      "tool_set": "terminal",
+      "tool_set": "execute",
       "model_name": "killTerminal",
       "category": "terminal"
     },
     "killshell": {
       "canonical_intent": "KillShell",
-      "host_reference": "killTerminal",
+      "host_reference": "execute/killTerminal",
       "accepted_aliases": [],
-      "tool_set": "terminal",
+      "tool_set": "execute",
       "model_name": "killTerminal",
       "category": "terminal"
     },

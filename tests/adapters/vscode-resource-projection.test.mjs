@@ -63,7 +63,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(gitParsed.fields.model, undefined, 'template must strip actionable model key');
     assert.deepEqual(
       [...(gitParsed.fields.tools || [])].sort(),
-      ['read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch'].sort()
+      ['execute/runInTerminal', 'read/readFile', 'search/fileSearch', 'search/textSearch'].sort()
     );
     assert.deepEqual(gitParsed.fields.agents, []);
 
@@ -90,7 +90,7 @@ test('vscode-projection: complete end-to-end build and validation', () => {
     assert.equal(scoutParsed.fields.model, undefined, 'template must strip actionable model key');
     assert.deepEqual(
       [...(scoutParsed.fields.tools || [])].sort(),
-      ['getTerminalOutput', 'killTerminal', 'read/readFile', 'runInTerminal', 'search/fileSearch', 'search/textSearch', 'todo', 'web/fetch'].sort()
+      ['execute/getTerminalOutput', 'execute/killTerminal', 'execute/runInTerminal', 'read/readFile', 'search/fileSearch', 'search/textSearch', 'todo', 'web/fetch'].sort()
     );
     assert.deepEqual(scoutParsed.fields.agents, [], 'Scout must have agents: [] to prevent delegation');
     assert.ok(!scoutParsed.fields.tools.includes('editFiles'), 'Scout must not have editFiles');

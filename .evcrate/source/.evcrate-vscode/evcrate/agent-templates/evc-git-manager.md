@@ -3,8 +3,8 @@ name: evc-git-manager
 description: "Stage, commit, and push code changes with conventional commits. Use when user says \"commit\", \"push\", or finishes a feature/fix."
 user-invocable: true
 tools:
+  - execute/runInTerminal
   - read/readFile
-  - runInTerminal
   - search/fileSearch
   - search/textSearch
 agents: []
