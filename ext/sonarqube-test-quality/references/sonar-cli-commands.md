@@ -22,13 +22,33 @@ Follow pagination until exhausted before claiming a complete list; preserve all 
 
 Discover active server statuses rather than assuming fixed defaults (Standard defaults to `OPEN,CONFIRMED`; active server vocabulary may vary). Use severity filters only after checking server mode: Standard uses `BLOCKER,CRITICAL,MAJOR,MINOR,INFO`; MQR uses `BLOCKER,HIGH,MEDIUM,LOW,INFO`. Do not pass Standard values to MQR.
 
-Optional branch-only helper (requires PowerShell):
+### Issue-fetch helpers
+
+Cross-platform Node issue-fetch helper (`scripts/fetch-sonar-issues.mjs`, Node >=22.19.0 ESM):
+
+```bash
+node <skill-dir>/scripts/fetch-sonar-issues.mjs --project-key <key> [--branch <branch>] [--format json] [--output <report-path>]
+```
+
+Supported options:
+- `--project-key <key>`: SonarQube project key (required).
+- `--branch <branch>`: Optional target branch.
+- `--statuses <statuses>`: Optional comma-separated issue statuses (e.g., `OPEN,CONFIRMED`).
+- `--severities <sevs>`: Optional comma-separated issue severities (`BLOCKER,CRITICAL,MAJOR,MINOR,INFO` or MQR equivalents).
+- `--format <fmt>`: Output format: `toon` (default), `json`, or `table`.
+- `--output <path>`: Destination file path. Spools stdout to a secure staging file (`0600`) and atomically replaces destination on success; preserves existing output on failure.
+- `--cwd <path>`: Execution directory for child process.
+- `--sonar-path <path>`: Explicit path to native Sonar CLI executable (rejects `.bat` and `.cmd`).
+
+*(Note: `fetch-sonar-issues.mjs` is delivered in package source in Phase 02; installer `ASSET_INVENTORY` remains frozen at 18 assets until the Phase 05 cutover.)*
+
+Legacy PowerShell helper (requires PowerShell / `pwsh`; retained until Phase 05 cutover):
 
 ```powershell
 pwsh -File <skill-dir>/scripts/fetch-sonar-issues.ps1 -ProjectKey <key> -Branch <branch> -Format json -OutputFile <report-path>
 ```
 
-It forwards filters and saves output; it does not check auth, bind PRs, or exhaust pagination. Use CLI commands for those steps.
+Both helpers forward query filters and save output to disk; neither helper checks authentication, binds PRs, or exhausts pagination. Use direct Sonar CLI commands for those operations.
 
 ## Check the quality gate
 
