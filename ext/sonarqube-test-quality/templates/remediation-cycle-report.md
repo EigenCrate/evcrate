@@ -36,7 +36,7 @@
 | **Stage F Commit Authorization Record** | `Status: <Approved\|Declined\|User-Committed> \| By: <user> \| At: <ISO-time> \| Commit SHA: <sha>` | Separate authorization required; never implies push |
 | **Evidence Paths, Privacy & Retention** | `Raw Dir: <private-evidence-dir> \| Checkpoint: <private-evidence-dir>/resume-checkpoint.json \| Guidance: <sanitized-path> \| Retention: <policy>` | Private raw store outside checkout or in approved ignored path |
 | **Overall Outcome Status** | `<Canonical Outcome Status>` | One of the 6 canonical outcomes in [Remediation cycles §5](../references/remediation-cycles.md#5-server-evidence-and-success-criteria) |
-| **Halting / Escalation Trigger** | `<none \| budget-n-exhausted \| two-round-no-progress \| failed-rereview \| declined-commit \| test-or-build-failed \| task-failed \| task-timeout \| resume-checkpoint-drift \| consistency-unknown>` | Trigger recorded when halted or awaiting owner decision |
+| **Halting / Escalation Trigger** | `<none \| budget-n-exhausted \| two-round-no-progress \| failed-rereview \| declined-commit \| declined-upload \| test-or-build-failed \| task-failed \| task-timeout \| resume-checkpoint-drift \| consistency-unknown>` | Trigger recorded when halted or awaiting owner decision |
 
 ---
 

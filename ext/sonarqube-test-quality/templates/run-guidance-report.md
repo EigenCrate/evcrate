@@ -17,7 +17,7 @@
 | **Toolchain & Server Versions** | `<Language/Runtime, Build Tool, Scanner Version, SonarQube Edition & Version>` | Sanitized version inventory |
 | **Summary Confidence Level** | `hypothesized \| observed \| validated (offline) \| validated (live-server)` | `synthetic` caps at `hypothesized`; `validated (offline)` requires named executed offline check |
 | **Source Run Outcome** | `server-verified success \| server-verified residual findings \| blocked/incomplete \| locally remediated \| reviewed \| awaiting commit` | Canonical outcome of originating run |
-| **Halting / Escalation Trigger** | `none \| budget-n-exhausted \| two-round-no-progress \| failed-rereview \| declined-commit \| test-or-build-failed \| task-failed \| task-timeout \| resume-checkpoint-drift \| consistency-unknown` | Accompanying trigger when halted |
+| **Halting / Escalation Trigger** | `none \| budget-n-exhausted \| two-round-no-progress \| failed-rereview \| declined-commit \| declined-upload \| test-or-build-failed \| task-failed \| task-timeout \| resume-checkpoint-drift \| consistency-unknown` | Accompanying trigger when halted |
 | **Automated Auditing Role** | `<independent-reviewer-role> \| <evidence-actor-role>` | Host-neutral subagent role that compiled or verified the summary |
 | **Owner Reviewer Identity** | `<REDACTED_REVIEWER_ID> \| pending-owner-review` | Human owner reviewing privacy/promotion (redacted in shared copies) |
 

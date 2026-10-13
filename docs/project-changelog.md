@@ -5,6 +5,12 @@
 **Updated:** 2026-10-13
 **Status:** Core package release history; Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
 
+### 2026-10-13 — feat(sonar): behavioral evals catalog, contract alignment, and test suite (Phase 07)
+
+- Expanded standalone SonarQube behavioral evals catalog (`ext/sonarqube-test-quality/evals/evals.json`): 64 instruction scenarios with 195 authored prose assertions and monotonic integer IDs (1–64); covers four scanner lifecycle shapes, global budget $N$ enforcement, single correction batch invariant, two-round comparable no-progress escalation, neutral applicability and metric requirements, authority/auth invariants, and Stage $F$ server-verified success contracts with zero literal credentials or TLS bypass instructions.
+- Halting contracts & evals test suite: aligned `declined-upload` trigger across references (`remediation-cycles.md`) and report templates (`remediation-cycle-report.md`, `run-guidance-report.md`); added 15-test suite (`tests/evals.test.mjs`) validating catalog schema, assertion density, lifecycle shapes, static matrix traceability (A01–A09, D01–D09, C01–C12, E01–E08), and security invariants.
+- Verified package test and release inventory: all 114 package tests pass across 8 test suites (`tests/*.test.mjs`); release tarball packages exactly 23 verified entries (`package.json#files`). Packed installer extraction and offline scenario verification exercised; live LLM host execution and candidate qualification handoff remain Phase 07 unexercised gates pending Phase 08.
+
 ### 2026-10-13 — feat(sonar): dual-root transactional two-skill installer and package (Phase 06)
 
 - Extended standalone SonarQube installer (`ext/sonarqube-test-quality/lib/install.js`, `ext/sonarqube-test-quality/bin/install.js`): added explicit target selection via `--target agents|claude|both` and `--directory <project-root>`; unsupported or missing targets fail closed; `--target agents` preserves legacy behavior and paths (`<project>/.agents/skills/sonarqube-test-quality/`).

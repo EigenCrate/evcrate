@@ -80,14 +80,18 @@ For full server scans, the skill can leverage an existing Jenkins push-triggered
 
 ## Skill Evaluation
 
-`evals/evals.json` contains **twenty** instruction scenarios:
+`evals/evals.json` contains **64** behavioral instruction scenarios covering the full remediation cycle lifecycle:
 - Local JUnit refactoring and coverage boundaries in default checkout (Scenarios 1, 2, 8, 10).
 - Authentication, CLI binding, and MQR severity handling (Scenarios 3, 4, 5, 9).
 - Jenkins push-to-scan triggers and authorization validation (Scenarios 6, 7).
-- Report view completeness and missing-metadata rejection (Scenario 11).
-- Controlled JSON vs Markdown model evaluation and token assertion rejection (Scenario 12).
-- Active dirty task preservation in default checkout (Scenario 13).
-- Prohibition against transferring push authorization to remediation branches (Scenario 14).
-- Worktree opt-in validation: missing both inputs (Scenario 15), missing destination path (Scenario 16), missing branch name (Scenario 17).
-- Complete worktree opt-in with user-supplied branch and path (Scenario 18).
-- Common `.agents` installation and retired target refusal (Scenarios 19, 20).
+- Report view completeness, metadata validation, and controlled JSON vs Markdown model evaluation (Scenarios 11, 12).
+- Active dirty task preservation and worktree opt-in validation (Scenarios 13–18).
+- Dual-root transactional installation: explicit `--target agents`, `--target claude`, `--target both`, and invalid target rejection (Scenarios 19–22).
+- Four scanner lifecycle shapes: build-integrated, standalone-after-native, prep/build/end, and multi-target (Scenarios 23–26).
+- Mandatory Stage F final submission and committed-input verification (Scenario 27).
+- Round budget $N$ boundaries: omitted $N$, invalid $N$, $N=1$ failure, task resume without budget increment, and no post-budget edits (Scenarios 28–31, 35, 60).
+- Single correction batch limit per round and second correction prohibition (Scenarios 32, 33).
+- Loop recovery boundaries: two-round no-progress halt and all-target conjunction (Scenarios 34, 36).
+- Applicability and metric validation: 0 tests rejected, justified no-test profile, unsupported coverage, stale reports, and metric aggregation (Scenarios 37–42).
+- Authority and security refusals: declined upload/commit, auth gap, role independence, unapproved scripts, TLS bypass refusal, and bounded actor (Scenarios 43–50, 62).
+- Evidence integrity: mutually exclusive branch/PR, background task failure, partial paging, consistency unknown, profile change rebaseline, input drift, disappearing findings, pending hotspots, serial scans, and hostile instruction neutralization (Scenarios 51–59, 61, 63, 64).
