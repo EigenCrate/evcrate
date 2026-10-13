@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!DOCTYPE report PUBLIC "-//JACOCO//DTD Report 1.1//EN" "report.dtd">
+<!--
+  Synthetic JaCoCo XML Report Fixture
+  Schema: Formatted conforming to JaCoCo Report 1.1 DTD
+  Purpose: Verifies offline class-level LINE and BRANCH counter extraction,
+           excluding higher-level package, group, method, and sourcefile totals.
+-->
+<report name="sample-library">
+  <sessioninfo id="sample-host-12345" start="1712000000000" dump="1712000010000"/>
+  <package name="com/example/sample">
+    <class name="com/example/sample/SampleUtil" sourcefilename="SampleUtil.java">
+      <method name="&lt;init&gt;" desc="()V" line="5">
+        <counter type="INSTRUCTION" missed="0" covered="3"/>
+        <counter type="LINE" missed="0" covered="1"/>
+        <counter type="COMPLEXITY" missed="0" covered="1"/>
+        <counter type="METHOD" missed="0" covered="1"/>
+      </method>
+      <method name="isValid" desc="(Ljava/lang/String;)Z" line="8">
+        <counter type="INSTRUCTION" missed="2" covered="10"/>
+        <counter type="BRANCH" missed="1" covered="3"/>
+        <counter type="LINE" missed="1" covered="4"/>
+        <counter type="COMPLEXITY" missed="1" covered="2"/>
+        <counter type="METHOD" missed="0" covered="1"/>
+      </method>
+      <counter type="INSTRUCTION" missed="2" covered="13"/>
+      <counter type="BRANCH" missed="1" covered="3"/>
+      <counter type="LINE" missed="1" covered="5"/>
+      <counter type="COMPLEXITY" missed="1" covered="3"/>
+      <counter type="METHOD" missed="0" covered="2"/>
+      <counter type="CLASS" missed="0" covered="1"/>
+    </class>
+    <sourcefile name="SampleUtil.java">
+      <line nr="5" mi="0" ci="3" mb="0" cb="0"/>
+      <line nr="8" mi="0" ci="5" mb="0" cb="2"/>
+      <line nr="9" mi="1" ci="2" mb="1" cb="1"/>
+      <line nr="10" mi="1" ci="0" mb="0" cb="0"/>
+      <line nr="12" mi="0" ci="3" mb="0" cb="0"/>
+      <line nr="15" mi="0" ci="2" mb="0" cb="0"/>
+      <counter type="INSTRUCTION" missed="2" covered="13"/>
+      <counter type="BRANCH" missed="1" covered="3"/>
+      <counter type="LINE" missed="1" covered="5"/>
+      <counter type="COMPLEXITY" missed="1" covered="3"/>
+      <counter type="METHOD" missed="0" covered="2"/>
+      <counter type="CLASS" missed="0" covered="1"/>
+    </sourcefile>
+    <counter type="INSTRUCTION" missed="2" covered="13"/>
+    <counter type="BRANCH" missed="1" covered="3"/>
+    <counter type="LINE" missed="1" covered="5"/>
+    <counter type="COMPLEXITY" missed="1" covered="3"/>
+    <counter type="METHOD" missed="0" covered="2"/>
+    <counter type="CLASS" missed="0" covered="1"/>
+  </package>
+  <counter type="INSTRUCTION" missed="2" covered="13"/>
+  <counter type="BRANCH" missed="1" covered="3"/>
+  <counter type="LINE" missed="1" covered="5"/>
+  <counter type="COMPLEXITY" missed="1" covered="3"/>
+  <counter type="METHOD" missed="0" covered="2"/>
+  <counter type="CLASS" missed="0" covered="1"/>
+</report>

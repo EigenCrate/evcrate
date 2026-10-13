@@ -45,12 +45,35 @@ Confirm Surefire executed the target method and record counts.
 ### Clean module lifecycle and XML generation
 Run `mvn clean test` (or `mvn clean verify` when coverage report generation is bound to verification/integration phases) to ensure fresh XML at `target/site/jacoco/jacoco.xml` or aggregated multi-module path.
 
-### Local JaCoCo calculation helper
-Aggregate matching classes using the optional PowerShell helper:
+### Local JaCoCo calculation helpers
+
+Cross-platform Node JaCoCo helper (`scripts/calculate-jacoco-coverage.mjs`, Node >=22.19.0 ESM):
+
+*(Note: `calculate-jacoco-coverage.mjs` is delivered in package source and unpacked tarball in Phase 03; the installed skill does not receive this file until the Phase 05 payload cutover. During Phase 03, invoke it directly from the unpacked extension package root or repository source; the legacy PowerShell helper remains the installed alternative until Phase 05.)*
+
+```bash
+node <package-root>/scripts/calculate-jacoco-coverage.mjs [--report-path <path>] [--threshold <0..100>] [--include-pattern <regex>]
+```
+
+Supported options:
+- `--report-path <path>`: Path to `jacoco.xml` (default: `target/site/jacoco/jacoco.xml`). Relative paths resolve against initial caller working directory.
+- `--threshold <val>`: Strict combined-coverage threshold percentage (default: `95`). Evaluated using exact BigInt rational arithmetic without floating-point rounding.
+- `--include-pattern <regex>`: Optional case-insensitive regex matching class names to include (uses JavaScript RegExp with `i` flag).
+- `--help`: Display usage help (must be used alone).
+
+Aggregation & Exit Codes:
+- Aggregates direct child `LINE` and `BRANCH` counters of matched classes only; ignores method, sourcefile, package, group, or report counter elements.
+- Every evaluated class requires a direct `LINE` counter; missing `LINE` is invalid input (exit 1). Present zero-valued `LINE` counters are valid.
+- Absent `BRANCH` counters are treated as undefined/empty and do not fail the combined metric.
+- Exit 0 on strict pass (`(covered lines + covered branches) / (total lines + total branches) * 100 > threshold`), exit 1 on invalid arguments, missing file, malformed XML, or invalid counters, exit 2 on threshold failure or empty matched aggregate.
+
+Legacy PowerShell helper (currently installed alternative; requires PowerShell / `pwsh`; retained until Phase 05 cutover):
+
 ```powershell
 pwsh -File <skill-dir>/scripts/calculate-jacoco-coverage.ps1 -ReportPath <fresh-xml> -Threshold 95 -IncludePattern '<class-regex>'
 ```
-Its local proxy is `(covered lines + covered branches) / (total lines + total branches) * 100`, using a strict `>` threshold (e.g., exactly 95.0% fails `>95%`). Use unrounded values. This helper provides local feedback only and cannot prove remote quality gate satisfaction.
+
+Both helpers calculate local proxy `(covered lines + covered branches) / (total lines + total branches) * 100` using a strict `>` threshold (e.g., exactly 95.0% fails `>95%`). These helpers provide local feedback only and cannot prove remote quality gate satisfaction.
 
 ## 4. Remote Gate and Analysis Correlation
 
