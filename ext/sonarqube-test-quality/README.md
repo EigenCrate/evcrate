@@ -5,7 +5,7 @@ Portable SonarQube triage, Java test-quality, JaCoCo coverage, and offline repor
 ## Runtime Requirements
 
 - **Node.js 22.19.0 or newer (required)**: Runs the portable installer (`bin/install.js`), the standalone offline report converter (`scripts/convert-sonar-report.mjs`), the native issue-fetch helper (`scripts/fetch-sonar-issues.mjs`), the offline JaCoCo coverage helper (`scripts/calculate-jacoco-coverage.mjs`), and the vendored structural XML parser (`scripts/vendor/sax.cjs`). All package components are self-contained Node ESM with zero external npm dependencies. (The installer, report converter, parser, and coverage helper operate strictly offline; issue fetching forwards to the native Sonar CLI and requires active session authentication and server connectivity.)
-- **Zero PowerShell / `pwsh` dependency**: All functionality is pure cross-platform Node ESM. Legacy PowerShell helpers (`fetch-sonar-issues.ps1` and `calculate-jacoco-coverage.ps1`) are retired and automatically removed during upgrade from known release versions.
+- **Zero PowerShell / `pwsh` dependency**: Replaces legacy PowerShell helpers (`fetch-sonar-issues.ps1` and `calculate-jacoco-coverage.ps1`, automatically retired upon upgrade from known release versions) with portable Node ESM helpers (`convert-sonar-report.mjs`, `fetch-sonar-issues.mjs`, `calculate-jacoco-coverage.mjs`) and a vendored CommonJS SAX parser runtime (`scripts/vendor/sax.cjs`). (Issue fetching spawns the external native `sonar`/`sonar.exe` binary directly without an intermediate shell.)
 ## Install
 
 Preview the installation before writing files:
@@ -132,15 +132,34 @@ Companion command skill prompt:
 
 ## Verification Status & Qualification Boundaries
 
-### Verified Offline Capabilities
-- **Package & installer test suite**: Passing unit, specification, simulation, and transactional retirement regression tests across 14 suites (`npm test`).
-- **Transactional multi-target installer**: Validated from unpacked release tarball outside the repository checkout for `--target agents` (21 files), `--target claude` (21 files), and `--target both` (42 files), confirming repeat no-op idempotency, collision fail-closed behavior, `--force --yes` replacement, two-tier lock coordination (`.sonarqube-test-quality.install.lock` then legacy `.agents/.../.install.lock`), transactional retirement of legacy PowerShell helpers, and caught-failure rollback.
+### Track D — Verified Implementation Delivery
+- **Package & installer test suite**: 234 passing unit, specification, simulation, installed runtime closure, and transactional retirement regression tests across 18 suites (`npm test`).
+- **Isolated candidate package and unpacked installation**: Candidate packaged into release tarball outside checkout, unpacked without `node_modules`, and installed via unpacked `bin/install.js` for `--target agents` (21 files), `--target claude` (21 files), and `--target both` (42 files), verifying zero `.ps1` helpers in tarball, source, or installed payload.
+- **Installed CLI runtime closure**: Standalone helpers (`convert-sonar-report.mjs`, `fetch-sonar-issues.mjs`, `calculate-jacoco-coverage.mjs`) and vendored SAX parser (`scripts/vendor/sax.cjs`) verified by absolute path from an unrelated CWD outside checkout, without `node_modules` or `NODE_PATH`/`NODE_OPTIONS` assistance.
+- **Native issue-fetch execution**: Process isolation, argv forwarding, child CWD handling, atomic sibling staging with POSIX 0600 mode tightening, exit code preservation, launch error handling, and silent child stderr draining verified using an isolated native process mock.
+- **Offline JaCoCo coverage calculation**: Class-level direct LINE/BRANCH aggregation, exact BigInt rational threshold comparison (`100n * covered * q > p * total`), offline external DOCTYPE acceptance without remote fetch, and fail-closed rejection of internal DTD subsets and custom entities verified on synthetic fixture `tests/fixtures/synthetic-jacoco-report.xml`.
+- **Transactional multi-target retirement & rollback**: 18-case regression suite in `tests/install.test.mjs` verifying authentic v3.0.0 SHA-256 release allowlists, harmless absence, customized/unknown blocking even with `--force --yes`, second-root preflight failure, dry-run no-write/no-lock, mutation-boundary drift abort, multi-root caught-failure rollback, restrictive umask mode restoration, and concurrent recreation preservation.
 - **Specification & catalog validation**: 70 scenarios and 210 prose assertions in `evals/evals.json` validated for structure, non-empty content, and static matrix traceability; 15 state transitions verified programmatically in simulation fixtures.
+
+### Track Q — Operational Qualification Matrix (Independently Pending)
+Track D implementation delivery does not claim universal cross-platform or live scanner qualification. Track Q gates remain strictly categorized:
+
+| Gate | Target & Scope | Status | Limitation / Missing Prerequisite |
+|---|---|---|---|
+| **Q-LINUX** | Linux x64: runtime execution of candidate on Linux x64 | **Exercised (Partial)** | Verified on active Linux x64 host under Node v24.16.0; exact released Node 22.19.0 lower-bound receipt pending. |
+| **Q-WINDOWS** | Windows x64: native launcher, path resolution, and retirement | **Pending / Not Exercised** | Windows host unavailable; Windows migration support unqualified. |
+| **Q-MACOS** | macOS arm64: native launcher, filesystem, and retirement | **Pending / Not Exercised** | macOS host unavailable; macOS migration support unqualified. |
+| **Q-MINIMUM** | Released Node 22.19.0: exact lower-bound execution outside checkout | **Pending / Not Exercised** | Engine validator acceptance unit tests cannot substitute for actual Node 22.19.0 binary execution. |
+| **Q-MAVEN-WINDOWS** | Windows Maven: `mvn.cmd` array splatting from wrong CWD | **Pending / Not Exercised** | Windows Maven environment unavailable; Linux recipe cannot close Windows gate. |
+| **Q-PRIVATE-WINDOWS** | Windows ACL: private directory ACLs and destination replacement | **Pending / Not Exercised** | Windows filesystem ACL environment unavailable. |
+| **Q-SONAR-NATIVE** | Native Sonar CLI: official vendor `sonar`/`sonar.exe` execution | **Pending / Not Exercised** | Live vendor CLI and server read-query credentials unavailable; no server/auth claim. |
+| **Q-HOST-ROOTS** | Consuming Host: live LLM three-root binding across delegation | **Pending / Not Exercised** | Offline eval scenarios 65–70 provide policy evidence, not live host LLM runtime execution. |
+| **Q-HOST-RESUME** | Consuming Host: live saved-task resume without re-upload | **Pending / Not Exercised** | Evaluator simulation cannot close actual consuming host resume receipt. |
 
 ### Operational & Runtime Boundaries
 - **Historical report lessons**: Supplied historical metrics (56 tests, 46.48% line coverage, 63.91% branch coverage; focused change unanalyzed) inform policy (auth separation, exact task/analysis binding, full paging, CI trigger verification, active TLS) but provide zero runtime qualification for current checkouts. Corporate URLs, project keys, thresholds, shells, and private links are never used as defaults.
 - **Consuming host execution boundary**: Node.js and Linux installer execution is verified, but live consuming-host LLM runtime discovery and independent-child prompt execution are **unexercised** in offline build/test environments.
-- **Minimum runtime qualification boundary**: Standalone extension metadata, installer guard, and test suite declare and enforce Node.js `>=22.19.0`. Current test execution on active development environments (e.g., Node 24.x) confirms configuration feasibility, but exact released Node 22.19.0 execution receipts and multi-platform (Windows/macOS) qualification remain separate operational gates.
+- **Minimum runtime qualification boundary**: Standalone extension metadata, installer guard, and test suite declare and enforce Node.js `>=22.19.0`. Current test execution on active development environments (Node v24.16.0) confirms configuration feasibility, but exact released Node 22.19.0 execution receipts and multi-platform (Windows/macOS) qualification remain separate operational gates.
 - **Installed payload closure**: All active components (installer, report converter, native issue-fetch helper, native JaCoCo coverage helper, vendored SAX parser, license, and provenance) are deployed in every selected root (21 assets per root); legacy `.ps1` helpers are retired and absent from source, release tarball (27 packaged files total), and installed payload.
 - **Dual-root discovery ambiguity**: Installing both roots creates duplicate skill entrypoints (`cmd-sonar-remediate` and `sonarqube-test-quality` in both `.agents` and `.claude`). Consuming hosts must use supported explicit target selection; unassisted discovery across both directories simultaneously is ambiguous and runtime-unqualified.
 - **No atomic reader visibility or crash recovery**: In-process rollback restores backups on caught exceptions; it does not claim atomic simultaneous reader visibility or process-crash recovery.

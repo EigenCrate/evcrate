@@ -3,7 +3,16 @@
 ## Unreleased
 
 **Updated:** 2026-10-14
-**Status:** Core package release history; Cross-platform Sonar helpers Phase 05 payload cutover and documentation delivered (227/227 tests passing across 14 suites; 21 assets/root, 42 both; 27 packed files; legacy .ps1 retired; Phase 06 qualification unobserved); Cross-platform Sonar helpers Phase 04 reusable execution-root guidance delivered (206/206 tests passing across 13 suites; review approved 7.5/10; Phase 06 platform qualification unobserved); Cross-platform Sonar helpers Phase 03 Node JaCoCo coverage helper delivered (191/191 tests passing; Node >=22.19.0 baseline); Cross-platform Sonar helpers Phase 02 Node issue-fetch helper delivered (152/152 tests passing); Cross-platform Sonar helpers Phase 01 contracts and parser runtime delivered (121/121 tests passing); General Sonar remediation cycles partial offline handoff (8/8 phases offline verified; live host unexercised); General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement (100% complete; Review Cycle 2 approved 9.8/10; portable Linux/repo verification complete); VS Code Local native adapter and container-aware command mapping cutover (100% complete; review approved); Filesystem-policy cutover (100% complete; review approved 9.6/10); Windows release qualification milestone (100% complete; 4-row matrix proven; build-once handoff).
+**Status:** Core package release history; Cross-platform Sonar helpers Phase 06 behavior and platform qualification delivered (234/234 tests passing across 18 suites; review approved 7.5/10; Track D delivery 100% complete; Track Q platform qualification matrix independently recorded); Cross-platform Sonar helpers Phase 05 payload cutover and documentation delivered (227/227 tests passing across 14 suites; 21 assets/root, 42 both; 27 packed files; legacy .ps1 retired; Phase 06 qualification unobserved); Cross-platform Sonar helpers Phase 04 reusable execution-root guidance delivered (206/206 tests passing across 13 suites; review approved 7.5/10; Phase 06 platform qualification unobserved); Cross-platform Sonar helpers Phase 03 Node JaCoCo coverage helper delivered (191/191 tests passing; Node >=22.19.0 baseline); Cross-platform Sonar helpers Phase 02 Node issue-fetch helper delivered (152/152 tests passing); Cross-platform Sonar helpers Phase 01 contracts and parser runtime delivered (121/121 tests passing).
+
+### 2026-10-14 — feat(sonar): behavior and platform qualification (Phase 06)
+
+- **Behavior and platform qualification (Phase 06)**: Completed Phase 06 of plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` (`plans/261013-1920-sonar-cross-platform-helpers-and-root-guidance/phase-06-behavior-and-platform-qualification.md`). Verified Track D implementation delivery across isolated packaging, unpacked multi-target installation, and runtime closure outside repository checkout with zero repository dependencies. Established Track Q operational qualification matrix with 9 explicitly categorized gates.
+- **Changed files recorded & acceptance status**: Track D delivery status is **DONE (100%)** as of 2026-10-14; user approved (7.5/10 review); Track Q qualification remains independently pending without unobserved platform claims; 234/234 tests pass across 18 suites in `ext/sonarqube-test-quality`. Changed files: 5 test/utility files added (`tests/installed-helpers-fixture-utils.mjs`, `tests/node-helpers-installed-closure.test.mjs`, `tests/node-helpers-installed-convert.test.mjs`, `tests/node-helpers-installed-fetch.test.mjs`, `tests/node-helpers-installed-coverage.test.mjs`), 1 documentation update (`ext/sonarqube-test-quality/README.md`), 1 qualification report (`plans/reports/qualification-index-261014-sonar-cross-platform.md`).
+- **Genuinely isolated candidate packaging & installation**: Packed candidate package into temporary directory via `npm pack`, verifying candidate digest (`e01a6891277b0331d600b634474796eefbbc47d8`), 27 packaged files, and complete absence of `.ps1` helpers. Unpacked outside checkout and executed unpacked installer (`bin/install.js`) for `--target agents` (21 assets), `--target claude` (21 assets), and `--target both` (42 assets) with zero `node_modules` in unpacked or installed trees.
+- **Installed CLI runtime closure**: Verified standalone helpers (`convert-sonar-report.mjs`, `fetch-sonar-issues.mjs`, `calculate-jacoco-coverage.mjs`) and vendored SAX parser (`scripts/vendor/sax.cjs`) by absolute path from an unrelated CWD outside checkout, without `node_modules` or `NODE_PATH`/`NODE_OPTIONS` assistance.
+- **Process isolation and XML parser boundaries**: Verified native issue-fetcher execution with mock process, literal argv forwarding, child CWD handling, atomic 0600 sibling staging, child exit code propagation, and silent stderr draining. Verified offline JaCoCo coverage calculation with direct LINE/BRANCH aggregation on synthetic fixture (`tests/fixtures/synthetic-jacoco-report.xml`), exact BigInt rational threshold comparison (`100n * covered * q > p * total`), offline external DOCTYPE acceptance without network access, and fail-closed rejection of internal DTD subsets and custom entities (`[xml error]`).
+- **Track Q operational qualification matrix**: Formally registered all 9 operational qualification gates (Q-LINUX exercised partial on Fedora Linux x64 Node v24.16.0; Q-WINDOWS, Q-MACOS, Q-MINIMUM, Q-MAVEN-WINDOWS, Q-PRIVATE-WINDOWS, Q-SONAR-NATIVE, Q-HOST-ROOTS, Q-HOST-RESUME pending/not-exercised). Offline extension delivery does not claim universal platform support or server-verified remediation.
 
 ### 2026-10-14 — feat(sonar): payload cutover, transactional retirement, and documentation (Phase 05)
 
@@ -753,22 +762,11 @@
 **Plan:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md)  
 **Evidence:** [validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md); [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md)
 
-- Replaced view-owned acquisition with shared provider/reducer/views and a
-  temporary standalone picker (later removed by E05); DamHopper uses bounded
-  `MessagePort` without credentials, paths, sockets, or arbitrary network.
-- Added bridge 1.0.0's eight validated envelopes, single-use nonce ack, session/
-  generation fences, cancellation, late-response suppression, availability,
-  and revocation cleanup.
-- Kept Overview, paged History/detail, current account-wide policy labels, and
-  bound-source Evaluations with provenance and candidate masking.
-- Built `plugin/ui/index.html` as opaque-srcdoc inlined CSS/IIFE (328,337 bytes,
-  <=5 MiB), with no external assets/network/filesystem picker, `eval`, or
-  `Function`. Manifest/candidate include UI, `/plugins/evcrate.advisor`
-  navigation, and its SHA-256 inventory entry (64 records).
-- Verification: **68/68 tests passed** — 23 focused E03 UI tests, 14 viewer
-  browser/build tests, 22 worker tests, and 9 plugin contract tests. Host-enforced
-  CSP/sandbox, joint G2 LAN acceptance, E04 packaging, and G4 cutover remain
-  downstream gates.
+- Replaced view-owned acquisition with shared provider/reducer/views and a temporary standalone picker (later removed by E05); DamHopper uses bounded `MessagePort` without credentials, paths, sockets, or arbitrary network.
+- Added bridge 1.0.0's eight validated envelopes, single-use nonce ack, session/generation fences, cancellation, late-response suppression, availability, and revocation cleanup.
+- Kept Overview, paged History/detail, current account-wide policy labels, and bound-source Evaluations with provenance and candidate masking.
+- Built `plugin/ui/index.html` as opaque-srcdoc inlined CSS/IIFE (328,337 bytes, <=5 MiB), with no external assets/network/filesystem picker, `eval`, or `Function`. Manifest/candidate include UI, `/plugins/evcrate.advisor` navigation, and its SHA-256 inventory entry (64 records).
+- Verification: **68/68 tests passed** — 23 focused E03 UI tests, 14 viewer browser/build tests, 22 worker tests, and 9 plugin contract tests. Host-enforced CSP/sandbox, joint G2 LAN acceptance, E04 packaging, and G4 cutover remain downstream gates.
 
 ### 2026-09-22 — feat(plugin): qualify E04 independent package and Gate G3
 
@@ -779,6 +777,7 @@
 
 - Added viewer TypeScript, Vite, and Playwright boundaries: strict ES2020 browser typechecking, loopback HTTP CSP on `127.0.0.1:4173`, and 298.5 kB package inventory.
 - Package inventory includes only built `viewer/dist/**` assets; exact 7 release assets and 33-file controller closure unchanged. 39/39 focused tests passed.
+
 ### 2026-09-18–2026-09-19 — feat(viewer, advisor): historical React Explorer, browser traversal, and controller closure (Phases 02–07)
 
 - Completed React Explorer under `viewer/src/` (Phase 07), browser traversal scanner/metrics/counsel (Phases 04–06), and deterministic metrics kernel/controller closure (Phases 02–03). Detailed records preserved in [changelog archive](./project-changelog-archive.md).
