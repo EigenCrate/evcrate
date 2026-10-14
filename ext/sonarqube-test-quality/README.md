@@ -37,7 +37,7 @@ Run focused installer tests with `npm test` from this package directory.
 
 ### 1. One Markdown Report for Every Cycle
 
-Maintain one private `<evidence-destination>/sonar-report.md`, readable by humans and AI agents. Sonar API JSON is transient input, not another saved report. No raw-page archive, `resume-checkpoint.json`, YAML mirror, actor report, separate guidance report, or file per cycle.
+Maintain one private `<evidence-destination>/sonar-report.md` (defaults automatically to `<checkout_root>/.sonar-evidence/`, ensuring `.sonar-evidence/` is added to `.gitignore` without asking the user), readable by humans and AI agents. Sonar API JSON is transient input, not another saved report. No raw-page archive, json, YAML mirror, actor report, separate guidance report, or file per cycle.
 
 | Section | Contents |
 |---|---|

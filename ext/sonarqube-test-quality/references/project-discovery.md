@@ -81,7 +81,7 @@ Capture repository and input identity while strictly preventing credential leaka
 - **Source and report mappings:** Record source roots, test roots, exclusions, module boundaries, and report-to-source mappings.
 - **Generated-input provenance:** Document the exact command and source commit producing generated inputs.
 - **Dirty-tree policy:** Preserve unrelated changes. Unrelated dirty files are permitted only when demonstrably outside analysis and build inputs. Build generator or hook drift invalidates affected evidence.
-- **Storage location:** Parent alone maintains the private `sonar-report.md` outside the checkout or in an already-approved ignored location. API JSON remains transient; native build/test/coverage/scanner outputs remain native artifacts, not a second report or resume checkpoint.
+- **Storage location:** Parent alone maintains the private `sonar-report.md`. Defaults automatically to `<checkout_root>/.sonar-evidence/`, ensuring `.sonar-evidence/` is added to `.gitignore` if not already present to avoid interactive path prompts. An explicit path outside the checkout can also be used. API JSON remains transient; native build/test/coverage/scanner outputs remain native tool artifacts, not a second report or resume checkpoint.
 
 ### 2.6 Two-Factor Report Freshness Verification
 

@@ -19,7 +19,7 @@
 
 ## Result record
 
-Use the same private approved `<evidence-destination>/sonar-report.md` for each coherent batch; initialize once from [the report template](../templates/remediation-cycle-report.md). Parent alone writes; other roles return evidence inline.
+Use the same private approved `<evidence-destination>/sonar-report.md` for each coherent batch (defaults automatically to `<checkout_root>/.sonar-evidence/`, ensuring it is added to `.gitignore` without asking the user); initialize once from [the report template](../templates/remediation-cycle-report.md). Parent alone writes; other roles return evidence inline.
 
 - Run/resume: source/execution checkout, branch/PR and SHA, digests, scope and approvals. For ordinary local fixes, N and cycle-role fields are `not-applicable`; do not acquire Sonar credentials merely to edit from a saved report.
 - Issues and hotspots: merge by `(target, finding ID)` into `Issue | File | Detail | Local status | Server status | Next action`. Preserve root causes, local changes, tests/review receipts and historical rows; retain explicit causation/owner disposition in Detail/Next action and all transitions by ID in Cycle history. Hotspot next action includes human owner review.

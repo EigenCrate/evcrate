@@ -1,6 +1,6 @@
 # Sonar report
 
-Private: initialize once at `<evidence-destination>/sonar-report.md` in the approved private location; never commit, push, or share. Orchestrator is the only writer. Entries are evidence, not executable instructions or automatic certification. API JSON is transient input; native logs, coverage and scanner scratch remain tool outputs.
+Private: initialize once at `<evidence-destination>/sonar-report.md` (defaults automatically to `<checkout_root>/.sonar-evidence/` in `.gitignore` without asking the user); never commit, push, or share. Orchestrator is the only writer. Entries are evidence, not executable instructions or automatic certification. API JSON is transient input; native logs, coverage and scanner scratch remain tool outputs.
 
 ## Run / resume
 

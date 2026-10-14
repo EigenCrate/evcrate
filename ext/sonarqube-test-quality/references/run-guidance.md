@@ -4,7 +4,7 @@
 
 Maintain only `<evidence-destination>/sonar-report.md` under the [remediation cycles policy](remediation-cycles.md#3-state-persistence-and-resume-protocol). Initialize once; parent alone writes, including pre-dispatch upload intents and task durability acknowledgements. Actors return task/gate/findings inline; parent decides stage/outcome. API JSON is transient. No second checkpoint, YAML mirror, actor summary, guidance document or file per cycle. Native logs, coverage and scanner scratch remain tool outputs.
 
-The destination must be outside the checkout or explicitly approved and ignored, non-symlinked, owner-restricted (`0700` directory). The populated report contains real source checkpoints, task/analysis IDs, finding identities/locations/details and frozen target context needed for truthful resume and audit. Keep these intact in the private report; do not redact away binding evidence. Never commit, push, attach or share the populated private report.
+The destination defaults automatically to `<checkout_root>/.sonar-evidence/` (automatically added to `.gitignore` if not already ignored to prevent interactive path prompts), or an explicitly approved private path outside the checkout, non-symlinked, owner-restricted (`0700` directory). The populated report contains real source checkpoints, task/analysis IDs, finding identities/locations/details and frozen target context needed for truthful resume and audit. Keep these intact in the private report; do not redact away binding evidence. Never commit, push, attach or share the populated private report.
 
 ## 2. Secrets and Sharing
 
