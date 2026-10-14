@@ -43,14 +43,29 @@ mvn '-Dtest=ClassName#methodName' test
 Confirm Surefire executed the target method and record counts.
 
 ### Clean module lifecycle and XML generation
-Run `mvn clean test` (or `mvn clean verify` when coverage report generation is bound to verification/integration phases) to ensure fresh XML at `target/site/jacoco/jacoco.xml` or aggregated multi-module path.
+Run `mvn clean test` (or `mvn clean verify` when coverage report generation is bound to verification/integration phases) in the approved target `execution_root` to ensure fresh XML at `target/site/jacoco/jacoco.xml` (or aggregated multi-module path `target/site/jacoco-aggregate/jacoco.xml`). Standalone offline coverage parsing does not require Git; relative report paths resolve against the caller's initial directory, while delegated invocations pass absolute report paths bound to the verified `execution_root` per [Project discovery §2](project-discovery.md#2-three-root-execution-context-and-identity-validation).
 
 ### Local JaCoCo calculation helper
-Aggregate matching classes using the optional PowerShell helper:
-```powershell
-pwsh -File <skill-dir>/scripts/calculate-jacoco-coverage.ps1 -ReportPath <fresh-xml> -Threshold 95 -IncludePattern '<class-regex>'
+
+Cross-platform Node JaCoCo helper (`scripts/calculate-jacoco-coverage.mjs`, Node >=22.19.0 ESM):
+
+```bash
+node <installed-skill-root>/scripts/calculate-jacoco-coverage.mjs [--report-path <path>] [--threshold <0..100>] [--include-pattern <regex>]
 ```
-Its local proxy is `(covered lines + covered branches) / (total lines + total branches) * 100`, using a strict `>` threshold (e.g., exactly 95.0% fails `>95%`). Use unrounded values. This helper provides local feedback only and cannot prove remote quality gate satisfaction.
+
+Supported options:
+- `--report-path <path>`: Path to `jacoco.xml` (default: `target/site/jacoco/jacoco.xml`). Relative paths resolve against initial caller working directory.
+- `--threshold <val>`: Strict combined-coverage threshold percentage (default: `95`). Evaluated using exact BigInt rational arithmetic without floating-point rounding.
+- `--include-pattern <regex>`: Optional case-insensitive regex matching class names to include (uses JavaScript RegExp with `i` flag).
+- `--help`: Display usage help (must be used alone).
+
+Aggregation & Exit Codes:
+- Aggregates direct child `LINE` and `BRANCH` counters of matched classes only; ignores method, sourcefile, package, group, or report counter elements.
+- Every evaluated class requires a direct `LINE` counter; missing `LINE` is invalid input (exit 1). Present zero-valued `LINE` counters are valid.
+- Absent `BRANCH` counters are treated as undefined/empty and do not fail the combined metric.
+- Exit 0 on strict pass (`(covered lines + covered branches) / (total lines + total branches) * 100 > threshold`), exit 1 on invalid arguments, missing file, malformed XML, or invalid counters, exit 2 on threshold failure or empty matched aggregate.
+
+The helper calculates local proxy `(covered lines + covered branches) / (total lines + total branches) * 100` using a strict `>` threshold (e.g., exactly 95.0% fails `>95%`). It provides local feedback only and cannot prove remote quality gate satisfaction.
 
 ## 4. Remote Gate and Analysis Correlation
 

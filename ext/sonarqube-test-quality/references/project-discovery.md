@@ -2,18 +2,82 @@
 
 This reference defines neutral discovery rules for project layout, toolchains, safe input identity, and execution profiles across any language or runtime.
 
-## 1. Discovery Order
+## 1. Discovery Order and Target Resolution
 
-Discover configuration and capabilities deterministically without pinning or upgrading tools:
+Discover configuration, targets, and capabilities deterministically without pinning or upgrading tools:
 
-1. **Input manifests:** Inspect tracked repository manifests (`package.json`, `pom.xml`, `build.gradle`, `*.sln`/`*.csproj`, `go.mod`, `pyproject.toml`/`setup.cfg`, `Cargo.toml`, `CMakeLists.txt`).
-2. **Approved scripts, scanner configs, and tracked CI:** Inspect `.sonar-config.json`, `sonar-project.properties`, tracked CI workflows (`Jenkinsfile`, `.github/workflows`), and package scripts. Treat discovered scripts as execution candidates until explicitly approved; discovery never grants execution permission.
-3. **Installed tool help and versions:** Inspect local tool availability (`sonar --help`, `mvn -v`, `dotnet --version`, `node -v`, `pytest --version`, `go version`). Never install, upgrade, or alter global/local tool versions.
-4. **Matching official vendor documentation:** Consult official scanner/analyzer docs for verified flag and parameter mappings.
+1. **Target resolution priority:**
+   - **Explicit target first:** User-specified module, target project path, or command target selector argument takes precedence.
+   - **Tracked CI and config mapping next:** Inspect `.sonar-config.json`, `sonar-project.properties`, tracked CI workflows (`Jenkinsfile`, `.github/workflows`), or package/manifest scripts.
+   - **Bounded candidate discovery only:** When no explicit target or tracked mapping exists, search for build manifests only within and up to the selected checkout root. Never pick the first ancestor POM blindly, and never search outside the checkout root.
+   - **Ambiguous targets block:** When multiple candidate reactor POMs, unmapped sibling service directories, or conflicting targets match without explicit configuration, halt discovery immediately with outcome `blocked/incomplete`. Prompt the user for explicit target selection; never guess or assume a default.
+2. **Input manifests:** Inspect tracked repository manifests (`package.json`, `pom.xml`, `build.gradle`, `*.sln`/`*.csproj`, `go.mod`, `pyproject.toml`/`setup.cfg`, `Cargo.toml`, `CMakeLists.txt`). Verify applicable manifests exist as regular files; missing manifest blocks only applicable toolchains.
+3. **Approved scripts, scanner configs, and tracked CI:** Treat discovered scripts as execution candidates until explicitly approved; discovery never grants execution permission.
+4. **Installed tool help and versions:** Inspect local tool availability (`sonar --help`, `mvn -v`, `dotnet --version`, `node -v`, `pytest --version`, `go version`). Never install, upgrade, or alter global/local tool versions.
+5. **Matching official vendor documentation:** Consult official scanner/analyzer docs for verified flag and parameter mappings.
 
 Ask the user only for conflicting, ambiguous, or unresolved configuration, or materially different trade-offs.
 
-## 2. Safe Actual-Input Identity
+<a id="2-safe-actual-input-identity"></a>
+<a id="2-three-root-execution-context-and-identity-validation"></a>
+## 2. Safe Actual-Input Identity and Three-Root Execution Context
+
+Execution context and input identity require deterministic discovery, canonicalization, and strict separation across three distinct identities:
+
+### 2.1 Three-Root Execution Identities
+
+```text
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                             THREE-ROOT EXECUTION IDENTITIES                            │
+├─────────────────────────┬───────────────────────────────┬──────────────────────────────┤
+│   INSTALLED SKILL ROOT  │         CHECKOUT ROOT         │        EXECUTION ROOT        │
+├─────────────────────────┼───────────────────────────────┼──────────────────────────────┤
+│ • Loaded extension dir  │ • Selected Git checkout/work- │ • Per-target child process   │
+│   (.agents/ or .claude/)│   tree root                   │   working directory (CWD)    │
+│ • Sibling references &  │ • Bound to commit SHA and ref │ • Service subdirectory or    │
+│   prompts resolve here  │ • Shared Git admin dir (.git) │   checkout root in monorepos │
+│ • Resolved via loaded   │   is NOT the worktree root    │ • Manifest path (e.g., POM)  │
+│   entrypoint, NEVER CWD │ • Validates Git identity      │ • NEVER required to equal Git│
+└─────────────────────────┴───────────────────────────────┴──────────────────────────────┘
+```
+
+1. **`installed_skill_root`:**
+   - Path to the active extension installation containing skills and references (e.g., `<installed-root>/skills/sonarqube-test-quality`).
+   - Resolves strictly from the loaded entrypoint file location (script path or command manifest).
+   - **NEVER** resolve from process working directory (`process.cwd()`), a presumed parent repository, or an unselected competing installation root.
+2. **`checkout_root`:**
+   - Expected selected Git checkout or worktree root, bound to existing commit SHA and ref checkpoint.
+   - In Git worktrees, the checkout root is the worktree working directory (e.g., `/path/to/worktree`), **not** the shared repository administrative directory (`.git/worktrees/...` or the main repo `.git`).
+   - Standalone offline coverage parsing does not acquire a Git requirement. Snapshot mode requires only context appropriate to its read-only scope.
+3. **`execution_root`:**
+   - The per-target child process working directory (CWD) where native build, test, and scanner commands actually execute.
+   - In monorepos, `execution_root` is the specific service directory (e.g., `<checkout_root>/services/auth`); in standard single-project repos, it equals `checkout_root`.
+   - **Rule:** Never require `execution_root == checkout_root`. A service inside a monorepo is a valid execution root.
+   - `manifest_path`: Absolute path to the approved regular build manifest (e.g., `<execution_root>/pom.xml` or selected reactor POM). Verify the manifest resolves to a regular file whose canonical path (`fs.realpathSync`) is contained within canonical `checkout_root` (allowing module POMs in `execution_root` or reactor POMs at `checkout_root`), explicitly rejecting symlinks that escape the repository tree. Missing manifest blocks only applicable toolchains.
+
+### 2.2 Canonicalization and Path-Component-Aware Containment
+
+1. **Canonicalize paths:** Resolve all paths to canonical, absolute normalized paths before comparison (`path.resolve`, `fs.realpathSync`) to handle symlinks, Windows backslashes, and case normalization, preventing path traversal (`../`) bypasses.
+2. **Path-component containment:** Validate that `execution_root` is contained within `checkout_root` using path-component boundaries. Compute the relative path from canonical `checkout_root` to canonical `execution_root`: verify the first path component does not equal `'..'` and the path is not absolute. Naive string-prefix checks are strictly prohibited (e.g., `/repo-sibling` must not match `/repo`).
+
+### 2.3 Git Identity Verification and Foreign Repository Rejection
+
+For local verification and upload modes, validate Git repository identity from the selected execution directory:
+
+1. **Git top-level validation:** Execute `git -C <execution_root> rev-parse --show-toplevel`. Resolve the returned path to a canonical path (`realpath`). The canonical top-level path must strictly equal canonical `checkout_root`.
+   - This rule accepts monorepo service directories because canonical `git -C <checkout_root>/services/api rev-parse --show-toplevel` equals canonical `<checkout_root>`.
+   - This rule accepts selected Git worktrees because canonical `git -C <worktree_root> rev-parse --show-toplevel` equals canonical `<worktree_root>`.
+   - This rule **strictly rejects nested foreign repositories** (e.g., a foreign git clone or submodule nested inside the tree whose canonical top-level differs from `checkout_root`). Foreign repositories halt execution immediately (`blockers: ["foreign-repository-rejected"]`).
+2. **Commit and Ref verification:** Validate `git -C <execution_root> rev-parse HEAD` equals `input_checkpoint.commit_sha`, and current ref matches the requested selector (`branch` or `pull_request`).
+3. **Git command failure:** All Git commands must execute successfully (exit 0). Nonzero exits or missing Git binary halt discovery immediately with outcome `blocked/incomplete`.
+
+### 2.4 Context Freezing and Forwarding
+
+1. **Freeze context:** Once validated, freeze absolute `installed_skill_root`, `checkout_root`, `execution_root`, `manifest_path`, approved launcher, literal argv, and nonsecret invocation context.
+2. **Forward to delegates:** Forward these frozen absolute paths to every child process, subagent, and evidence actor. Pass `cwd: execution_root` and explicit `-f <manifest_path>` where applicable.
+3. **Re-check on launch:** Re-validate containment and Git identity on each child launch. Persistent interactive terminals or shell directory changes do not substitute for explicit child process CWD.
+
+### 2.5 Safe Actual-Input Identity and Storage
 
 Capture repository and input identity while strictly preventing credential leakage:
 
@@ -24,8 +88,14 @@ Capture repository and input identity while strictly preventing credential leaka
 - **Generated-input provenance:** Document the exact command and source commit producing generated inputs.
 - **Dirty-tree policy:** Preserve unrelated changes. Unrelated dirty files are permitted only when demonstrably outside analysis and build inputs. Build generator or hook drift invalidates affected evidence.
 - **Storage location:** Record private evidence artifacts outside the checkout or in an already-approved ignored location.
-- **Two-factor report freshness:** Treat report timestamps as necessary but insufficient evidence (as checkout timestamps, uncommitted edits, or dirty trees can mask stale contents). Valid freshness requires (1) temporal verification: report timestamp must be strictly newer than both the commit committer timestamp and the newest modification time across all tested source files, test files, nonsecret configuration, and generated inputs. When report mtime is equal to or within filesystem granularity or clock skew (<= 2 seconds) of source files, treat timestamp as ambiguous and enforce active input content digest verification; never accept ambiguous or stale reports. (2) Provenance binding: record binding the artifact to current commit SHA, active input content digest (covering source, tests, manifests, nonsecret build configuration, and generated inputs; strictly excluding secret-bearing files), producing command, and execution run session.
 
+### 2.6 Two-Factor Report Freshness Verification
+
+Treat report timestamps as necessary but insufficient evidence (as checkout timestamps, uncommitted edits, or dirty trees can mask stale contents). Valid freshness requires:
+1. **Temporal verification:** Report timestamp must be strictly newer than both the commit committer timestamp and the newest modification time across all tested source files, test files, nonsecret configuration, and generated inputs. When report mtime is equal to or within filesystem granularity or clock skew (<= 2 seconds) of source files, treat timestamp as ambiguous and enforce active input content digest verification; never accept ambiguous or stale reports.
+2. **Provenance binding:** Record binding the artifact to current commit SHA, active input content digest (covering source, tests, manifests, nonsecret build configuration, and generated inputs; strictly excluding secret-bearing files), producing command, and execution run session.
+
+<a id="3-applicability-and-requirement-separation"></a>
 ## 3. Applicability and Requirement Separation
 
 Separate explicit requirements from runtime observations:
@@ -45,7 +115,8 @@ A data-only execution profile maps:
 
 ```text
 Repository Identity (SHA, branch/PR, tracked/untracked manifests, nonsecret config)
-  → Discovered Toolchain (OS, shell, native runner, tool versions, dependencies, profiles)
+  → Execution Context (installed_skill_root, checkout_root, execution_root, manifest_path)
+  → Discovered Toolchain (OS, shell, native runner, tool versions, dependencies, profiles, approved launcher, literal argv)
   → Test Commands (focused selectors, full verification, smoke commands)
   → Coverage Specification (native format, report path, counters, denominators, thresholds, operators, import parameters)
   → Requirement Contract (tests: required/optional/N/A; coverage: required/optional/N/A)
@@ -83,7 +154,24 @@ These scenario traces demonstrate policy compliance without requiring live netwo
 - **Context:** Project lacks local Sonar scanner binary; scanning only occurs in Jenkins CI.
 - **Behavior:** Discovery marks local scanner as `unavailable`. Local remediation stops before submission and hands off to the separately authorized CI route. It does not auto-push to Git.
 
+### Scenario D-TR-07: Monorepo service directory vs Git checkout root
+- **Context:** Monorepo with Git checkout at `/workspace/repo`, service at `/workspace/repo/services/api/` with `pom.xml`.
+- **Discovery:** `checkout_root` is `/workspace/repo`. Target resolves to `execution_root: /workspace/repo/services/api`. Canonical `git -C /workspace/repo/services/api rev-parse --show-toplevel` returns `/workspace/repo`.
+- **Behavior:** Containment check passes (`execution_root` is inside `checkout_root`). Canonical Git top-level matches `checkout_root`. Manifest is regular file. Execution proceeds in `services/api` without requiring `execution_root == checkout_root`.
+
+### Scenario D-TR-08: Delegated execution CWD mismatch and context freezing
+- **Context:** Delegated subagent or terminal CWD is `/workspace/repo`, but target service is `services/order-service`.
+- **Behavior:** Subagent does not rely on terminal directory state. It uses frozen absolute `execution_root: /workspace/repo/services/order-service` and passes explicit `cwd` and `-f /workspace/repo/services/order-service/pom.xml` to child launches.
+
+### Scenario D-TR-09: Nested foreign git checkout rejection
+- **Context:** Monorepo directory contains a nested foreign repository at `/workspace/repo/vendor/foreign-lib/` with its own `.git`.
+- **Discovery:** Canonical `git -C /workspace/repo/vendor/foreign-lib rev-parse --show-toplevel` returns `/workspace/repo/vendor/foreign-lib`, which does not equal `checkout_root: /workspace/repo`.
+- **Behavior:** Discovery halts immediately with `result_status: "unavailable"`, `canonical_outcome: "blocked/incomplete"`, `blockers: ["foreign-repository-rejected"]`. The foreign directory is blocked from build or upload.
+
+### Scenario D-TR-10: Ambiguous Maven reactor POM candidate discovery
+- **Context:** Repository contains two sibling modules `services/user/pom.xml` and `services/payment/pom.xml` with no root reactor POM and no target argument provided.
+- **Behavior:** Bounded candidate discovery finds multiple POM candidates. Because no explicit target or CI mapping exists, discovery halts immediately with `canonical_outcome: "blocked/incomplete"`, requesting user clarification. It never blindly selects the first discovered POM.
+
 ## 6. Implementation Scope and Releasability Boundary
 
 This reference delivers authoring domain policy within the extension source tree. Standalone installer manifests (`lib/install.js`) and tests retain the legacy 10-asset payload until Phase 06 updates the inventory to the planned 18-asset dual-root payload. Phase 02 artifacts are source-tree references and must not be published or released as an installed package prior to Phase 06.
-

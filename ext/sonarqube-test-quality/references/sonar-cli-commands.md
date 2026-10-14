@@ -22,13 +22,25 @@ Follow pagination until exhausted before claiming a complete list; preserve all 
 
 Discover active server statuses rather than assuming fixed defaults (Standard defaults to `OPEN,CONFIRMED`; active server vocabulary may vary). Use severity filters only after checking server mode: Standard uses `BLOCKER,CRITICAL,MAJOR,MINOR,INFO`; MQR uses `BLOCKER,HIGH,MEDIUM,LOW,INFO`. Do not pass Standard values to MQR.
 
-Optional branch-only helper (requires PowerShell):
+### Issue-fetch helper
 
-```powershell
-pwsh -File <skill-dir>/scripts/fetch-sonar-issues.ps1 -ProjectKey <key> -Branch <branch> -Format json -OutputFile <report-path>
+Cross-platform Node issue-fetch helper (`scripts/fetch-sonar-issues.mjs`, Node >=22.19.0 ESM):
+
+```bash
+node <installed-skill-root>/scripts/fetch-sonar-issues.mjs --project-key <key> [--branch <branch>] [--format json] [--output <report-path>]
 ```
 
-It forwards filters and saves output; it does not check auth, bind PRs, or exhaust pagination. Use CLI commands for those steps.
+Supported options:
+- `--project-key <key>`: SonarQube project key (required).
+- `--branch <branch>`: Optional target branch.
+- `--statuses <statuses>`: Optional comma-separated issue statuses (e.g., `OPEN,CONFIRMED`).
+- `--severities <sevs>`: Optional comma-separated issue severities (`BLOCKER,CRITICAL,MAJOR,MINOR,INFO` or MQR equivalents).
+- `--format <fmt>`: Output format: `toon` (default), `json`, or `table`.
+- `--output <path>`: Destination file path. Spools stdout to a secure staging file (`0600`) and atomically replaces destination on success; preserves existing output on failure.
+- `--cwd <path>`: Execution directory for child process.
+- `--sonar-path <path>`: Explicit path to native Sonar CLI executable (rejects `.bat` and `.cmd`).
+
+The helper forwards query filters and saves output to disk; it does not check authentication, bind PRs, or exhaust pagination. Use direct Sonar CLI commands for those operations.
 
 ## Check the quality gate
 
@@ -74,8 +86,17 @@ For full analysis through Jenkins, read [full scan](full-scan-workflow.md).
 For an explicitly requested local Maven scan (integrated build/scanner shape, requiring recorded preflight upload authorization per [Local analysis](local-analysis.md)):
 
 ```powershell
-mvn -B clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:<configured-version>:sonar
+# Step 1: Clean native build, test, and fresh coverage verification
+mvn -B clean verify
+
+# Step 2: Intermediate inspection - verify test execution logs, validate two-factor
+# fresh coverage reports, and confirm zero working copy drift before any upload
+
+# Step 3: Integrated scanner goal execution with identical reactor/modules/profiles and NO clean
+mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:<configured-version>:sonar
 ```
+
+On Windows or when executing across service directories, run from the approved `execution_root`, pass explicit `-f <manifest-path>`, and use PowerShell argument splatting with whole quoted `-Dkey=value` strings per [Local analysis §3.2](local-analysis.md#windows-maven-recipe-and-cross-platform-process-boundaries).
 
 Use project-configured version/goals, scope, branch/PR binding, and secured scanner credentials. CLI keychain login is not Maven authentication; never put tokens on command lines.
 

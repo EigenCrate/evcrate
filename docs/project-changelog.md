@@ -2,8 +2,63 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-13
-**Status:** Core package release history; General Sonar remediation cycles partial offline handoff (8/8 phases offline verified; live host unexercised); General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+**Updated:** 2026-10-14
+**Status:** Core package release history; Cross-platform Sonar helpers Phase 06 behavior and platform qualification delivered (234/234 tests passing across 18 suites; review approved 7.5/10; Track D delivery 100% complete; Track Q platform qualification matrix independently recorded); Cross-platform Sonar helpers Phase 05 payload cutover and documentation delivered (227/227 tests passing across 14 suites; 21 assets/root, 42 both; 27 packed files; legacy .ps1 retired; Phase 06 qualification unobserved); Cross-platform Sonar helpers Phase 04 reusable execution-root guidance delivered (206/206 tests passing across 13 suites; review approved 7.5/10; Phase 06 platform qualification unobserved); Cross-platform Sonar helpers Phase 03 Node JaCoCo coverage helper delivered (191/191 tests passing; Node >=22.19.0 baseline); Cross-platform Sonar helpers Phase 02 Node issue-fetch helper delivered (152/152 tests passing); Cross-platform Sonar helpers Phase 01 contracts and parser runtime delivered (121/121 tests passing).
+
+### 2026-10-14 — feat(sonar): behavior and platform qualification (Phase 06)
+
+- **Behavior and platform qualification (Phase 06)**: Completed Phase 06 of plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` (`plans/261013-1920-sonar-cross-platform-helpers-and-root-guidance/phase-06-behavior-and-platform-qualification.md`). Verified Track D implementation delivery across isolated packaging, unpacked multi-target installation, and runtime closure outside repository checkout with zero repository dependencies. Established Track Q operational qualification matrix with 9 explicitly categorized gates.
+- **Changed files recorded & acceptance status**: Track D delivery status is **DONE (100%)** as of 2026-10-14; user approved (7.5/10 review); Track Q qualification remains independently pending without unobserved platform claims; 234/234 tests pass across 18 suites in `ext/sonarqube-test-quality`. Changed files: 5 test/utility files added (`tests/installed-helpers-fixture-utils.mjs`, `tests/node-helpers-installed-closure.test.mjs`, `tests/node-helpers-installed-convert.test.mjs`, `tests/node-helpers-installed-fetch.test.mjs`, `tests/node-helpers-installed-coverage.test.mjs`), 1 documentation update (`ext/sonarqube-test-quality/README.md`), 1 qualification report (`plans/reports/qualification-index-261014-sonar-cross-platform.md`).
+- **Genuinely isolated candidate packaging & installation**: Packed candidate package into temporary directory via `npm pack`, verifying candidate digest (`e01a6891277b0331d600b634474796eefbbc47d8`), 27 packaged files, and complete absence of `.ps1` helpers. Unpacked outside checkout and executed unpacked installer (`bin/install.js`) for `--target agents` (21 assets), `--target claude` (21 assets), and `--target both` (42 assets) with zero `node_modules` in unpacked or installed trees.
+- **Installed CLI runtime closure**: Verified standalone helpers (`convert-sonar-report.mjs`, `fetch-sonar-issues.mjs`, `calculate-jacoco-coverage.mjs`) and vendored SAX parser (`scripts/vendor/sax.cjs`) by absolute path from an unrelated CWD outside checkout, without `node_modules` or `NODE_PATH`/`NODE_OPTIONS` assistance.
+- **Process isolation and XML parser boundaries**: Verified native issue-fetcher execution with mock process, literal argv forwarding, child CWD handling, atomic 0600 sibling staging, child exit code propagation, and silent stderr draining. Verified offline JaCoCo coverage calculation with direct LINE/BRANCH aggregation on synthetic fixture (`tests/fixtures/synthetic-jacoco-report.xml`), exact BigInt rational threshold comparison (`100n * covered * q > p * total`), offline external DOCTYPE acceptance without network access, and fail-closed rejection of internal DTD subsets and custom entities (`[xml error]`).
+- **Track Q operational qualification matrix**: Formally registered all 9 operational qualification gates (Q-LINUX exercised partial on Fedora Linux x64 Node v24.16.0; Q-WINDOWS, Q-MACOS, Q-MINIMUM, Q-MAVEN-WINDOWS, Q-PRIVATE-WINDOWS, Q-SONAR-NATIVE, Q-HOST-ROOTS, Q-HOST-RESUME pending/not-exercised). Offline extension delivery does not claim universal platform support or server-verified remediation.
+
+### 2026-10-14 — feat(sonar): payload cutover, transactional retirement, and documentation (Phase 05)
+
+- **Payload cutover and transactional retirement (Phase 05)**: Completed Phase 05 of plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` (`plans/261013-1920-sonar-cross-platform-helpers-and-root-guidance/phase-05-payload-cutover-and-documentation.md`). Cut over extension installer payload from legacy PowerShell utilities (`.ps1`) to cross-platform Node ESM helpers (`.mjs`) and vendored SAX parser runtime across source, release tarball, and installed roots.
+- **Ten changed files recorded & acceptance status**: Acceptance status is **DONE (100%)** as of 2026-10-14; user approved (8/10 review); 227/227 tests passing across 14 suites in `ext/sonarqube-test-quality`. Changed files: 6 modified (`ext/sonarqube-test-quality/lib/install.js`, `ext/sonarqube-test-quality/bin/install.js`, `ext/sonarqube-test-quality/references/sonar-cli-commands.md`, `ext/sonarqube-test-quality/references/testing-and-coverage.md`, `ext/sonarqube-test-quality/README.md`, `ext/sonarqube-test-quality/tests/install.test.mjs`), 2 deleted legacy scripts (`ext/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1`, `ext/sonarqube-test-quality/scripts/calculate-jacoco-coverage.ps1`), 1 new provenance manifest (`ext/sonarqube-test-quality/lib/retirement-provenance.json`), and authentic binary fixtures (`ext/sonarqube-test-quality/tests/fixtures/retired/*.bin`).
+- **Installed payload & packaging expansion**: Updated `ASSET_INVENTORY` in `lib/install.js` from 18 to 21 assets per selected root (42 total for `--target both`), deploying Node helpers (`scripts/fetch-sonar-issues.mjs`, `scripts/calculate-jacoco-coverage.mjs`) and vendored SAX parser runtime (`scripts/vendor/sax.cjs`, `scripts/vendor/sax.LICENSE`, `scripts/vendor/sax-provenance.json`) to destination skill roots. Release tarball packages exactly 27 files (`package.json#files`); test fixtures are excluded.
+- **Bounded transactional retirement**: Implemented `planInstallation()` and `executeInstallation()` in `lib/install.js` with exact-path, trusted-release allowlist matching historical release SHA-256 digests (`lib/retirement-provenance.json`, release `v3.0.0` commit `e2e2c284`) to authorize removing `skills/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1` and `calculate-jacoco-coverage.ps1`.
+- **Fail-closed security & harmless absence**: Missing obsolete helpers in fresh installs or repeat upgrades are harmless; customized, modified, unknown copies, symlinks, or non-directory ancestors block installation fail-closed across all roots before publication, even with `--force --yes`. Dry-run CLI and library report planned removals, missing paths, and blockers without locks or disk mutations.
+- **Caught-failure rollback & exclusive restoration**: In-process rollback journal captures original bytes and file modes before unlink; unlinks execute before active publication. On caught failure, active additions are pruned, replacements restored, and removed originals restored exclusively (`COPYFILE_EXCL` / `O_EXCL` with explicit `fchmod`) only if destinations remain absent; concurrent recreations or unsafe ancestors are preserved and reported as partial rollback.
+- **Verification & closure**: Installation succeeds only after verifying that all 21 active payload files match packaged bytes and both legacy `.ps1` paths are absent in every selected root.
+- **Qualification boundaries**: All 227 tests pass on Linux dev environment (Node v24.16.0). Exact released Node 22.19.0 binary execution, native Windows (`pwsh`/`cmd`) execution/ACLs, macOS verification, live Sonar queries/uploads, and consuming-host runtime discovery remain explicitly pending Phase 06 qualification gates.
+
+### 2026-10-14 — feat(sonar): reusable execution-root guidance and three-root context contracts (Phase 04)
+
+- **Reusable execution-root guidance (Phase 04)**: Completed Phase 04 of plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` (`plans/261013-1920-sonar-cross-platform-helpers-and-root-guidance/phase-04-reusable-execution-root-guidance.md`). Delivered reusable three-root execution context specification contracts across policy references, agent prompts, and test suites. Standardizes canonical three-root separation (`installed_skill_root`, `checkout_root`, `execution_root`), path-aware containment with prefix-spoofing prevention, worktree and monorepo service acceptance, foreign repository rejection, Windows Maven recipe with quoted array splatting and location restoration, split verify/scan without intervening clean, dynamic `report-task.txt` metadata discovery, and saved-task resume.
+- **Ten changed files recorded & acceptance status**: Acceptance status is **DONE (100%)** as of 2026-10-14; review approved (Cycle 2 score 7.5/10, 0 critical issues, 5 warnings, 6 suggestions tracked for Phase 05/06 reconciliation per `plans/reports/code-reviewer-261014-0230-phase-04-execution-root-guidance-cycle-2.md`); 206/206 tests passing across 13 suites in `ext/sonarqube-test-quality` per `plans/reports/tester-261014-0218-phase04-execution-root-guidance.md`. Phase 04 records 10 changed files (9 tracked modified, 1 new test suite): `ext/sonarqube-test-quality/references/project-discovery.md` (three-root specification §1–§6), `ext/sonarqube-test-quality/references/local-analysis.md` (Windows Maven recipe & dynamic task discovery), `ext/sonarqube-test-quality/agents/sonar-evidence.md` (three-root context forwarding), `ext/sonarqube-test-quality/commands/cmd-sonar-remediate/SKILL.md` (root freezing), `ext/sonarqube-test-quality/references/sonar-cli-commands.md` (split verification), `ext/sonarqube-test-quality/references/testing-and-coverage.md` (offline coverage), `ext/sonarqube-test-quality/SKILL.md` (boundary routing), `ext/sonarqube-test-quality/evals/evals.json` (70 scenarios / 210 assertions), `ext/sonarqube-test-quality/tests/evals.test.mjs` (eval suite update), and `ext/sonarqube-test-quality/tests/execution-root-guidance.test.mjs` (15 new unit/fixture tests).
+- **Three-root execution model & path containment**: Formalizes `installed_skill_root` (extension directory resolved strictly from loaded entrypoint, never CWD), `checkout_root` (selected Git checkout or worktree root, distinguishing worktree checkout from Git administrative directory), and `execution_root` (per-target child process working directory; accepts monorepo service subdirectories where `execution_root != checkout_root`). Enforces `path.resolve` / `fs.realpathSync` canonicalization and path-component-aware containment (`..` boundary checks) to reject path traversal and sibling prefix collisions.
+- **Git identity verification & context freezing**: Enforces `git -C <execution_root> rev-parse --show-toplevel` equality with canonical `checkout_root`, verifying HEAD commit SHA and ref match while halting immediately on foreign nested repositories (`foreign-repository-rejected`). Freezes absolute roots, manifest path, approved launcher, and literal argv; re-validates child working directory on each dispatch.
+- **Toolchain & Windows Maven guidance**: Aligns Windows Maven invocation (`mvn.cmd`) with literal executable and whole-quoted string arrays via PowerShell splatting (`& $mvnCmd @mvnArgs`), avoiding backtick continuations or `Invoke-Expression`. Enforces immediate native exit code capture (`$savedExitCode = $LASTEXITCODE`) before `finally` directory restoration, ensuring test failures halt without executing upload-capable scanner goals. Intermediate verification requires clean build and test verification before scanner execution.
+- **Task metadata path discovery & resumption**: Discovers task file from effective build configuration (`target/sonar/report-task.txt` for Maven), persisting metadata in `<evidence-destination>/resume-checkpoint.json` before cleanup and resuming existing `ceTaskId` without re-upload or consuming additional budget `N`.
+- **Packaging allowlist vs. installer boundary**: Release tarball packaging remains at 28 files (`package.json#files`), and installed `ASSET_INVENTORY` remains frozen at 18 assets; legacy scripts remain until Phase 05 cutover.
+- **Qualification boundaries**: All 206 tests pass on Linux dev environment (Node v24.16.0). Exact Node 22.19.0 binary execution, native Windows (`pwsh`/`cmd`), macOS, and live Sonar server qualification remain unobserved Phase 06 qualification gates, not established support claims.
+
+### 2026-10-14 — feat(sonar): cross-platform Node JaCoCo coverage helper and exact rational arithmetic (Phase 03)
+
+- **Cross-platform JaCoCo coverage helper (Phase 03)**: Completed Phase 03 of plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` (`plans/261013-1920-sonar-cross-platform-helpers-and-root-guidance/phase-03-node-jacoco-coverage-helper.md`). Delivered pure Node ESM CLI/module in `ext/sonarqube-test-quality/scripts/calculate-jacoco-coverage.mjs` running under Node `>=22.19.0` with zero external npm dependencies, replacing the historical PowerShell helper script (`scripts/calculate-jacoco-coverage.ps1`) for offline class coverage verification.
+- **Structural SAX XML streaming and strict parser security**: Parses JaCoCo XML reports incrementally using vendored SAX (`scripts/vendor/sax.cjs`) with fatal UTF-8 decoding (`TextDecoder('utf-8', { fatal: true })`), strict entities (`strictEntities: true`), allowing ordinary external DOCTYPE declarations without fetching while strictly rejecting internal subsets and custom entity declarations (`parser.ondoctype`), duplicate attribute rejection via Proxy trap, unclosed element enforcement, and single root element validation (`<report>`), rejecting ad hoc regex XML parsing.
+- **Direct-counter class aggregation and validation hierarchy**: Aggregates direct child `LINE` and `BRANCH` counters of classes matching optional case-insensitive JavaScript RegExp (`--include-pattern <regex>`). Method, sourcefile, package, group, and report summary counters are strictly ignored during aggregation. Requires every evaluated class to provide a direct `LINE` counter (missing `LINE` is invalid input exiting 1); present zero-valued `LINE` counters are valid. Absent `BRANCH` counters are treated as undefined/empty and do not fail the combined metric.
+- **Exact BigInt rational arithmetic**: Evaluates strict combined coverage predicate (`(covered lines + covered branches) / (total lines + total branches) * 100 > threshold`, default 95) using exact BigInt rational cross-multiplication (`100n * covered * q > p * total`) to avoid floating-point rounding errors on near-safe-limit counters. Decimal thresholds (0..100) are parsed to rational `p/q`. Display percentages are formatted for output only and never influence the binary pass/fail verdict. Exits 0 on strict pass, 1 on invalid arguments/XML/counters, and 2 on threshold failure or empty matched scope.
+- **Packaging allowlist vs. installer boundary**: Release tarball contains 28 files (`package.json#files` includes `scripts/calculate-jacoco-coverage.mjs`), while installed `ASSET_INVENTORY` remains frozen at 18 assets; legacy `scripts/calculate-jacoco-coverage.ps1` remains in installed payloads until Phase 05 cutover.
+- **Test expansion and qualification boundaries**: Test suite expanded to 191 passing tests across 11 suites (added `tests/calculate-jacoco-coverage.test.mjs` with 39 comprehensive tests covering argument validation, threshold parsing, hierarchy traversal, exact rational arithmetic, malformed XML rejection, DTD/entity protection, and stream chunk splitting; review approved 8.5/10). All 191 tests pass on active Linux dev environment (Node v24.16.0). Exact Node 22.19.0 binary execution, Windows (`pwsh`/`cmd`), macOS, and live Sonar server qualification remain unobserved Phase 06 qualification gates.
+
+### 2026-10-14 — feat(sonar): cross-platform Node issue-fetch helper and atomic publication (Phase 02)
+
+- **Cross-platform Sonar issue-fetch helper (Phase 02)**: Completed Phase 02 of plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` (`plans/261013-1920-sonar-cross-platform-helpers-and-root-guidance/phase-02-node-issue-fetch-helper.md`). Delivered pure Node ESM CLI/module in `ext/sonarqube-test-quality/scripts/fetch-sonar-issues.mjs` running under Node `>=22.19.0` with zero external npm dependencies, replacing the historical PowerShell helper script (`scripts/fetch-sonar-issues.ps1`) for issue retrieval across platforms.
+- **Direct CLI invocation and shell injection safety**: Invokes native Sonar CLI executable (`sonar.exe` on Windows, `sonar` on POSIX, or explicit `--sonar-path`) directly via `spawn(..., { shell: false })`, eliminating shell interpolation hazards. Windows batch and command scripts (`.bat`, `.cmd`) are explicitly rejected during argument parsing to prevent `cmd.exe` command execution quirks.
+- **Atomic staging, permission tightening, and secret protection**: Spools child process stdout through `pipeline()` into a unique sibling temporary staging file (`.<basename>.<pid>.<timestamp>.<rand>.tmp`) with exclusive POSIX mode 0600 (`O_WRONLY | O_CREAT | O_EXCL`). Replaces destination only upon child exit 0 and stream close, tightening permissions to `(existingMode & 0600)` on existing files and rejecting symlinks or non-regular files. On child non-zero exit, signal termination, launch failure, or I/O error, removes staging file and preserves existing output file untouched. Drains child stderr silently to prevent query or session secret leakage. Propagates child exit code directly; wrapper errors exit 1 with fixed category diagnostics (`[argument]`, `[launch]`, `[signal]`, `[child]`, `[publication]`).
+- **Packaging allowlist vs. installer boundary**: Release tarball contains 27 files (`package.json#files` includes `scripts/fetch-sonar-issues.mjs`), while installed `ASSET_INVENTORY` remains frozen at 18 assets; legacy `scripts/fetch-sonar-issues.ps1` remains in installed payloads until Phase 05 cutover.
+- **Test expansion and qualification boundaries**: Test suite expanded to 152 passing tests across 10 suites (added `tests/fetch-sonar-issues.test.mjs` with 29 comprehensive tests covering argument parsing, process spawning, mock execution, atomic staging, mode tightening, failure cleanup, and signal handling; review approved 8.5/10). All 152 tests pass on active Linux dev environment (Node v24.16.0). Exact Node 22.19.0 binary execution, Windows (`pwsh`/`cmd`), macOS, and live Sonar server qualification remain unobserved Phase 06 qualification gates.
+
+### 2026-10-14 — feat(sonar): helper contracts, parser runtime, and qualification boundaries (Phase 01)
+
+- **Cross-platform Sonar helpers & runtime baseline (Phase 01)**: Completed Phase 01 of plan `261013-1920-sonar-cross-platform-helpers-and-root-guidance` (`plans/261013-1920-sonar-cross-platform-helpers-and-root-guidance/phase-01-helper-contracts-and-parser-runtime.md`). Uplifted standalone extension runtime baseline to Node `>=22.19.0` across `ext/sonarqube-test-quality/package.json#engines.node` and `ext/sonarqube-test-quality/lib/install.js:MIN_NODE_VERSION` ('22.19.0'), superseding historical Node 18.11 compatibility. Direct converter (`scripts/convert-sonar-report.mjs`) and future migrated helpers share this declared runtime floor; installer entrypoint (`bin/install.js`) asserts runtime early and exits 1 before filesystem mutation.
+- **Vendored SAX parser runtime and provenance closure**: Vendored upstream `sax@1.6.1` CommonJS implementation byte-for-byte from `lib/sax.js` as `ext/sonarqube-test-quality/scripts/vendor/sax.cjs` (50,818 bytes; SHA-256 `1cdc1270d987cb0f6ee66dd8efb01c50511aa14d17b6163bbbffb21df8cf1c06`), accompanied by BlueOak-1.0.0 license (`sax.LICENSE`) and authoritative provenance metadata (`sax-provenance.json`, upstream git commit `961ceeefcc5186005466f2085aeb36f31b161e37`, tarball integrity `sha512-42tBVwLWnaQvW5zc4HbZrTuWccECCZfBi92FDuwtqxasH+JbPB3/FOKb1m222K42R4WxuxzzMsTswfzgtSu64Q==`, advisories clean as of 2026-10-13 check). Pinned CommonJS module imports into ESM with zero runtime npm dependencies, zero repository modules, and no external bundler. Offline JaCoCo DOCTYPE header is accepted; internal DTD subset rejection is verified in test fixtures and will be enforced by the consuming Phase 03 JaCoCo helper; strict entity mode fails fast on undeclared entities.
+- **Packaging allowlist vs. installation inventory boundary**: Packed release tarball contains exactly 26 files (including the 3 vendor files under `scripts/vendor/`), while installed `ASSET_INVENTORY` remains frozen at 18 assets; vendored files are not yet deployed to destination skill roots until Phase 05 payload cutover.
+- **Verification and qualification boundaries**: Test suite expanded to 121 passing tests across 9 suites (added `tests/parser-runtime.test.mjs` verifying byte integrity, isolated-tmpdir load, JaCoCo DTD acceptance, and malformed XML rejection; updated `tests/install.test.mjs` asserting `22.18.x` rejection, `22.19.x` acceptance, and early exit 1 guard behavior). All 121 tests pass on active development environment (Node v24.16.0). Exact released Node 22.19.0 binary execution, Windows (`pwsh`/`cmd`) execution, macOS verification, and live Sonar server qualification remain unobserved Phase 06 qualification gates, not established support claims.
 
 ### 2026-10-13 — fix(release): normalize release version in companion input digests and guard manifest parity
 
@@ -707,90 +762,29 @@
 **Plan:** [Phase E03 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-03-embedded-four-view-ui.md)  
 **Evidence:** [validation](../plans/reports/tester-260921-1717-phase-e03-embedded-four-view-ui.md); [review](../plans/reports/code-review-260921-1718-phase-e03-embedded-four-view-ui.md)
 
-- Replaced view-owned acquisition with shared provider/reducer/views and a
-  temporary standalone picker (later removed by E05); DamHopper uses bounded
-  `MessagePort` without credentials, paths, sockets, or arbitrary network.
-- Added bridge 1.0.0's eight validated envelopes, single-use nonce ack, session/
-  generation fences, cancellation, late-response suppression, availability,
-  and revocation cleanup.
-- Kept Overview, paged History/detail, current account-wide policy labels, and
-  bound-source Evaluations with provenance and candidate masking.
-- Built `plugin/ui/index.html` as opaque-srcdoc inlined CSS/IIFE (328,337 bytes,
-  <=5 MiB), with no external assets/network/filesystem picker, `eval`, or
-  `Function`. Manifest/candidate include UI, `/plugins/evcrate.advisor`
-  navigation, and its SHA-256 inventory entry (64 records).
-- Verification: **68/68 tests passed** — 23 focused E03 UI tests, 14 viewer
-  browser/build tests, 22 worker tests, and 9 plugin contract tests. Host-enforced
-  CSP/sandbox, joint G2 LAN acceptance, E04 packaging, and G4 cutover remain
-  downstream gates.
+- Replaced view-owned acquisition with shared provider/reducer/views and a temporary standalone picker (later removed by E05); DamHopper uses bounded `MessagePort` without credentials, paths, sockets, or arbitrary network.
+- Added bridge 1.0.0's eight validated envelopes, single-use nonce ack, session/generation fences, cancellation, late-response suppression, availability, and revocation cleanup.
+- Kept Overview, paged History/detail, current account-wide policy labels, and bound-source Evaluations with provenance and candidate masking.
+- Built `plugin/ui/index.html` as opaque-srcdoc inlined CSS/IIFE (328,337 bytes, <=5 MiB), with no external assets/network/filesystem picker, `eval`, or `Function`. Manifest/candidate include UI, `/plugins/evcrate.advisor` navigation, and its SHA-256 inventory entry (64 records).
+- Verification: **68/68 tests passed** — 23 focused E03 UI tests, 14 viewer browser/build tests, 22 worker tests, and 9 plugin contract tests. Host-enforced CSP/sandbox, joint G2 LAN acceptance, E04 packaging, and G4 cutover remain downstream gates.
 
 ### 2026-09-22 — feat(plugin): qualify E04 independent package and Gate G3
 
-**Status:** Phase E04 DONE (2026-09-22); Gate G3 **QUALIFIED**; review approved **9.3/10**.  
-**Plan:** [Phase E04 plan](../plans/260920-1603-dam-hopper-advisor-plugin/phase-04-independent-package.md)  
-**Evidence:** [G3 qualification receipt](../plans/260920-1603-dam-hopper-advisor-plugin/reports/g3-qualification-receipt.md); [lifecycle review](../plans/reports/code-review-260922-2336-g3-qualification-lifecycle.md)
-
-- Verified the independently installable matched package `evcrate.advisor`
-  v0.1.0: **45 logical members**, **176,842 bytes compressed** (747,008 bytes
-  expanded), code-point-sorted exact closure, and archive SHA-256
-  `1ada5334671ae854e6c406930f8705de02d85e02198adcb07c41936002011f9a`
-  (`1ada5334...`).
-- Verified transactional stage/approve, matched UI/backend activation,
-  update/disable/remove, worker drain and context revocation, crash recovery,
-  and clean restart without DamHopper rebuild or EVCrate source mutation.
-- Verified rollback safety: current revoked grants and disabled intent dominate
-  restored package/settings; activation generations never rewind and restored
-  non-security settings are revalidated.
-- Verified root exact-7 release isolation: plugin staging is excluded from root
-  npm packaging and cannot become an eighth release asset.
-- Qualification evidence: plugin lifecycle **5/5**, package integrity/hostile
-  archive **5/5**, root isolation **1/1**, and companion DamHopper lifecycle
-  **8/8**. Standalone viewer retirement remains gated on E05/D06 G4.
+- Qualified independently installable package `evcrate.advisor` v0.1.0: 45 members, 176,842 bytes compressed, archive SHA-256 `1ada5334...`. Staging excluded from root npm packaging.
+- Qualification evidence: plugin lifecycle 5/5, package integrity 5/5, root isolation 1/1, companion DamHopper lifecycle 8/8. Gate G3 qualified; review approved 9.3/10.
 
 ### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
 
-**Status:** Phase 08 DONE (2026-09-19; 100%); **39/39 focused tests passed**.
-**Plan:** [Phase 08 plan](../plans/260917-2308-advisor-visual-metrics/phase-08-packaging-csp-preview-and-release-inventory.md)
-**Evidence:** `tests/viewer/package-inventory.test.mjs`; `tests/distribution/private-release-artifacts.test.mjs`
+- Added viewer TypeScript, Vite, and Playwright boundaries: strict ES2020 browser typechecking, loopback HTTP CSP on `127.0.0.1:4173`, and 298.5 kB package inventory.
+- Package inventory includes only built `viewer/dist/**` assets; exact 7 release assets and 33-file controller closure unchanged. 39/39 focused tests passed.
 
-- Added the viewer TypeScript, Vite, and Playwright boundaries: strict ES2020
-  browser typechecking, relative static assets, no sourcemaps, and one Chromium
-  project served from the built preview.
-- Added `build:viewer`, `build:all`, `viewer:preview`, and
-  `test:advisor-viewer`; release preparation now builds the root and viewer
-  together before collecting package inventory.
-- Preview binds strictly to loopback `127.0.0.1:4173` and emits the exact HTTP
-  CSP: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'
-  data:; connect-src 'none'; object-src 'none'; base-uri 'none';
-  frame-ancestors 'none'`.
-- Package inventory includes only built `viewer/dist/**` viewer assets; source,
-  configs, tests, maps, and `node_modules` remain excluded. The measured bundle
-  is **298.5 kB <= 5 MiB**.
-- Exact-seven top-level release assets and the exact 33-file controller closure
-  remain unchanged. The viewer is packed inside platform archives, never added
-  as a release asset.
-- Handoff: **Phase 09 — Focused qualification and performance benchmark**.
+### 2026-09-18–2026-09-19 — feat(viewer, advisor): historical React Explorer, browser traversal, and controller closure (Phases 02–07)
 
-### 2026-09-19 — feat(viewer): historical React Explorer and view architecture (Phase 07)
+- Completed React Explorer under `viewer/src/` (Phase 07), browser traversal scanner/metrics/counsel (Phases 04–06), and deterministic metrics kernel/controller closure (Phases 02–03). Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 
-- Added private static React explorer under `viewer/src/` with unified reducer, tab navigation, and telemetry-free view contracts. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
+### 2026-09-14–2026-09-15 — docs(release): historical Windows qualification and bounded support cutover (Phases 05–10)
 
-### 2026-09-18 — feat(advisor): historical browser traversal, metrics CLI, and counsel evaluation (Phases 04–06)
-
-- Completed read-only browser history traversal scanner (Phase 05), metrics CLI operation (Phase 04), and counsel evaluation protocol fixtures (Phase 06). Detailed records preserved in [changelog archive](./project-changelog-archive.md).
-
-### 2026-09-18 — feat(advisor): historical checkpoint digest, metrics kernel, and controller closure (Phases 02–03)
-
-- Completed the portable deterministic metrics kernel, exact history filters/formulas, and registered the generated four-file runtime closure in the 33-file controller inventory; focused test suites passed. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
-
-### 2026-09-15 — docs(release): complete Windows qualification and bounded support cutover (Phases 09–10)
-
-- Completed the hosted `windows-2025` x64 matrix for PowerShell 5.1/7 and Node `22.19.0`/`24.21.0` for standalone installer lifecycle (`install`, `repair`, `upgrade`, `rollback`, `uninstall`) and `version --json`.
-- Bounded support covers standalone installer and version reporting only. Detailed records preserved in [changelog archive](./project-changelog-archive.md).
-### 2026-09-14–2026-09-15 — feat(release): historical Windows qualification harness and CI workflow (Phases 05–08)
-
-- Historical Windows qualification milestone: self-contained qualification harness (Phase 05), semantic-release candidate/publisher wrappers (Phase 06), split producer/matrix/publisher CI workflow (Phase 07), and unprivileged PR smoke workflow with qualified asset labels (Phase 08).
-- Retained evidence: release orchestration 12/12, `npm run test:release` 29/29, scoped harness checks 60/60. Detailed phase records preserved in [changelog archive](./project-changelog-archive.md).
+- Completed the hosted `windows-2025` x64 matrix for PowerShell 5.1/7 and Node `22.19.0`/`24.21.0` for standalone installer lifecycle (Phases 09–10) and self-contained qualification harness/CI workflows (Phases 05–08). Detailed records preserved in [changelog archive](./project-changelog-archive.md).
 ## Historical entries
 
 Older phase detail is preserved in the [project changelog archive](./project-changelog-archive.md); this document remains the maintained phase mirror for the active milestone.
