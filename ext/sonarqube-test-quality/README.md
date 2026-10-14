@@ -58,9 +58,10 @@ Markdown is the default. The converter supports issue/hotspot searches, project/
 
 - **Single writer:** The orchestrator merges evidence into existing rows by target/finding ID, retaining local progress, historical issues and owner reviews. Evidence actors return observations inline.
 - **Coverage append & history tags:** Coverage summary and checks rows are tagged with cycle and analysis ID (or not-yet-bound) and appended rather than overwritten, preserving baseline and prior-round observations. Coverage work items merge by target and stable parent-assigned ID, retaining local progress and test-addition evidence; line moves do not break identity, passing tests do not prove coverage, and server aggregate metrics do not certify individual branch tasks without fresh matching granular evidence.
-- **Less repeated work:** Persist budget before edits and `correction_used=true` before correction edits. Persist a minimal in-flight intent (`dispatching/no-task-ID`, stage, target, pre-scan SHA/digests, time bounds) before upload dispatch, and verified task IDs immediately after upload before polling or the next target; batch other updates per stage result. All live in the same report. Never regenerate unchanged evidence for each child or poll.
+- **Less repeated work:** Persist budget before edits and `correction_used=true` before correction edits. Persist a minimal in-flight intent (`dispatching/no-task-ID`, stage, target, pre-scan commit SHA, time bounds) before upload dispatch, and verified task IDs immediately after upload before polling or the next target; batch other updates per stage result. All live in the same report. Never regenerate unchanged evidence for each child or poll.
 - **Safe initialization:** When creating a new report with the converter (`--output`), it writes exclusively with mode `0600` on POSIX and the `wx` flag, refusing to overwrite an existing report. The parent workflow must approve and secure the destination directory (`0700` recommended); POSIX mode does not set Windows ACLs, and manual template copies or subsequent orchestrator updates do not inherit converter flags automatically. Subsequent cycles use surgical parent updates, not blind conversion.
-- **Resume & recovery:** Resume revalidates actual source and context. An existing in-flight intent without a task ID requires verified native scanner task and invocation provenance; missing or ambiguous provenance blocks as `submission-unverified` and prohibits resubmission.
+- **Resume & incremental remediation:** Resume revalidates actual source context by parsing `sonar-report.md` directly for current stage, open issues, and coverage work items, continuing incremental fixes round-by-round within budget N. An existing in-flight intent without a task ID requires verified native scanner task and invocation provenance; missing or ambiguous provenance blocks as `submission-unverified` and prohibits resubmission.
+- **Complexity remediation rock foundation:** Refactoring high-complexity methods (`java:S3776`, cognitive/cyclomatic complexity) strictly enforces the Rock Foundation protocol in `testing-and-coverage.md`: inspect existing unit tests, author characterization tests first if coverage is inadequate, prove behavior passes on original code before splitting, and rerun tests post-refactor without weakening assertions.
 - **Truthful evidence:** Partial/errors render useful rows with CLI exit 2; malformed/unsupported input exits 1. Missing paging is unknown, not proof of completeness. Converted and maintained Markdown views are evidence, not automatic verdict engines; exit 0 does not certify success.
 - **Data-only boundary:** Messages and paths are untrusted data. Escaped table cells prevent syntax breakout, not model immunity.
 - **Native outputs remain native:** Builds and scanners still produce logs, coverage files and scratch directories. These are not duplicate maintained skill reports.
@@ -127,7 +128,7 @@ Companion command skill prompt:
 - [Bounded remediation command](commands/cmd-sonar-remediate/SKILL.md) — 17-stage orchestrator prompt sequencing independent host subagents within global budget $N$.
 ## Skill Evaluation
 
-`evals/evals.json` contains **70** behavioral instruction scenarios covering the full remediation cycle lifecycle:
+`evals/evals.json` contains **72** behavioral instruction scenarios covering the full remediation cycle lifecycle:
 - Local JUnit refactoring and coverage boundaries in default checkout (Scenarios 1, 2, 8, 10).
 - Authentication, CLI binding, and MQR severity handling (Scenarios 3, 4, 5, 9).
 - Jenkins push-to-scan triggers and authorization validation (Scenarios 6, 7).
@@ -142,14 +143,14 @@ Companion command skill prompt:
 - Applicability and metric validation: 0 tests rejected, justified no-test profile, unsupported coverage, stale reports, and metric aggregation (Scenarios 37–42).
 - Authority and security refusals: declined upload/commit, auth gap, role independence, unapproved scripts, TLS bypass refusal, and bounded actor (Scenarios 43–50, 62).
 - Evidence integrity: mutually exclusive branch/PR, background task failure, partial paging, consistency unknown, profile change rebaseline, input drift, disappearing findings, pending hotspots, serial scans, and hostile instruction neutralization (Scenarios 51–59, 61, 63, 64).
-- Three-root execution context and platform toolchains: delegated wrong-CWD execution, monorepo service acceptance (`execution_root != checkout_root`), ambiguous sibling POM halt, Windows Maven PowerShell array splatting (`& $mvnCmd @mvnArgs`), native exit code capture before `finally`, and task resume from build directories (`target/sonar/report-task.txt`) without re-upload (Scenarios 65–70).
+- Three-root execution context and platform toolchains: delegated wrong-CWD execution, monorepo service acceptance (`execution_root != checkout_root`), ambiguous sibling POM halt, Windows Maven PowerShell array splatting (`& $mvnCmd @mvnArgs`), native exit code capture before `finally`, task resume from build directories (`target/sonar/report-task.txt`) without re-upload, S3776 complexity rock-foundation characterization testing, and report-driven incremental resumption (Scenarios 65–72).
 
 ## Verification Status & Qualification Boundaries
 
 ### Offline Evidence and Merge Validation
 - **Historical single-report cutover:** Before this integration, 70 converter/installer/catalog-structure tests passed on Linux x64, Node 24.16.0, including coverage work-item association, independent local/server states, malformed inputs and unknown gap locations. That receipt does not qualify the merged native-helper payload.
 - **Merged package acceptance:** 174/174 tests passed across 10 suites on Linux x64, Node 24.16.0. The 26-file tarball installed 20 assets/root (40 for `both`) from unrelated CWD. Installed report conversion retained issues and distinct-target coverage work items, emitted one `0600` report and refused overwrites; the installed JaCoCo helper parsed an isolated XML fixture successfully. Source-wording pins and copied workflow simulations do not qualify consuming-agent behavior.
-- **Evaluation catalog:** 70 authored instruction scenarios are available. Structural validation is not execution of those scenarios or hosted-model qualification.
+- **Evaluation catalog:** 72 authored instruction scenarios are available. Structural validation is not execution of those scenarios or hosted-model qualification.
 
 ### Operational Qualification Matrix
 

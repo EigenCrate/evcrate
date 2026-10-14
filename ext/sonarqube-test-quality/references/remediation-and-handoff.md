@@ -11,6 +11,8 @@
 
 - Prioritize blocker/critical findings (blocker/high in MQR), then major reliability or maintainability issues (medium in MQR), then remaining in-scope findings. Assess actual impact, not severity alone.
 - Confirm each finding against code in the execution checkout before editing. Fix root causes in production code; keep unrelated cleanup out.
+- Route findings with high cognitive or cyclomatic complexity (such as `java:S3776` or cyclomatic complexity rules) directly to the Rock Foundation Protocol in [Testing and coverage](testing-and-coverage.md) before making any production code changes. Inspect existing unit tests for adequacy; if missing or insufficient, author characterization unit tests first, verify they pass against the unchanged original code to prove the baseline, and only then split and refactor.
+- Prohibit weakening, removing, or modifying characterization assertions during or after refactoring to make tests pass. If characterization tests fail after refactoring, treat the failure as an implementation defect in the refactored code; fix the production implementation until all original assertions pass cleanly.
 - For security hotspots, explain the relevant data flow, operational context, and threat assumptions for human owner review. Subagents must never mark hotspots resolved or accepted on the server; server resolution is performed exclusively by the human project owner.
 - Use small, valid synthetic fixtures. Do not use customer or production data.
 - Keep test assertions meaningful. Prefer AssertJ extraction/chaining or JUnit `assertAll` for related assertions rather than brittle assertion noise.

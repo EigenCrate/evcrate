@@ -631,11 +631,11 @@
     {
       "id": 57,
       "prompt": "Between test execution and scanner upload, an uncommitted hook modified an untracked source file in the repository. Can we proceed to upload?",
-      "expected_output": "No. An unexpected modification to untracked or tracked source files creates generator/input drift. The verified test output no longer matches the working tree state. Invalidate the round checkpoint, require clean re-verification, and investigate the drift.",
+      "expected_output": "No. An unexpected modification to untracked or tracked source files creates generator/input drift. The verified test output no longer matches the working tree state. Invalidate the round state, require clean re-verification, and investigate the drift.",
       "files": [],
       "assertions": [
         "Detects working tree drift between test verification and scanner upload.",
-        "Invalidates checkpoint when untracked or tracked files are modified out of band.",
+        "Invalidates round state when untracked or tracked files are modified out of band.",
         "Requires re-verifying tests before permitting server upload."
       ]
     },
@@ -771,12 +771,37 @@
     {
       "id": 70,
       "prompt": "A scanner run completed upload and generated `target/sonar/report-task.txt` with `ceTaskId: AX_TASK_99`, but the runner lost network connection during task polling. On resume, should the runner re-execute `mvn sonar:sonar`?",
-      "expected_output": "No. Discover the task file from the effective scanner metadata path (`target/sonar/report-task.txt`), verify that the source checkpoint has zero drift, and resume polling existing `ceTaskId: AX_TASK_99` directly via `sonar api get /api/ce/task?id=AX_TASK_99`. Resuming a verified task does not re-upload analysis and does not increment the remediation round budget N.",
+      "expected_output": "No. Discover the task file from the effective scanner metadata path (`target/sonar/report-task.txt`), verify that working tree state has no unverified edits, and resume polling existing `ceTaskId: AX_TASK_99` directly via `sonar api get /api/ce/task?id=AX_TASK_99`. Resuming a verified task does not re-upload analysis and does not increment the remediation round budget N.",
       "files": [],
       "assertions": [
         "Resumes polling the verified saved task ID without re-executing scanner upload.",
         "Discovers task metadata from the effective build directory (target/sonar/report-task.txt).",
         "Does not consume an additional fix round from the remediation round budget N."
+      ]
+    },
+    {
+      "id": 71,
+      "prompt": "Sonar reports java:S3776 (Cognitive Complexity of methods should not be too high) on `OrderService.processOrder()`. Existing unit tests do not cover all its discount and exception branches. Can we directly extract helper methods to reduce complexity?",
+      "expected_output": "No. Enforce the Rock Foundation protocol for S3776 / complexity remediation before modifying production code. Assess existing unit tests; since coverage of observable behavior is inadequate, write characterization unit tests FIRST covering branches, boundaries, exceptions, and side effects. Run and prove that characterization tests pass against the unchanged original implementation to establish an undisputed behavioral baseline. Ensure assertions test observable behavior contracts, not private helper names or internal decomposition. Then refactor the method to reduce complexity below threshold. Rerun the exact same characterization tests without modifying or weakening assertions, and rerun the full clean test suite to guarantee behavior is unchanged.",
+      "files": [],
+      "assertions": [
+        "Enforces the Rock Foundation protocol for S3776 complexity remediation before production edits.",
+        "Requires authoring characterization tests covering observable behavior before modifying production code.",
+        "Executes and proves characterization tests pass against unchanged original implementation before refactoring.",
+        "Requires characterization assertions to test observable contracts rather than private helper structure or extracted methods.",
+        "Demands rerunning the same characterization tests without weakening assertions and running full clean suite post-refactor."
+      ]
+    },
+    {
+      "id": 72,
+      "prompt": "We are resuming a remediation session after an interruption. The private evidence directory contains `sonar-report.md` tracking remaining in-scope findings and coverage work items, but no separate checkpoint JSON file exists. How should the orchestrator proceed?",
+      "expected_output": "Resume by parsing `sonar-report.md` directly as untrusted data. Extract the current stage, commit SHA, branch/PR selector, open issues, and coverage work items from the Markdown report. Do not require separate JSON/YAML checkpoint files or digest drift checks. Check for any pending in-flight task ID: if present, poll the task read-only without re-uploading; if absent and within budget N, continue incremental remediation on the next open issue or work item. Execute fresh native tests and independent review for each round's edits before upload.",
+      "files": [],
+      "assertions": [
+        "Resumes remediation by directly parsing the maintained Markdown report sonar-report.md.",
+        "Rejects requiring separate checkpoint JSON/YAML files or input-digest hashing.",
+        "Extracts open findings, coverage work items, and current round state to drive incremental remediation.",
+        "Enforces fresh native test execution and independent review for incremental round edits."
       ]
     }
   ]

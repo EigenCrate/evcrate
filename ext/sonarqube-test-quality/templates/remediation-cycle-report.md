@@ -9,8 +9,8 @@ Private: initialize once at `<evidence-destination>/sonar-report.md` in the appr
 | Run ID / updated at | |
 | N / entered round count / current cycle | |
 | Stage / correction used / outcome / halting trigger | |
-| Source SHA / active-input digest / generated-input digest / tree state | |
-| Pre/post lifecycle checkpoints / intended inputs / generated provenance | |
+| Source commit SHA / branch or PR / working tree state | |
+| Incremental run state / intended inputs / report-driven progress | |
 | Checkout / mode / source and test roots / exclusions | |
 | Frozen targets / branch or PR / module-language mapping | |
 | Profile / gate requirements / new-code baseline / active status vocabulary | |
@@ -18,10 +18,10 @@ Private: initialize once at `<evidence-destination>/sonar-report.md` in the appr
 | Role IDs / independence / review and rereview verdicts | |
 | Approved effects / upload authority: approver, time, targets | |
 | Commit authority / committed SHA | |
-| Pending submissions/tasks: stage, target/server/selector, pre-scan SHA/digests, invocation/submission-start bounds and verified actual times, dispatching/no-task-ID or task ID/status | |
+| Pending submissions/tasks: stage, target/server/selector, pre-scan commit SHA, invocation/submission-start bounds and verified actual times, dispatching/no-task-ID or task ID/status | |
 | Evidence destination / native output paths / privacy and retention | |
 
-Use the canonical 17 stages, 10 local statuses and six outcomes from [Remediation cycles](../references/remediation-cycles.md). Persist round/correction accounting before edits, each upload intent before dispatch, and each task ID before acknowledging polling/next target; batch other stage results. Resume revalidates source/context; an intent without verified task provenance blocks as submission-unverified, never authorizes resubmission. Record unknown/unavailable fields explicitly.
+Use the canonical 17 stages, 10 local statuses and six outcomes from [Remediation cycles](../references/remediation-cycles.md). Persist round/correction accounting before edits, each upload intent before dispatch, and each task ID before acknowledging polling/next target; batch other stage results. Resume parses this report directly to track remaining open issues and coverage work items; an intent without verified task provenance blocks as submission-unverified, never authorizes resubmission. Record unknown/unavailable fields explicitly.
 
 ## Issues and hotspots
 
@@ -49,7 +49,7 @@ One row per `(target, work-item ID)`: stable parent-assigned ID (distinct from S
 | Cycle | Target | Checkpoint | Task / analysis / gate | Completeness / consistency | Result |
 |---|---|---|---|---|---|
 
-Append compact rows for C0, entered rounds and final audit. Bind source/generated digests, task ID, certified and pre/post capture analysis IDs and exact gate; retain submission/capture times, paging totals/received/pages, issue/hotspot counts, errors, truncation and consistency. Result retains review/rereview, correction, audit, all finding transitions by ID with causation/owner-disposition references, deltas, outcome and rebaseline reasons. Partial paging or unknown consistency blocks success; an empty table proves nothing.
+Append compact rows for C0, entered rounds and final audit. Bind commit SHA, task ID, certified and pre/post capture analysis IDs and exact gate; retain submission/capture times, paging totals/received/pages, issue/hotspot counts, errors, truncation and consistency. Result retains review/rereview, correction, audit, all finding transitions by ID with causation/owner-disposition references, deltas, outcome and rebaseline reasons. Partial paging or unknown consistency blocks success; an empty table proves nothing.
 
 ## Blockers / next action
 

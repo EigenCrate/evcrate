@@ -2,8 +2,14 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-14
+**Updated:** 2026-10-15
 **Status:** Core package release history; combined Sonar single-report, coverage-work-item and native-helper candidate verified offline on Linux Node24.16.0 (174/174 tests across 10 suites, 20 assets/root, 40 both, 26 packaged files). Historical report receipts (59/70 tests), helper delivery receipts (234 tests/18 suites) and Track Q records remain dated below; they do not imply new live Sonar/LLM, minimum-runtime or platform qualification. General Snyk operational qualification and VS Code interactive rollout gates remain separate. Dated entries describe their original candidates.
+### 2026-10-15 — feat(sonar): S3776 complexity rock foundation and report-driven incremental remediation
+
+- **S3776 complexity rock foundation:** Added Section 3 to `references/testing-and-coverage.md` and routed in `remediation-and-handoff.md`, establishing the mandatory Rock Foundation protocol: evaluate existing unit tests before refactoring complex functions; author characterization tests first when coverage is inadequate; prove behavior passes against original code; assert observable contracts rather than private helper structure; and rerun tests unchanged post-refactor.
+- **Report-driven incremental cycles:** Aligned `references/remediation-cycles.md`, `commands/cmd-sonar-remediate/SKILL.md`, `agents/sonar-evidence.md`, and report template: removed heavy input-digest hashing checkpoints and `resume-checkpoint-drift` halting triggers; orchestrator parses `sonar-report.md` directly for open issues and coverage work items, continuing incremental fixes within budget N.
+- **Evals & verification:** Expanded `evals/evals.json` to 72 scenarios / 228 assertions adding S3776 rock foundation and report-driven resumption scenarios; 174/174 package tests pass across 10 suites.
+
 
 ### 2026-10-14 — fix(sonar): integrate report changes with current native helpers
 

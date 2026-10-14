@@ -39,7 +39,43 @@ Coverage verification requires strict mathematical, temporal, and contractual in
    - Passing local tests do not establish improved coverage without fresh coverage measurements.
    - Server aggregate metrics or quality gate passes do not certify specific branch tasks without fresh matching granular evidence; when unverified, retain explicit unverified or unavailable state.
    - Missing or empty work items represent unavailable evidence, never proof that zero coverage gaps remain.
-## 3. Optional Java and JaCoCo Recipes
+## 3. Complexity Remediation and Behavior Preservation (`java:S3776` and Cognitive Complexity)
+
+Refactoring methods flagged for high cognitive or cyclomatic complexity (such as SonarQube rule `java:S3776` for cognitive complexity, or language-specific cyclomatic complexity rules) requires strict behavioral discipline to avoid introducing regressions into business logic.
+
+### Refactoring Hazard
+Cognitive and cyclomatic complexity refactoring fundamentally reshapes control flow, conditional branching, nesting depth, loops, and method boundaries. When reorganizing complex logic without adequate guardrails, developers risk silently altering edge-case handling, inverted condition evaluations, error paths, or subtle side-effect sequencing.
+
+### Rock Foundation Protocol
+To guarantee behavioral preservation, follow this protocol strictly in order. Complete the assessment, characterization, assertion review, and passing original-code baseline before modifying production code:
+
+1. **Pre-refactor assessment:**
+   - Inspect existing unit tests covering the flagged method and enclosing class.
+   - Evaluate whether existing tests form a rock-solid behavioral foundation covering the method's observable business requirements, branching decisions, boundary conditions, and edge cases.
+   - If existing tests are adequate, they become the designated characterization suite.
+2. **Characterization test authoring:**
+   - If existing tests are absent, incomplete, or inadequate, author characterization unit tests FIRST, before altering any production code.
+   - Systematically characterize current behaviors across nominal inputs, boundary values, empty or null inputs, branch permutations, expected exceptions, and observable state transitions or side effects.
+3. **Observable assertion standard:**
+   - Assertions must verify strictly externally observable contracts: return values, output payloads, thrown exceptions, public state transitions, and external collaborator side effects (e.g., verified mock interactions).
+   - NEVER assert internal implementation structure, private helper method invocations, intermediate variable states, or extracted helper method names. Tests must validate *what* the method accomplishes, not *how* it is decomposed internally. Ensure assertions satisfy these standards before establishing the baseline.
+4. **Attributable baseline execution:**
+   - Execute the characterization suite (whether newly authored or existing designated tests meeting the observable assertion standard) against the **unchanged original implementation**.
+   - Verify that all characterization tests PASS. A failed test run or zero executed tests (`0/0`) must strictly block refactoring until resolved.
+   - Record the original source identity, test selectors, execution command, and actual counts/results in the result record to establish an undisputed, attributable behavioral baseline oracle.
+5. **Code split and refactor:**
+   - Safely split, decompose, and extract cohesive helper methods or modular structures to reduce the finding's applicable complexity metric below its configured rule threshold. `java:S3776` evaluates cognitive complexity; reducing cognitive complexity below threshold does not require simultaneously reducing cyclomatic complexity unless a distinct cyclomatic rule applies.
+   - Keep extracted helpers focused, appropriately scoped (private or package-private), with cohesive responsibilities and explicit parameter passing.
+6. **Post-refactor proof:**
+   - Rerun the exact same characterization tests without modifying, removing, or weakening any assertions.
+   - If any characterization assertion fails, treat the failure as an implementation defect in the refactored code—never weaken or alter the test.
+   - After characterization tests pass, execute the repository's clean native test suite to verify zero regressions across callers and the broader codebase.
+
+### Coverage vs. Assertion Strength
+- **Execution vs. verification:** Coverage metrics (such as JaCoCo line, branch, or instruction coverage, or LCOV) measure code execution paths, not assertion rigor or functional correctness.
+- **The behavioral oracle:** High coverage with shallow or absent assertions provides false confidence. Passing behavioral assertions executed against the original code constitute the true behavioral oracle; coverage metrics verify execution presence but cannot substitute for behavioral proof.
+
+## 4. Optional Java and JaCoCo Recipes
 
 For Java repositories using Maven and JaCoCo, apply these established recipes:
 
@@ -74,6 +110,6 @@ Aggregation & Exit Codes:
 
 The helper calculates local proxy `(covered lines + covered branches) / (total lines + total branches) * 100` using a strict `>` threshold (e.g., exactly 95.0% fails `>95%`). It provides local feedback only and cannot prove remote quality gate satisfaction.
 
-## 4. Remote Gate and Analysis Correlation
+## 5. Remote Gate and Analysis Correlation
 
 When remote gate verification is required, follow [CLI commands](sonar-cli-commands.md) and [Local analysis](local-analysis.md) for the active project key and revision. Missing credentials, missing scanner, stale analysis, or mismatched branch scope leaves the gate blocked/unverified, not complete.
