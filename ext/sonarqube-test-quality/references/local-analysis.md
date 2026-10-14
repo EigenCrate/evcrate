@@ -6,9 +6,11 @@ This reference defines execution rules for local Sonar scanner lifecycles, authe
 
 Local analysis and scanning must follow strict, verifiable stage ordering. Coverage report freshness must be verified before the report importer or submission stage, not necessarily before scanner preparation:
 
+Every lifecycle child uses the frozen per-target `execution_root` (`service_execution_root`) as explicit `cwd`, with approved `manifest_path` (`execution_manifest`) and launcher/literal argv. Re-check canonical containment, regular applicable manifest and Git top-level against `checkout_root` on every launch; service roots need not equal the checkout root. Resolve policy/helper paths from `installed_skill_root` or explicitly selected source skill root, never the child's cwd. See [project discovery §2](project-discovery.md#2-safe-actual-input-identity).
+
 ```text
 1. Preparation
-   ├── Actions: Clean only approved, regenerable build paths; remove stale scanner task files (e.g., report-task.txt) only after preserving unresolved task evidence in the persistent ledger (or when no unresolved task is pending resume); persist `ceTaskId`, target identity, and run provenance outside regenerable scanner directories; resolve approved dependencies.
+   ├── Actions: Clean only approved, regenerable build paths; never remove stale scanner task files while an unresolved task or dispatching/no-task-ID intent needs recovery. Return task/target/provenance inline for parent durability in sonar-report.md outside regenerable scanner directories; resolve approved dependencies.
    └── Effects: Writes to build scratch dirs; Network: None (or project-approved package restore).
 2. Instrumentation / Begin (if required by lifecycle shape)
    ├── Actions: Initialize scanner hooks, listeners, or analyzers (.sonarqube/, build-wrapper).
@@ -23,14 +25,14 @@ Local analysis and scanning must follow strict, verifiable stage ordering. Cover
    ├── Actions: Produce fresh, uncorrupted coverage reports (e.g., LCOV, JaCoCo XML, Cobertura).
    └── Effects: Writes coverage report files; Network: None.
 6. Import, Scanner Execution, and Upload
-   ├── Actions: Execute scanner analysis, importing freshly generated coverage and execution reports. In Shapes A, B, and C, scanner execution or the `end` command performs analysis upload; this step is upload-capable and strictly gated on explicit preflight upload authorization (recorded approval naming the target server, project key, and branch/PR).
+   ├── Actions: Execute scanner analysis, importing fresh coverage/execution reports. Scanner or Shape C `end` is upload-capable: require explicit preflight authorization naming server/project/branch-or-PR and, for bounded cycles, parent-approved durable per-target in-flight intent in sonar-report.md before dispatch per [remediation cycles §3](remediation-cycles.md#3-state-persistence-and-resume-protocol).
    └── Effects: Writes scanner working directory (e.g., .scannerwork/) and logs; Network: Preflight queries and analysis payload upload (when upload is authorized).
 7. Submission and Task Tracking
-   ├── Actions: Capture and record background task ID (`ceTaskId`) from scanner output or scanner-specific task files (e.g., Maven default `${project.build.directory}/sonar/report-task.txt`, `.scannerwork/report-task.txt`, or configured metadata working directory). Discover actual task path from effective scanner configuration rather than assuming fixed `.scannerwork/`. Verify that the task file is strictly newer than scanner invocation start time and matches target project key and server URL; bind `ceTaskId` to the active run's commit SHA and input content digest in the persistent record outside regenerable build directories before initiating polling.
-   └── Effects: Writes verified task tracking record; Network: None.
+   ├── Actions: Capture `ceTaskId` from scanner output or the discovered native task path (e.g., Maven `${project.build.directory}/sonar/report-task.txt`, `.scannerwork/report-task.txt`, `.sonar/report-task.txt`, or configured metadata directory). Resolve relative paths against the frozen per-target execution root; verify task-file mtime strictly newer than invocation start, invocation/checkout provenance and exact target/server/selector, binding task to pre-scan SHA/source/generated digests. Return inline; parent persists and acknowledges durability before actor polling or next target upload.
+   └── Effects: Returns verified task metadata inline for parent recording in the same sonar-report.md outside regenerable build paths, not an additional file; Network: None.
 8. Finalization
    ├── Actions: Poll server task status for recorded `ceTaskId`, correlate `ceTaskId → analysisId → quality gate status`, and retrieve gate verdict and condition breakdown.
-   └── Effects: Writes local gate summary; Network: Task status and quality gate status queries.
+   └── Effects: Returns task/analysis-bound gate evidence inline for parent recording in the same sonar-report.md, not an additional gate-summary file; Network: Task status and quality gate status queries.
 ```
 
 ## 2. Supported Scanner Lifecycle Shapes
@@ -188,9 +190,9 @@ Maintain strict separation between CLI query sessions and scanner process creden
 
 ### Task Metadata Path Discovery and Bound Resumption
 - **Dynamic metadata path discovery:** Scanner task metadata is not invariably written to `.scannerwork/report-task.txt`. Maven integrated lifecycles default to `${project.build.directory}/sonar/report-task.txt` (typically `<execution_root>/target/sonar/report-task.txt`), and projects may configure custom working directories. Discover the actual task file path from the effective scanner configuration.
-- **Persistent binding before cleanup:** Before executing any cleanup or retrying commands, persist verified `ceTaskId`, server URL, project key, commit SHA, and invocation timestamp outside regenerable build directories in `<evidence-destination>/resume-checkpoint.json`.
-- **Resume without re-upload:** If execution is interrupted during task waiting, resume polling the existing `ceTaskId`. Never re-execute the scanner or upload another analysis payload when a valid `ceTaskId` exists. Resuming a verified task does not consume from the remediation round budget `N`.
-- **Missing metadata blocks retry:** Missing or stale task metadata cannot authorize an automatic retry; halt immediately and require owner investigation.
+- **Persistent binding before cleanup:** Actor returns verified `ceTaskId`, server/project/selector, pre-scan SHA/source/generated digests, native task path and invocation/submission bounds inline. Parent persists them in the same private `<evidence-destination>/sonar-report.md` outside regenerable build directories and acknowledges durability before polling, cleanup or next target upload. No actor checkpoint file.
+- **Resume without re-upload:** Revalidate frozen roots/manifest, source/generated digests and recorded invocation provenance first. A verified known task resumes read-only polling, never preparation/build/scanner or another N entry. Source drift permits only recording terminal status, not certification. An interrupted `dispatching/no-task-ID` intent permits only verified fresh native task-file recovery and parent acknowledgement, never reuse or resubmission.
+- **Missing metadata blocks retry:** Missing, stale, wrong-target or ambiguous task metadata leaves `submission-unverified`, `blocked/incomplete`; it never proves that no upload occurred and cannot authorize an automatic retry.
 
 ### Recovery Actions Table
 Never execute generic cleanup scripts that could submit partial or invalid analysis to the Sonar server:
@@ -201,15 +203,15 @@ Never execute generic cleanup scripts that could submit partial or invalid analy
 | **Native Build / Test Failure** | Stop immediately. Preserve compiler and test failure logs for debugging. | **NEVER** run upload-capable scanner or `end` hook as cleanup. |
 | **Coverage Generation Failure** | Abort before scanner import. Inspect test runner and report generator logs. | Do not proceed to scanner execution with missing or stale coverage. |
 | **Scanner Execution Failure** | Record scanner logs. Verify scanner version and property compatibility. | Do not alter scanner version or download unapproved binaries. |
-| **Submission Timeout / Error** | If a background task ID (`ceTaskId`) was returned, poll that exact task. If no task was created, halt and inspect network status. | Do not blindly re-submit analysis or substitute the latest project quality gate. |
+| **Submission Timeout / Error** | Poll the exact verified task only after parent persistence/acknowledgement. An intent without task ID permits only verified fresh native task-file recovery bound to invocation/checkout/target/checkpoint; otherwise halt `submission-unverified`. No recovered ID does not prove no task was created. | Never blindly re-submit, reuse an interrupted intent, or substitute latest project gate. |
 
 ## 6. Labeled Offline Scenario Traces
 ### Scenario L-TR-01: Standalone scanner with fresh coverage verification
 - **Trace:**
   1. `npm test -- --coverage` outputs `coverage/lcov.info` from the tested commit SHA S1 at timestamp T1.
   2. Importer validates report freshness per the canonical two-factor rules in [Project discovery](project-discovery.md).
-  3. Scanner runs with project-discovered coverage properties (e.g., `-Dsonar.javascript.lcov.reportPaths=coverage/lcov.info`).
-  4. Server responds with `ceTaskId: AX123456789`, persisted in scanner-specific `report-task.txt`. Pipeline tracks exact task `AX123456789`.
+  3. For bounded cycles, parent durably records per-target upload intent and approves dispatch; scanner runs with authorized project-discovered coverage properties (e.g., `-Dsonar.javascript.lcov.reportPaths=coverage/lcov.info`).
+  4. Scanner receives `ceTaskId: AX123456789` in native `report-task.txt`. Actor returns verified metadata inline; parent persists/acknowledges before exact-task polling.
 
 ### Scenario L-TR-02: Preparation→Build→End abort on test failure
 - **Trace:**
@@ -220,9 +222,9 @@ Never execute generic cleanup scripts that could submit partial or invalid analy
 
 ### Scenario L-TR-03: Submission recovery after disconnect
 - **Trace:**
-  1. Scanner uploads analysis and receives `ceTaskId: TSK-8899`, persisted in scanner-specific `report-task.txt` (verified newer than scanner start).
-  2. Network connection drops before task status can be fetched.
-  3. On resume, the runner reads verified `ceTaskId: TSK-8899` from `report-task.txt` and queries `sonar api get "/api/ce/task?id=TSK-8899"` rather than triggering a new scanner run.
+  1. Parent durably records/approves bounded-cycle upload intent; scanner uploads and writes `ceTaskId: TSK-8899` in native `report-task.txt`.
+  2. Connection drops before parent receives/persists the ID; report retains `dispatching/no-task-ID`.
+  3. Resume recovers only a fresh task file with verified invocation/checkout/server/project/selector/pre-scan provenance. Parent persists/acknowledges TSK-8899, then actor queries `sonar api get "/api/ce/task?id=TSK-8899"`; missing/ambiguous provenance blocks `submission-unverified`, never a new scan.
 
 ### Scenario L-TR-04: TLS handshake failure
 - **Trace:**

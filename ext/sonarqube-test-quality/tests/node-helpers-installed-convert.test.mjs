@@ -41,8 +41,9 @@ describe('Installed convert-sonar-report.mjs execution outside checkout', () => 
     const sampleEvidence = {
       project: { key: 'isolated-demo', branch: 'feat/installed' },
       issues: [
-        { key: 'finding-1', severity: 'MAJOR', message: 'Test message for installed converter', line: 10 },
+        { key: 'finding-1', component: 'isolated-demo:src/example.js', severity: 'MAJOR', status: 'OPEN', message: 'Test message for installed converter', line: 10 },
       ],
+      measures: { component: { key: 'isolated-demo', measures: [{ metric: 'coverage', value: '87.5' }] } },
     };
 
     // 1. JSON format to stdout
@@ -63,9 +64,12 @@ describe('Installed convert-sonar-report.mjs execution outside checkout', () => 
       env: cleanEnvironment(),
     });
     assert.equal(resMd.status, 0, resMd.stderr);
-    assert.match(resMd.stdout, /# Sonar report \(JSON view\)/);
     assert.match(resMd.stdout, /finding-1/);
     assert.match(resMd.stdout, /isolated-demo/);
+    assert.match(resMd.stdout, /src\/example\.js/);
+    assert.match(resMd.stdout, /OPEN/);
+    assert.match(resMd.stdout, /coverage/);
+    assert.match(resMd.stdout, /87\.5/);
 
     // 3. Exclusive write fails when destination already exists
     const existingFile = path.join(unrelatedCwd, 'existing-output.md');

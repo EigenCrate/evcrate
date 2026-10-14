@@ -26,20 +26,12 @@ Execution context and input identity require deterministic discovery, canonicali
 
 ### 2.1 Three-Root Execution Identities
 
-```text
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                             THREE-ROOT EXECUTION IDENTITIES                            │
-├─────────────────────────┬───────────────────────────────┬──────────────────────────────┤
-│   INSTALLED SKILL ROOT  │         CHECKOUT ROOT         │        EXECUTION ROOT        │
-├─────────────────────────┼───────────────────────────────┼──────────────────────────────┤
-│ • Loaded extension dir  │ • Selected Git checkout/work- │ • Per-target child process   │
-│   (.agents/ or .claude/)│   tree root                   │   working directory (CWD)    │
-│ • Sibling references &  │ • Bound to commit SHA and ref │ • Service subdirectory or    │
-│   prompts resolve here  │ • Shared Git admin dir (.git) │   checkout root in monorepos │
-│ • Resolved via loaded   │   is NOT the worktree root    │ • Manifest path (e.g., POM)  │
-│   entrypoint, NEVER CWD │ • Validates Git identity      │ • NEVER required to equal Git│
-└─────────────────────────┴───────────────────────────────┴──────────────────────────────┘
-```
+| Identity | Binding and use |
+|---|---|
+| `installed_skill_root` / explicit source skill root | Loaded skill location; resolve policies/helpers here, never from process cwd or a competing installation. |
+| `checkout_root` | Selected Git checkout/worktree bound to SHA/ref; never the shared Git administrative directory. |
+| Per-target `execution_root` / `service_execution_root` | Child-process cwd, possibly a monorepo service; must be contained in checkout but need not equal it. |
+| `manifest_path` / `execution_manifest` | Approved regular manifest contained in checkout, including selected reactor manifests; independently frozen with target context. |
 
 1. **`installed_skill_root`:**
    - Path to the active extension installation containing skills and references (e.g., `<installed-root>/skills/sonarqube-test-quality`).
@@ -54,6 +46,8 @@ Execution context and input identity require deterministic discovery, canonicali
    - In monorepos, `execution_root` is the specific service directory (e.g., `<checkout_root>/services/auth`); in standard single-project repos, it equals `checkout_root`.
    - **Rule:** Never require `execution_root == checkout_root`. A service inside a monorepo is a valid execution root.
    - `manifest_path`: Absolute path to the approved regular build manifest (e.g., `<execution_root>/pom.xml` or selected reactor POM). Verify the manifest resolves to a regular file whose canonical path (`fs.realpathSync`) is contained within canonical `checkout_root` (allowing module POMs in `execution_root` or reactor POMs at `checkout_root`), explicitly rejecting symlinks that escape the repository tree. Missing manifest blocks only applicable toolchains.
+
+`service_execution_root` and `execution_manifest` are names for the per-target `execution_root` and `manifest_path` in caller context; they must identify the same frozen paths, not competing roots or manifests. For source-checkout use, bind the explicit source skill root independently of the service checkout. The caller's approved directory, selected Git checkout, installed/source skill root, and every target's execution root/manifest are independently resolved and forwarded; no one path is inferred from another or from persistent terminal state.
 
 ### 2.2 Canonicalization and Path-Component-Aware Containment
 
@@ -87,7 +81,7 @@ Capture repository and input identity while strictly preventing credential leaka
 - **Source and report mappings:** Record source roots, test roots, exclusions, module boundaries, and report-to-source mappings.
 - **Generated-input provenance:** Document the exact command and source commit producing generated inputs.
 - **Dirty-tree policy:** Preserve unrelated changes. Unrelated dirty files are permitted only when demonstrably outside analysis and build inputs. Build generator or hook drift invalidates affected evidence.
-- **Storage location:** Record private evidence artifacts outside the checkout or in an already-approved ignored location.
+- **Storage location:** Parent alone maintains the private `sonar-report.md`. Defaults automatically to `<checkout_root>/.sonar-evidence/`, ensuring `.sonar-evidence/` is added to `.gitignore` if not already present to avoid interactive path prompts. An explicit path outside the checkout can also be used. API JSON remains transient; native build/test/coverage/scanner outputs remain native tool artifacts, not a second report or resume checkpoint.
 
 ### 2.6 Two-Factor Report Freshness Verification
 
@@ -172,6 +166,3 @@ These scenario traces demonstrate policy compliance without requiring live netwo
 - **Context:** Repository contains two sibling modules `services/user/pom.xml` and `services/payment/pom.xml` with no root reactor POM and no target argument provided.
 - **Behavior:** Bounded candidate discovery finds multiple POM candidates. Because no explicit target or CI mapping exists, discovery halts immediately with `canonical_outcome: "blocked/incomplete"`, requesting user clarification. It never blindly selects the first discovered POM.
 
-## 6. Implementation Scope and Releasability Boundary
-
-This reference delivers authoring domain policy within the extension source tree. Standalone installer manifests (`lib/install.js`) and tests retain the legacy 10-asset payload until Phase 06 updates the inventory to the planned 18-asset dual-root payload. Phase 02 artifacts are source-tree references and must not be published or released as an installed package prior to Phase 06.

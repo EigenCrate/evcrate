@@ -1,6 +1,19 @@
 # Project Changelog Archive
 
-Historical phase entries moved from [project-changelog.md](./project-changelog.md) to keep the maintained phase mirror below the repository's 800-line documentation limit. Paths and evidence are preserved; current Phase 09 milestone status remains in the main changelog.
+Historical phase entries moved from [project-changelog.md](./project-changelog.md) to keep the maintained phase mirror below the repository's 800-line documentation limit. Paths and evidence are preserved; active milestone status remains in the main changelog.
+
+### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
+
+**Status:** Phase 08 DONE (2026-09-19; 100%); **39/39 focused tests passed**.  
+**Plan:** [Phase 08 plan](../plans/260917-2308-advisor-visual-metrics/phase-08-packaging-csp-preview-and-release-inventory.md)  
+**Evidence:** `tests/viewer/package-inventory.test.mjs`; `tests/distribution/private-release-artifacts.test.mjs`
+
+- Added the viewer TypeScript, Vite, and Playwright boundaries: strict ES2020 browser typechecking, relative static assets, no sourcemaps, and one Chromium project served from the built preview.
+- Added `build:viewer`, `build:all`, `viewer:preview`, and `test:advisor-viewer`; release preparation now builds the root and viewer together before collecting package inventory.
+- Preview binds strictly to loopback `127.0.0.1:4173` and emits the exact HTTP CSP: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`.
+- Package inventory includes only built `viewer/dist/**` viewer assets; source, configs, tests, maps, and `node_modules` remain excluded. The measured bundle is **298.5 kB <= 5 MiB**.
+- Exact-seven top-level release assets and the exact 33-file controller closure remain unchanged. The viewer is packed inside platform archives, never added as a release asset.
+- Handoff: **Phase 09 — Focused qualification and performance benchmark**.
 
 ### 2026-09-15 — feat(ci): unprivileged Windows PR smoke and qualified asset labels (Phase 08)
 

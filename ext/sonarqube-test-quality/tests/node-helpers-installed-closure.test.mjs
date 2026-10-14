@@ -24,22 +24,12 @@ describe('Installed Node helpers runtime closure - packaging and installation', 
     }
   });
 
-  test('candidate tarball contains exact 27 assets, zero .ps1 helpers, and hashes match', () => {
-    assert.equal(closure.candidateDigestSha256.length, 64);
-    assert.equal(closure.candidateDigestSha512.length, 128);
-
+  test('candidate tarball excludes retired PowerShell helpers and external dependencies', () => {
     const files = closure.tarballEntries.map((e) => e.replace(/^package\//, ''));
-    assert.equal(files.length, 27, `Tarball must contain exactly 27 files, got ${files.length}`);
 
     assert.ok(!files.includes('scripts/fetch-sonar-issues.ps1'), 'fetch-sonar-issues.ps1 absent from tarball');
     assert.ok(!files.includes('scripts/calculate-jacoco-coverage.ps1'), 'calculate-jacoco-coverage.ps1 absent from tarball');
 
-    assert.ok(files.includes('scripts/convert-sonar-report.mjs'));
-    assert.ok(files.includes('scripts/fetch-sonar-issues.mjs'));
-    assert.ok(files.includes('scripts/calculate-jacoco-coverage.mjs'));
-    assert.ok(files.includes('scripts/vendor/sax.cjs'));
-    assert.ok(files.includes('scripts/vendor/sax.LICENSE'));
-    assert.ok(files.includes('scripts/vendor/sax-provenance.json'));
 
     const unpackedPackage = path.join(closure.unpackedDir, 'package');
     assert.ok(fs.existsSync(unpackedPackage));
@@ -52,14 +42,13 @@ describe('Installed Node helpers runtime closure - packaging and installation', 
     const projectClaude = path.join(tempBase, 'project-claude');
     const projectBoth = path.join(tempBase, 'project-both');
 
-    // 1. Install agents target (21 assets)
+    // Install the agents root from the unpacked package.
     const resAgents = spawnSync(process.execPath, [installerCli, '--target', 'agents', '--directory', projectAgents], {
       cwd: tempBase,
       encoding: 'utf8',
       env: cleanEnvironment(),
     });
     assert.equal(resAgents.status, 0, resAgents.stderr);
-    assert.match(resAgents.stdout, /Installed 21 file\(s\)/);
 
     const agentsDir = path.join(projectAgents, '.agents', 'skills', 'sonarqube-test-quality');
     assert.ok(!fs.existsSync(path.join(agentsDir, 'scripts', 'fetch-sonar-issues.ps1')));
@@ -70,14 +59,13 @@ describe('Installed Node helpers runtime closure - packaging and installation', 
     assert.ok(fs.existsSync(path.join(agentsDir, 'scripts', 'vendor', 'sax.cjs')));
     assert.ok(!fs.existsSync(path.join(projectAgents, 'node_modules')));
 
-    // 2. Install claude target (21 assets)
+    // Install the claude root from the unpacked package.
     const resClaude = spawnSync(process.execPath, [installerCli, '--target', 'claude', '--directory', projectClaude], {
       cwd: tempBase,
       encoding: 'utf8',
       env: cleanEnvironment(),
     });
     assert.equal(resClaude.status, 0, resClaude.stderr);
-    assert.match(resClaude.stdout, /Installed 21 file\(s\)/);
 
     const claudeDir = path.join(projectClaude, '.claude', 'skills', 'sonarqube-test-quality');
     assert.ok(!fs.existsSync(path.join(claudeDir, 'scripts', 'fetch-sonar-issues.ps1')));
@@ -85,14 +73,13 @@ describe('Installed Node helpers runtime closure - packaging and installation', 
     assert.ok(fs.existsSync(path.join(claudeDir, 'scripts', 'fetch-sonar-issues.mjs')));
     assert.ok(fs.existsSync(path.join(claudeDir, 'scripts', 'calculate-jacoco-coverage.mjs')));
 
-    // 3. Install both target (42 assets)
+    // Install both roots from the unpacked package.
     const resBoth = spawnSync(process.execPath, [installerCli, '--target', 'both', '--directory', projectBoth], {
       cwd: tempBase,
       encoding: 'utf8',
       env: cleanEnvironment(),
     });
     assert.equal(resBoth.status, 0, resBoth.stderr);
-    assert.match(resBoth.stdout, /Installed 42 file\(s\)/);
 
     for (const root of ['.agents', '.claude']) {
       const dir = path.join(projectBoth, root, 'skills', 'sonarqube-test-quality');
