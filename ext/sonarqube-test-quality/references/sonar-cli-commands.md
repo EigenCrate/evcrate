@@ -24,13 +24,25 @@ Follow pagination until exhausted before claiming a complete list; carry all pag
 
 Discover the server status vocabulary and fetch all issues in the frozen target/scope, not just default active statuses (Standard defaults to `OPEN,CONFIRMED`; vocabulary varies). Preserve historical/server-resolved findings alongside local progress. Use severity filters only for an explicitly requested scope after checking server mode: Standard uses `BLOCKER,CRITICAL,MAJOR,MINOR,INFO`; MQR uses `BLOCKER,HIGH,MEDIUM,LOW,INFO`. Do not pass Standard values to MQR.
 
-Optional branch-only helper (requires PowerShell):
+### Issue-fetch helper
 
-```powershell
-pwsh -File <skill-dir>/scripts/fetch-sonar-issues.ps1 -ProjectKey <key> -Branch <branch> -Format json
+Cross-platform Node issue-fetch helper (`scripts/fetch-sonar-issues.mjs`, Node >=22.19.0 ESM):
+
+```bash
+node <installed-skill-root>/scripts/fetch-sonar-issues.mjs --project-key <key> [--branch <branch>] [--format json] [--output <report-path>]
 ```
 
-It forwards filters and can stream stdout; it does not check auth, bind PRs, or exhaust pagination. Use CLI commands for those steps. Its JSON output follows the installed CLI; if it is not an API-compatible response, use `sonar api get` for converter input. Do not turn optional `-OutputFile` exports into a mandatory raw-page archive.
+Supported options:
+- `--project-key <key>`: SonarQube project key (required).
+- `--branch <branch>`: Optional target branch.
+- `--statuses <statuses>`: Optional comma-separated issue statuses (e.g., `OPEN,CONFIRMED`).
+- `--severities <sevs>`: Optional comma-separated issue severities (`BLOCKER,CRITICAL,MAJOR,MINOR,INFO` or MQR equivalents).
+- `--format <fmt>`: Output format: `toon` (default), `json`, or `table`.
+- `--output <path>`: Destination file path. Spools stdout to a secure staging file (`0600`) and atomically replaces destination on success; preserves existing output on failure.
+- `--cwd <path>`: Execution directory for child process.
+- `--sonar-path <path>`: Explicit path to native Sonar CLI executable (rejects `.bat` and `.cmd`).
+
+The helper forwards query filters and can stream stdout; `--output` is an optional standalone export, not a maintained raw-page archive. It does not check authentication, bind PRs, exhaust pagination or generate coverage work items. Use direct Sonar CLI commands for those operations and verify JSON matches an API-compatible shape before converter input. Pass the approved per-target execution root explicitly with `--cwd`.
 
 ## Check the quality gate
 
@@ -78,7 +90,7 @@ sonar api get "/api/issues/search?projectKeys=<project-key>&branch=<branch>&ps=5
 node <skill-dir>/scripts/convert-sonar-report.mjs --input - --output <evidence-destination>/sonar-report.md
 ```
 
-The orchestrator assembles `run`, `issues`, `hotspots`, `measures`, `qualityGate`, and optional `coverageWorkItems` in one envelope; search/measures fields accept response objects or arrays of captured pages, and `qualityGate` accepts one response or an array of per-target responses. `coverageWorkItems` carries granular line/branch observations from fresh native coverage reports and source inspection (no automated native parser or gap inference). Attach `target`/`projectKey` independently to each target's captures/gates; conditions are not bound by array position. Optionally carry requested `metricKeys` on the envelope/run/measure response as a comma-separated string or string array. All measure components stay visible, with one compact row for absent coverage/new-code coverage and other requested/observed metrics; missing data does not certify applicability. Absent issues/hotspots sections are marked missing in combined envelopes, not silently counted as zero. This creates all report sections together (`Coverage summary and checks` with 5 columns and `Coverage work items` with 6 columns). Later cycles are parent-managed surgical merges by target and finding/work-item ID, never another converter invocation overwriting the report. Preserve historical rows and local verification separately from server state.
+The orchestrator assembles `run`, `issues`, `hotspots`, `measures`, `qualityGate`, and optional `coverageWorkItems` in one envelope; search/measures fields accept response objects or arrays of captured pages, and `qualityGate` accepts one response or an array of per-target responses. `coverageWorkItems` carries granular line/branch observations from fresh native coverage reports and source inspection; the converter does not ingest native artifacts or extract gaps. The separate JaCoCo helper structurally parses direct class counters for aggregate checks, not automatic work-item generation. Attach `target`/`projectKey` independently to each target's captures/gates; conditions are not bound by array position. Optionally carry requested `metricKeys` on the envelope/run/measure response as a comma-separated string or string array. All measure components stay visible, with one compact row for absent coverage data and explicit rows for omitted requested metrics. Keep API JSON transient; the report is the durable readable record.
 
 The converter does **not** fetch, authenticate, infer a clean verdict, execute Markdown, or validate freshness/task-analysis binding. Explicit incomplete paging, incomplete coverage work-item identity, or API errors emit useful Markdown with exit **2**; missing paging is recorded as unknown, not complete. Missing metrics, absent work items, or missing capture sections are not zero/pass and do not themselves change exit status. Malformed/unsupported input and I/O failures exit **1**. New output files use POSIX mode `0600`; secure the approved destination directory separately and do not infer Windows ACL privacy. Existing outputs (including link aliases) fail closed with `EEXIST`. Optional `--format json` is a compact utility only, not the maintained workflow artifact.
 
@@ -95,8 +107,17 @@ For full analysis through Jenkins, read [full scan](full-scan-workflow.md).
 For an explicitly requested local Maven scan (integrated build/scanner shape, requiring recorded preflight upload authorization per [Local analysis](local-analysis.md)):
 
 ```powershell
-mvn -B clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:<configured-version>:sonar
+# Step 1: Clean native build, test, and fresh coverage verification
+mvn -B clean verify
+
+# Step 2: Intermediate inspection - verify test execution logs, validate two-factor
+# fresh coverage reports, and confirm zero working copy drift before any upload
+
+# Step 3: Integrated scanner goal execution with identical reactor/modules/profiles and NO clean
+mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:<configured-version>:sonar
 ```
+
+On Windows or when executing across service directories, run from the approved `execution_root`, pass explicit `-f <manifest-path>`, and use PowerShell argument splatting with whole quoted `-Dkey=value` strings per [Local analysis §3.2](local-analysis.md#windows-maven-recipe-and-cross-platform-process-boundaries).
 
 Use project-configured version/goals, scope, branch/PR binding, and secured scanner credentials. CLI keychain login is not Maven authentication; never put tokens on command lines.
 

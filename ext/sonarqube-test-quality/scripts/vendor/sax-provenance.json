@@ -1,0 +1,28 @@
+{
+  "name": "sax",
+  "version": "1.6.1",
+  "license": "BlueOak-1.0.0",
+  "sourceUrl": "https://registry.npmjs.org/sax/-/sax-1.6.1.tgz",
+  "gitCommit": "961ceeefcc5186005466f2085aeb36f31b161e37",
+  "gitRepository": "https://github.com/isaacs/sax-js",
+  "tarballIntegrity": "sha512-42tBVwLWnaQvW5zc4HbZrTuWccECCZfBi92FDuwtqxasH+JbPB3/FOKb1m222K42R4WxuxzzMsTswfzgtSu64Q==",
+  "files": [
+    {
+      "sourcePath": "package/lib/sax.js",
+      "vendoredPath": "ext/sonarqube-test-quality/scripts/vendor/sax.cjs",
+      "sha256": "1cdc1270d987cb0f6ee66dd8efb01c50511aa14d17b6163bbbffb21df8cf1c06",
+      "sizeBytes": 50818
+    },
+    {
+      "sourcePath": "package/LICENSE.md",
+      "vendoredPath": "ext/sonarqube-test-quality/scripts/vendor/sax.LICENSE",
+      "sha256": "8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004",
+      "sizeBytes": 1552
+    }
+  ],
+  "advisoriesChecked": {
+    "date": "2026-10-13",
+    "status": "clean",
+    "notes": "No open CVEs or known high/critical security advisories affecting sax@1.6.1. Package is vendored as offline CommonJS parser (.cjs) with no external runtime dependencies."
+  }
+}

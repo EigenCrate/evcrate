@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "provenanceVersion": 1,
+  "description": "Immutable historical release provenance for retired SonarQube PowerShell helpers",
+  "retiredAssets": [
+    {
+      "destination": "skills/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1",
+      "knownVariants": [
+        {
+          "version": "1.0.0",
+          "release": "v3.0.0",
+          "commit": "e2e2c2849eb667fcbb19eee66d5c67f8f42c8ef7",
+          "introducedInCommit": "1948a08092285108605342fc7dcfb2f763ebf90f",
+          "length": 1466,
+          "sha256": "b63eada507cf70b79f5a29110e1204a9273edc30d9200c8ae9ed9604c734f087",
+          "reproductionCommand": "git show v3.0.0:ext/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1"
+        }
+      ]
+    },
+    {
+      "destination": "skills/sonarqube-test-quality/scripts/calculate-jacoco-coverage.ps1",
+      "knownVariants": [
+        {
+          "version": "1.0.0",
+          "release": "v3.0.0",
+          "commit": "e2e2c2849eb667fcbb19eee66d5c67f8f42c8ef7",
+          "introducedInCommit": "1948a08092285108605342fc7dcfb2f763ebf90f",
+          "length": 2606,
+          "sha256": "1196999e702d55e3cdaf2e45b1e9193833151ce174f81403b5f64a8e29c1b2a9",
+          "reproductionCommand": "git show v3.0.0:ext/sonarqube-test-quality/scripts/calculate-jacoco-coverage.ps1"
+        }
+      ]
+    }
+  ]
+}

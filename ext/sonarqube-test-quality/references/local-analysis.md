@@ -6,6 +6,8 @@ This reference defines execution rules for local Sonar scanner lifecycles, authe
 
 Local analysis and scanning must follow strict, verifiable stage ordering. Coverage report freshness must be verified before the report importer or submission stage, not necessarily before scanner preparation:
 
+Every lifecycle child uses the frozen per-target `execution_root` (`service_execution_root`) as explicit `cwd`, with approved `manifest_path` (`execution_manifest`) and launcher/literal argv. Re-check canonical containment, regular applicable manifest and Git top-level against `checkout_root` on every launch; service roots need not equal the checkout root. Resolve policy/helper paths from `installed_skill_root` or explicitly selected source skill root, never the child's cwd. See [project discovery §2](project-discovery.md#2-safe-actual-input-identity).
+
 ```text
 1. Preparation
    ├── Actions: Clean only approved, regenerable build paths; never remove stale scanner task files while an unresolved task or dispatching/no-task-ID intent needs recovery. Return task/target/provenance inline for parent durability in sonar-report.md outside regenerable scanner directories; resolve approved dependencies.
@@ -26,8 +28,8 @@ Local analysis and scanning must follow strict, verifiable stage ordering. Cover
    ├── Actions: Execute scanner analysis, importing fresh coverage/execution reports. Scanner or Shape C `end` is upload-capable: require explicit preflight authorization naming server/project/branch-or-PR and, for bounded cycles, parent-approved durable per-target in-flight intent in sonar-report.md before dispatch per [remediation cycles §3](remediation-cycles.md#3-state-persistence-and-resume-protocol).
    └── Effects: Writes scanner working directory (e.g., .scannerwork/) and logs; Network: Preflight queries and analysis payload upload (when upload is authorized).
 7. Submission and Task Tracking
-   ├── Actions: Capture `ceTaskId` from scanner output or native task files (`.scannerwork/report-task.txt`, `.sonar/report-task.txt`); verify fresh invocation provenance and exact target/server/selector, binding task to pre-scan SHA/source/generated digests. Return inline; parent persists and acknowledges durability before actor polling or next target upload.
-   └── Effects: Returns verified task metadata inline for parent recording in the same sonar-report.md, not an additional file; Network: None.
+   ├── Actions: Capture `ceTaskId` from scanner output or the discovered native task path (e.g., Maven `${project.build.directory}/sonar/report-task.txt`, `.scannerwork/report-task.txt`, `.sonar/report-task.txt`, or configured metadata directory). Resolve relative paths against the frozen per-target execution root; verify task-file mtime strictly newer than invocation start, invocation/checkout provenance and exact target/server/selector, binding task to pre-scan SHA/source/generated digests. Return inline; parent persists and acknowledges durability before actor polling or next target upload.
+   └── Effects: Returns verified task metadata inline for parent recording in the same sonar-report.md outside regenerable build paths, not an additional file; Network: None.
 8. Finalization
    ├── Actions: Poll server task status for recorded `ceTaskId`, correlate `ceTaskId → analysisId → quality gate status`, and retrieve gate verdict and condition breakdown.
    └── Effects: Returns task/analysis-bound gate evidence inline for parent recording in the same sonar-report.md, not an additional gate-summary file; Network: Task status and quality gate status queries.
@@ -40,7 +42,10 @@ Rather than hardcoding language-specific adapters, workflows conform to one of t
 ### Shape A: Integrated Build / Scanner
 - **Description:** Build tool directly incorporates Sonar analysis plugins (e.g., Maven `sonar:sonar`, Gradle `sonar`).
 - **Flow:** `Preparation → Build + Test + Coverage → Integrated Scanner Goal → Submission Tracking → Finalization`.
-- **Constraint:** Test execution logs and freshly generated coverage artifacts must be explicitly verified before executing the upload-capable scanner goal. If single-command goal chaining prevents intermediate inspection, split execution into a native verification run (`clean verify`) followed by the scanner goal invocation, or enforce build-plugin configuration that fails immediately on missing or stale coverage. Scanner goal execution is upload-capable and requires preflight upload authorization.
+- **Constraint:** Test execution logs and freshly generated coverage artifacts must be explicitly verified before executing the upload-capable scanner goal. If single-command goal chaining (such as `mvn clean verify sonar:sonar`) prevents intermediate inspection, split execution into:
+  1. **Native verification run:** `mvn clean verify` to execute native compilation, tests, and fresh coverage generation.
+  2. **Intermediate inspection:** Verify test logs, validate fresh coverage reports per canonical two-factor rules, and confirm zero working copy drift.
+  3. **Integrated scanner goal execution:** Execute the scanner goal (`mvn org.sonarsource.scanner.maven:sonar-maven-plugin:<configured-version>:sonar`) retaining the identical checkout, module/reactor selection, active profiles, compiled artifacts, and fresh coverage reports with **NO intervening `clean`**. Multi-module lifecycles may require project-approved `install`, but never add `install` universally unless configured and approved. Scanner goal execution is upload-capable and requires explicit preflight upload authorization.
 
 ### Shape B: Standalone Scanner
 - **Description:** Native build and tests run first; an independent scanner CLI analyzes the repository and imports pre-generated artifacts.
@@ -52,14 +57,113 @@ Rather than hardcoding language-specific adapters, workflows conform to one of t
 - **Flow:** `Begin Hook → Native Build → Native Test → Coverage Generation → End Hook / Upload → Submission`.
 - **Constraint:** The upload-capable `end` hook is **never** a cleanup command. If build or tests fail, abort the lifecycle without executing the upload command.
 
-## 3. Native Semantic Parity Verification
+<a id="3-native-semantic-parity-verification"></a>
+## 3. Native Semantic Parity Verification and Windows Process Boundaries
 
+### 3.1 Native Semantic Parity Verification
 - **Semantic Drift Risk:** Instrumented builds may mask or introduce compiler warnings, test race conditions, or optimization side effects.
 - **Mandatory Native Verification:** When scanner instrumentation or wrappers alter compiler flags, build hooks, or analysis analyzers (such as C/C++ build-wrapper or .NET `begin` steps), a separate clean uninstrumented native verification (`clean build` and full test suite) is mandatory to verify clean native semantics before declaring changes complete.
 - **No Universal Flags:** Use only project-approved commands; do not inject undocumented compiler flags or third-party wrappers.
 
-## 4. Authentication Separation and TLS Boundaries
+<a id="windows-maven-recipe-and-cross-platform-process-boundaries"></a>
+### 3.2 Windows Maven Recipe and Cross-Platform Process Boundaries
 
+When executing Maven on Windows (especially under PowerShell), follow this structured invocation contract to preserve arguments, location, and exit codes:
+
+#### Invocation Contract
+
+1. **Whole-string argument array:** Pass whole `-Dkey=value` strings in a PowerShell array. Never rely on backtick line continuations or unquoted property values.
+2. **Call operator and splatting:** Invoke the literal executable using the call operator `&` and argument splatting (`& $mvnCmd @mvnArgs`). Never use `Invoke-Expression` or string concatenation.
+3. **Explicit execution location and POM:** Combine explicit child directory setting (`Set-Location -LiteralPath $executionRoot`) with explicit manifest flag (`-f $manifestPath`). Explicit `-f` alone does not reliably resolve relative report or script paths; correct child working directory is mandatory.
+4. **Shell/Batch Boundary Invariant:** PowerShell splatting handles argument construction inside PowerShell, but **does not guarantee batch file safety**. On Windows, `mvn.cmd` and `mvnw.cmd` cross Windows command shell (`cmd.exe`) batch processing, where batch metacharacters (`&`, `|`, `<`, `>`, `^`, `%`) or unbalanced quotes can undergo secondary expansion. Shell-sensitive values must be qualified against the actual approved launcher.
+5. **Terminating launcher errors vs native failures:** Distinguish launcher/invocation failures (executable missing, permission denied, command not found) from native Maven build/test failures (process completed with nonzero exit code). Resolve launcher failures as terminating errors before reading `$LASTEXITCODE`; a failed launch can leave a stale `$LASTEXITCODE` from an earlier process.
+6. **Immediate exit code capture:** Capture `$savedExitCode = $LASTEXITCODE` immediately after process completion, before executing any subsequent command or cleanup logic.
+7. **Guaranteed location restoration:** Wrap invocations in `try ... finally` to guarantee restoring the caller's initial working directory (`Set-Location -LiteralPath $callerLocation` in `finally`).
+8. **Diagnostic preservation:** Cleanup diagnostics in `finally` must **never** mask or overwrite the primary build failure or the recorded `$savedExitCode`.
+9. **Child-script exit only:** Use `exit $savedExitCode` strictly at a dedicated child-script boundary where numeric exit code propagation to an outer shell runner is required; never call `exit` within interactive host sessions.
+
+#### Windows Maven PowerShell Example
+
+```powershell
+# Example: Executing Maven verification and scan on Windows
+$callerLocation = Get-Location
+$mvnCmd = "mvn.cmd"  # Or project-approved ./mvnw.cmd / absolute path
+$executionRoot = "C:\repo\services\api"
+$manifestPath = "C:\repo\services\api\pom.xml"
+$savedExitCode = 0
+
+try {
+    # Fail immediately if executionRoot cannot be set so commands never run in wrong CWD
+    Set-Location -LiteralPath $executionRoot -ErrorAction Stop
+
+    # Step 1: Native verification without scanner upload
+    $verifyArgs = @(
+        "-B",
+        "-f", $manifestPath,
+        "clean",
+        "verify"
+    )
+    try {
+        & $mvnCmd @verifyArgs
+    }
+    catch {
+        $savedExitCode = 127 # Terminating launcher failure
+        throw "Failed to launch Maven command '$mvnCmd': $_"
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        $savedExitCode = $LASTEXITCODE
+        throw "Native Maven verification failed with native exit code $savedExitCode"
+    }
+
+    # Step 2: Intermediate inspection (verify reports, drift check)
+    # ... preflight upload authorization verified ...
+
+    # Step 3: Scanner goal with identical reactor and NO clean
+    $scannerVersion = "3.11.0.3922" # Discovered from pom.xml / config
+    $scanArgs = @(
+        "-B",
+        "-f", $manifestPath,
+        "org.sonarsource.scanner.maven:sonar-maven-plugin:$scannerVersion:sonar",
+        "-Dsonar.projectKey=com.example:api"
+    )
+    try {
+        & $mvnCmd @scanArgs
+    }
+    catch {
+        $savedExitCode = 127
+        throw "Failed to launch Maven scanner goal '$mvnCmd': $_"
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        $savedExitCode = $LASTEXITCODE
+        throw "Maven Sonar scanner goal failed with native exit code $savedExitCode"
+    }
+}
+catch {
+    # Assign failure code before any diagnostic write to prevent exit-code loss under Stop preference
+    if ($savedExitCode -eq 0) { $savedExitCode = 1 }
+    Write-Error -Message "Maven execution failed: $_" -ErrorAction Continue
+}
+finally {
+    # Guard directory restoration so restoration errors never mask primary exit codes
+    try {
+        Set-Location -LiteralPath $callerLocation -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "Failed to restore caller location: $_"
+        if ($savedExitCode -eq 0) { $savedExitCode = 1 }
+    }
+}
+
+# If running at a dedicated child script boundary, propagate the saved numeric exit code:
+if ($savedExitCode -ne 0) {
+    exit $savedExitCode
+}
+```
+
+<a id="4-authentication-separation-and-tls-boundaries"></a>
+## 4. Authentication Separation and TLS Boundaries
 Maintain strict separation between CLI query sessions and scanner process credentials:
 
 ### Read and Query Sessions (`sonar` CLI)
@@ -77,8 +181,20 @@ Maintain strict separation between CLI query sessions and scanner process creden
 - Never automatically add or alter trust overrides, certificates, or corporate proxy settings without explicit owner approval. Project-approved trust configurations (such as `-Djavax.net.ssl.trustStore`) are owner-gated.
 - If TLS handshake errors occur, stop execution, report the exact diagnostic error, and require owner intervention.
 
+### Node CA vs Java/Maven Trust Isolation
+- **Node CA configuration:** Environment variables such as `NODE_USE_SYSTEM_CA=1` affect only supporting Node.js processes; they do **not** configure or affect Java or Maven certificate trust.
+- **Java/Maven trust:** Java tools (such as Maven and the Sonar Maven plugin) use Java trust stores (`javax.net.ssl.trustStore`). Do not assume that Node CLI certificates apply to Maven or that every `sonar` distribution uses standard Node.
+- **Owner-gated trust changes:** Any certificate trust overrides, custom trust stores, or proxy settings remain strictly owner-gated. Never inject trust store properties without explicit owner approval.
+
 ## 5. Stage-Specific Failure Recovery
 
+### Task Metadata Path Discovery and Bound Resumption
+- **Dynamic metadata path discovery:** Scanner task metadata is not invariably written to `.scannerwork/report-task.txt`. Maven integrated lifecycles default to `${project.build.directory}/sonar/report-task.txt` (typically `<execution_root>/target/sonar/report-task.txt`), and projects may configure custom working directories. Discover the actual task file path from the effective scanner configuration.
+- **Persistent binding before cleanup:** Actor returns verified `ceTaskId`, server/project/selector, pre-scan SHA/source/generated digests, native task path and invocation/submission bounds inline. Parent persists them in the same private `<evidence-destination>/sonar-report.md` outside regenerable build directories and acknowledges durability before polling, cleanup or next target upload. No actor checkpoint file.
+- **Resume without re-upload:** Revalidate frozen roots/manifest, source/generated digests and recorded invocation provenance first. A verified known task resumes read-only polling, never preparation/build/scanner or another N entry. Source drift permits only recording terminal status, not certification. An interrupted `dispatching/no-task-ID` intent permits only verified fresh native task-file recovery and parent acknowledgement, never reuse or resubmission.
+- **Missing metadata blocks retry:** Missing, stale, wrong-target or ambiguous task metadata leaves `submission-unverified`, `blocked/incomplete`; it never proves that no upload occurred and cannot authorize an automatic retry.
+
+### Recovery Actions Table
 Never execute generic cleanup scripts that could submit partial or invalid analysis to the Sonar server:
 
 | Stage Failure | Recovery Action | Forbidden Action |
@@ -90,7 +206,6 @@ Never execute generic cleanup scripts that could submit partial or invalid analy
 | **Submission Timeout / Error** | Poll the exact verified task only after parent persistence/acknowledgement. An intent without task ID permits only verified fresh native task-file recovery bound to invocation/checkout/target/checkpoint; otherwise halt `submission-unverified`. No recovered ID does not prove no task was created. | Never blindly re-submit, reuse an interrupted intent, or substitute latest project gate. |
 
 ## 6. Labeled Offline Scenario Traces
-
 ### Scenario L-TR-01: Standalone scanner with fresh coverage verification
 - **Trace:**
   1. `npm test -- --coverage` outputs `coverage/lcov.info` from the tested commit SHA S1 at timestamp T1.
@@ -117,3 +232,11 @@ Never execute generic cleanup scripts that could submit partial or invalid analy
   2. Execution halts. Diagnostics report certificate verification failure.
   3. System refuses to disable TLS verification or alter security policies; halts for owner remediation.
 
+
+### Scenario L-TR-05: Windows Maven split lifecycle with native exit code preservation
+- **Context:** Windows execution environment using PowerShell and `mvn.cmd`.
+- **Behavior:** Runner sets child location to service `execution_root`, passes `-f <manifestPath>`, executes `mvn.cmd -B clean verify`, and captures native exit code. Tests fail with exit code 1. Runner halts immediately without executing `sonar:sonar`. Initial working directory is restored in `finally`, preserving exit code 1 without cleanup masking.
+
+### Scenario L-TR-06: Dynamic task metadata path discovery and saved-task resumption
+- **Context:** Maven project where scanner writes task metadata to `target/sonar/report-task.txt`. Runner disconnected during task polling.
+- **Behavior:** On resume, runner checks `target/sonar/report-task.txt` (discovered from Maven build directory), extracts verified `ceTaskId`, verifies source checkpoint has zero drift, and queries `sonar api get "/api/ce/task?id=..."` without triggering a new build or upload.

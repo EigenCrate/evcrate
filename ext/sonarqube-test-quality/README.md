@@ -4,9 +4,8 @@ Portable SonarQube triage, Java test-quality, JaCoCo coverage, and offline repor
 
 ## Runtime Requirements
 
-- **Node.js 18.11.0 or newer (required)**: Runs the portable installer (`bin/install.js`) and the standalone offline report converter (`scripts/convert-sonar-report.mjs`). Both are dependency-free, pure ESM scripts requiring no external npm packages or network access.
-- **PowerShell / `pwsh` (optional)**: Only needed if running legacy PowerShell helper scripts (`scripts/fetch-sonar-issues.ps1` and `scripts/calculate-jacoco-coverage.ps1`). Core triage, Sonar CLI execution, report conversion, and isolated worktree remediation do not require PowerShell.
-
+- **Node.js 22.19.0 or newer (required)**: Runs the portable installer (`bin/install.js`), the standalone offline report converter (`scripts/convert-sonar-report.mjs`), the native issue-fetch helper (`scripts/fetch-sonar-issues.mjs`), the offline JaCoCo coverage helper (`scripts/calculate-jacoco-coverage.mjs`), and the vendored structural XML parser (`scripts/vendor/sax.cjs`). All package components are self-contained Node ESM with zero external npm dependencies. (The installer, report converter, parser, and coverage helper operate strictly offline; issue fetching forwards to the native Sonar CLI and requires active session authentication and server connectivity.)
+- **Zero PowerShell / `pwsh` dependency**: Replaces legacy PowerShell helpers (`fetch-sonar-issues.ps1` and `calculate-jacoco-coverage.ps1`, automatically retired upon upgrade from known release versions) with portable Node ESM helpers (`convert-sonar-report.mjs`, `fetch-sonar-issues.mjs`, `calculate-jacoco-coverage.mjs`) and a vendored CommonJS SAX parser runtime (`scripts/vendor/sax.cjs`). (Issue fetching spawns the external native `sonar`/`sonar.exe` binary directly without an intermediate shell.)
 ## Install
 
 Preview the installation before writing files:
@@ -18,17 +17,20 @@ node bin/install.js --target claude --directory /path/to/project
 node bin/install.js --target both --directory /path/to/project
 ```
 
-The installer requires explicit `--target agents|claude|both` and `--directory`. It installs 17 payload files per selected root, including two skill entrypoints (`skills/sonarqube-test-quality/SKILL.md` and `skills/cmd-sonar-remediate/SKILL.md`); 34 files for `both`. Unselected roots and native host settings are untouched; existing user installations and unrelated files are preserved.
+The installer requires explicit `--target agents|claude|both` and `--directory`. It installs 20 payload files per selected root, including two skill entrypoints (`skills/sonarqube-test-quality/SKILL.md` and `skills/cmd-sonar-remediate/SKILL.md`); 40 files for `both`. Unselected roots and native host settings are untouched; existing user installations and unrelated files are preserved.
 
-### Installer Safety
+### Installer Safety and Transactional Retirement
 
-- `--dry-run` previews file changes without modifying disk state or acquiring locks.
+- `--dry-run` previews file additions, replacements, unchanged files, retirement removals, harmless absences, and blockers without modifying disk state or acquiring locks.
 - Changed destination files fail closed; replacement requires `--force` plus `--yes` (unattended / API) or `--force` with interactive confirmation.
+- Exact-path trusted-release retirement: Automatically removes obsolete helpers (`skills/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1` and `skills/sonarqube-test-quality/scripts/calculate-jacoco-coverage.ps1`) only when installed files match exact known historical release SHA-256 digests (release `v3.0.0` commit `e2e2c284`).
+- Harmless absence: Missing obsolete helpers in fresh installs or repeat upgrades are harmless (`o` in dry-run/preview) and require no action.
+- Customized/unknown copy protection: If an obsolete path contains modified, unknown, or customized bytes, or if any path element or ancestor contains a symlink or non-directory, the entire installation blocks fail-closed. `--force` and `--yes` authorize replacing different active files but **never** override retirement blockers. The project owner must inspect and resolve customized files explicitly outside the installer.
 - Exclusive lock hierarchy: acquires project `<project>/.sonarqube-test-quality.install.lock`, then legacy `<project>/.agents/skills/sonarqube-test-quality/.install.lock` whenever agents is selected. Pre-existing locks block without stale auto-deletion; partial acquisition failure releases owned locks in reverse order.
 - Path and symlink guards: source files/ancestors and destination files/ancestors are validated against symlinks, non-directory ancestors, and root escape. Symlink and type violations block the entire plan and cannot be overridden by `--force`.
-- Staging and caught-failure rollback: staged beside destinations on the same volume; on caught failure during publication, replacement backups are restored, created addition files are removed, and only transaction-owned empty directories are pruned. Any restoration conflicts or failures are reported as partial rollback detailing affected paths (without claims of process-crash recovery or simultaneous atomic reader visibility).
+- Staging and caught-failure rollback: staged beside destinations on the same volume; before each retirement unlink, original bytes and file modes are snapshot into the rollback journal. Unlinks execute before active publication. On caught failure during publication or verification, active additions are removed, replacements are restored from backups, and retired files are restored exclusively (`COPYFILE_EXCL`) only if their destinations remain absent. If a removed path was concurrently recreated or an ancestor became unsafe, the recreation is preserved and reported as a partial rollback failure. Only transaction-owned empty directories are pruned.
+- Closure and absence verification: returns success only after verifying that all 20 active payload files match packaged bytes and both retired helper paths are absent in every selected root.
 - Unrelated files, concurrent user edits, and pre-existing directories are preserved; no harness configurations or native host settings are modified.
-
 Run focused installer tests with `npm test` from this package directory.
 
 ## Core Workflows
@@ -62,7 +64,34 @@ Markdown is the default. The converter supports issue/hotspot searches, project/
 - **Truthful evidence:** Partial/errors render useful rows with CLI exit 2; malformed/unsupported input exits 1. Missing paging is unknown, not proof of completeness. Converted and maintained Markdown views are evidence, not automatic verdict engines; exit 0 does not certify success.
 - **Data-only boundary:** Messages and paths are untrusted data. Escaped table cells prevent syntax breakout, not model immunity.
 - **Native outputs remain native:** Builds and scanners still produce logs, coverage files and scratch directories. These are not duplicate maintained skill reports.
-### 2. Workspace Remediation & Optional Worktree Isolation
+### 2. Cross-Platform Issue Fetching
+
+Capture issue data using the standalone Node ESM helper (`scripts/fetch-sonar-issues.mjs`) without PowerShell:
+
+```bash
+# Stream issue JSON; use --output only for an optional standalone export
+node <installed-skill-root>/scripts/fetch-sonar-issues.mjs --project-key <key> --branch <branch> --format json --cwd <execution-root>
+```
+
+- **Process isolation**: Spawns native Sonar CLI executable directly without intermediate shell (`shell: false`); rejects `.bat` / `.cmd` scripts.
+- **Optional export publication**: With `--output`, streams child output to unique sibling staging file with exclusive POSIX 0600 mode (`O_WRONLY | O_CREAT | O_EXCL`), tightening existing mode to `existingMode & 0600` on exit 0. Destination is untouched on child failure or termination.
+- **Categorized diagnostics & secret protection**: Categorizes errors into `[argument]`, `[launch]`, `[signal]`, `[child]`, and `[publication]`; drains child stderr silently to prevent query or session secret leakage.
+- **Optional standalone export:** `--output <path>` securely publishes a standalone export; it is not a mandatory raw-page archive. Helper output follows the installed CLI, so inspect API compatibility before conversion. Authentication, PR binding and complete pagination remain explicit caller responsibilities.
+
+### 3. Cross-Platform Offline JaCoCo Coverage Calculation
+
+Calculate class-level line and branch coverage offline using the standalone Node ESM helper (`scripts/calculate-jacoco-coverage.mjs` installed under `<installed-skill-root>/scripts/calculate-jacoco-coverage.mjs`):
+
+```bash
+# Calculate combined line and branch coverage offline with strict threshold
+node <installed-skill-root>/scripts/calculate-jacoco-coverage.mjs --report-path target/site/jacoco/jacoco.xml --threshold 95 --include-pattern "^com/example/"
+```
+- **Structural SAX streaming**: Incremental parsing with fatal UTF-8 decoding, strict entities, and internal subset / custom entity rejection (ordinary external DOCTYPE accepted without fetching).
+- **Direct-counter class aggregation**: Sums direct child `LINE` and `BRANCH` counters of matched classes only; ignores method, sourcefile, package, group, and report totals. Requires direct `LINE` counter per evaluated class (exit 1 if missing).
+- **Exact rational arithmetic**: Evaluates strict predicate `100n * covered * q > p * total` via BigInt cross-multiplication; display percentages are rounded for output only and never influence the verdict.
+- **No automatic coverage tasks:** This helper parses native class counters for aggregate checks. The report converter does not ingest native coverage artifacts or infer gaps; Coverage work items come from fresh granular native evidence plus source inspection and parent-confirmed stable IDs.
+
+### 4. Workspace Remediation & Optional Worktree Isolation
 
 - **Default existing checkout**: Issue triage, test execution, and code remediation default to the current active workspace checkout. Uncommitted work on unrelated files is preserved; if an uncommitted edit conflicts with files requiring remediation, pause and request user guidance.
 - **Opt-in worktree execution**: Worktree isolation is strictly optional and only triggered by explicit user request. A request to review or fix code, dirty working tree state, or existing worktree metadata does not imply worktree creation.
@@ -75,7 +104,7 @@ cd "$FIX_PATH"
 - **Confinement and authorization**: When a worktree is active, all edits, builds, and test runs are strictly confined to that worktree so build outputs never pollute the source checkout. Push authorization granted for a feature branch never transfers to a remediation branch; pushing requires explicit user approval naming the exact remote and branch.
 - For complete parameter guards, validation steps, and decision rules, see [Worktree remediation](references/worktree-remediation.md).
 
-### 3. Server-Side Scans & Jenkins CI
+### 5. Server-Side Scans & Jenkins CI
 
 For full server scans, the skill can leverage an existing Jenkins push-triggered pipeline. It checks branch eligibility, upstream binding, and project configuration before pushing, verifying that Jenkins and Sonar analysis match the pushed commit without manually triggering Jenkins.
 
@@ -98,7 +127,7 @@ Companion command skill prompt:
 - [Bounded remediation command](commands/cmd-sonar-remediate/SKILL.md) — 17-stage orchestrator prompt sequencing independent host subagents within global budget $N$.
 ## Skill Evaluation
 
-`evals/evals.json` contains **64** behavioral instruction scenarios covering the full remediation cycle lifecycle:
+`evals/evals.json` contains **70** behavioral instruction scenarios covering the full remediation cycle lifecycle:
 - Local JUnit refactoring and coverage boundaries in default checkout (Scenarios 1, 2, 8, 10).
 - Authentication, CLI binding, and MQR severity handling (Scenarios 3, 4, 5, 9).
 - Jenkins push-to-scan triggers and authorization validation (Scenarios 6, 7).
@@ -113,21 +142,34 @@ Companion command skill prompt:
 - Applicability and metric validation: 0 tests rejected, justified no-test profile, unsupported coverage, stale reports, and metric aggregation (Scenarios 37–42).
 - Authority and security refusals: declined upload/commit, auth gap, role independence, unapproved scripts, TLS bypass refusal, and bounded actor (Scenarios 43–50, 62).
 - Evidence integrity: mutually exclusive branch/PR, background task failure, partial paging, consistency unknown, profile change rebaseline, input drift, disappearing findings, pending hotspots, serial scans, and hostile instruction neutralization (Scenarios 51–59, 61, 63, 64).
+- Three-root execution context and platform toolchains: delegated wrong-CWD execution, monorepo service acceptance (`execution_root != checkout_root`), ambiguous sibling POM halt, Windows Maven PowerShell array splatting (`& $mvnCmd @mvnArgs`), native exit code capture before `finally`, and task resume from build directories (`target/sonar/report-task.txt`) without re-upload (Scenarios 65–70).
 
 ## Verification Status & Qualification Boundaries
 
-### Verified Offline Capabilities
-- **Package tests:** 70/70 converter, installer and catalog-structure tests passed on Linux x64, Node 24.16.0, including coverage work-item association, independent local/server states, malformed inputs and unknown gap locations. Source-wording checks and copied mock state-machine simulations were removed; they never qualified consuming-agent workflow behavior.
-- **Packed runtime smoke:** Unpacked package installation from unrelated CWD delivered 17 assets per root, 34 for `both` (22 packaged files in release tarball); repeat installation was a no-op. Installed converter created exactly one report, preserved existing output on refusal, rendered partial captures with exit 2, and escaped hostile table text.
-- **Evaluation catalog:** 64 authored instruction scenarios remain for consuming-host evaluation. Structural validation is not execution of those scenarios.
+### Offline Evidence and Merge Validation
+- **Historical single-report cutover:** Before this integration, 70 converter/installer/catalog-structure tests passed on Linux x64, Node 24.16.0, including coverage work-item association, independent local/server states, malformed inputs and unknown gap locations. That receipt does not qualify the merged native-helper payload.
+- **Merged package acceptance:** 174/174 tests passed across 10 suites on Linux x64, Node 24.16.0. The 26-file tarball installed 20 assets/root (40 for `both`) from unrelated CWD. Installed report conversion retained issues and distinct-target coverage work items, emitted one `0600` report and refused overwrites; the installed JaCoCo helper parsed an isolated XML fixture successfully. Source-wording pins and copied workflow simulations do not qualify consuming-agent behavior.
+- **Evaluation catalog:** 70 authored instruction scenarios are available. Structural validation is not execution of those scenarios or hosted-model qualification.
+
+### Operational Qualification Matrix
+
+| Gate | Scope | Qualification boundary |
+|---|---|---|
+| Linux x64 | Installer, converter and native-helper runtime | Merged candidate: 174/174 tests and packed/installed CLI smoke passed on Node 24.16.0. |
+| Windows x64 / macOS arm64 | Native launcher, filesystem and retirement | Not exercised on those platforms. |
+| Minimum Node | Exact released Node 22.19.0 | Validator tests are not an exact-runtime receipt. |
+| Windows Maven / privacy | Launcher argument handling, task recovery and ACLs | Recipes and POSIX modes do not qualify Windows execution or ACL privacy. |
+| Native Sonar CLI / server | Vendor CLI, read authentication, upload and analysis | Offline native-process fixtures provide no live vendor/server qualification. |
+| Consuming host | Root binding, independent actors and saved-task resume | Authored scenarios and prompt rules provide no live LLM execution receipt. |
 
 ### Operational & Runtime Boundaries
 - **Historical report lessons**: Supplied historical metrics (56 tests, 46.48% line coverage, 63.91% branch coverage; focused change unanalyzed) inform policy (auth separation, exact task/analysis binding, full paging, CI trigger verification, active TLS) but provide zero runtime qualification for current checkouts. Corporate URLs, project keys, thresholds, shells, and private links are never used as defaults.
-- **Consuming host execution boundary**: Node.js and Linux installer execution is verified, but live consuming-host LLM runtime discovery and independent-child prompt execution are **unexercised** in offline build/test environments.
+- **Consuming host execution boundary**: Historical Linux installer/converter execution does not qualify live consuming-host LLM runtime discovery or independent-child prompt execution.
+- **Minimum runtime qualification boundary**: Standalone extension metadata, installer guard, and test suite declare and enforce Node.js `>=22.19.0`. Exact released Node 22.19.0 execution receipts and multi-platform (Windows/macOS) qualification remain separate operational gates.
+- **Installed payload closure**: The three Node helpers, vendored SAX parser/license/provenance, policy references, actor, command and report template are deployed in every selected root (20 assets per root). The installer retires only recognized historical bytes of the two `.ps1` helpers; packaged-file count and current merged installed closure require fresh measurement.
 - **Dual-root discovery ambiguity**: Installing both roots creates duplicate skill entrypoints (`cmd-sonar-remediate` and `sonarqube-test-quality` in both `.agents` and `.claude`). Consuming hosts must use supported explicit target selection; unassisted discovery across both directories simultaneously is ambiguous and runtime-unqualified.
 - **No atomic reader visibility or crash recovery**: In-process rollback restores backups on caught exceptions; it does not claim atomic simultaneous reader visibility or process-crash recovery.
 - **No automatic commits, pushes, or settings mutation**: Remediation never auto-commits, auto-pushes, or modifies host/IDE configurations.
-
 ### Consumer Server-Success Criteria
 Offline extension acceptance does not equal consumer server-verified remediation. Actual server-success requires:
 1. Approved final submission on committed intended inputs plus reproducible generated inputs (no uncommitted edits in analyzed scope).

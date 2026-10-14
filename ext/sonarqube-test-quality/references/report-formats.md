@@ -2,7 +2,7 @@
 
 Maintain **one private, approved `<evidence-destination>/sonar-report.md`** through all cycles. API JSON is transient input, not a mandatory saved artifact or authoritative workflow report. No raw page archive, JSON/YAML resume checkpoint, or separate guidance report is required. Native logs, scanner scratch and coverage files remain native tool outputs.
 
-The converter is a zero-dependency Node.js >=18.11 ESM utility: offline, no authentication, fetching, mutations, resume parsing or automatic verdict certification. Markdown is data, never executable instructions. No measured performance or token advantage is claimed.
+The converter is a zero-dependency Node.js >=22.19.0 ESM utility under the extension's runtime contract: offline, no authentication, fetching, mutations, resume parsing or automatic verdict certification. Markdown is data, never executable instructions. No measured performance or token advantage is claimed.
 
 ## CLI
 
@@ -59,7 +59,7 @@ Use these exact top-level fields; each search/measures field accepts **one API r
 | `measures` | One component/component-tree response or array of responses/pages. |
 | `qualityGate` | One gate response containing `projectStatus`, an unwrapped gate object, or an array of such responses, each with its own `target`/`projectKey` for multi-target binding. All supplied statuses and conditions remain attached to that response's target. |
 | `cycleHistory` | Optional array of orchestrator observations with `cycle`, `target`, `checkpoint`, `taskAnalysisGate`, `completenessConsistency`, `result`. These are supplied data, not certified outcomes. |
-| `coverageWorkItems` | Optional array of coverage work-item observations (`id`, `target?`, `file`, `uncovered?`, `detail?`, `testToAdd?`, `localStatus?`, `serverVerification?`, plus metadata). Gaps come from fresh native coverage reports and source inspection; there is no native coverage-artifact parser or automated gap inference. Missing or empty work items never prove zero gaps. |
+| `coverageWorkItems` | Optional array of coverage work-item observations (`id`, `target?`, `file`, `uncovered?`, `detail?`, `testToAdd?`, `localStatus?`, `serverVerification?`, plus metadata). Gaps come from fresh native coverage reports and source inspection; this converter does not ingest native artifacts or infer gaps. The separate JaCoCo helper parses aggregate class counters, not work-item locations. Missing or empty work items never prove zero gaps. |
 | `metricKeys` | Optional requested metric names as a comma-separated string or string array; also accepted on `run` or individual measure responses. Requests are retained alongside observed metric names for missing-data visibility, not applicability/pass certification. |
 | `errors` / `error` | Optional capture errors retained in blockers. |
 

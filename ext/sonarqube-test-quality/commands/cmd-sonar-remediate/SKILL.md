@@ -61,7 +61,7 @@ Before entering any remediation stage, the parent orchestrator binds available r
 
 ### 2.1 Preflight Discovery
 1. Load sibling discovery policy: `skills/sonarqube-test-quality/references/project-discovery.md`.
-2. Determine repository root, current commit SHA, target selector (`branch` XOR `pull_request`), and nonsecret scanner configuration. Redact all secret tokens (`sonar.token`, passwords, auth headers).
+2. Determine repository root and validate three-root execution context (`installed_skill_root`, `checkout_root`, per-target `execution_root` / `service_execution_root`) and `manifest_path` / `execution_manifest` per `project-discovery.md §2`. Validate canonical path-component containment, regular applicable manifest, and Git identity (`git -C <execution_root> rev-parse --show-toplevel` equals `checkout_root`), rejecting foreign repositories. Determine current commit SHA, target selector (`branch` XOR `pull_request`), and nonsecret scanner configuration. Redact all secret tokens (`sonar.token`, passwords, auth headers).
 3. Discover toolchain capabilities, test commands, coverage report paths, and requirement contracts (`required`, `optional`, or justified `not-applicable`).
 4. Validate that `evidence_destination` is outside the git tree or explicitly approved and ignored, a regular non-symlinked directory, mode `0700`. Initialize `sonar-report.md` once from the sibling report template. Never store tokens, passwords, authentication headers or environment dumps.
 ### 2.2 Establishing Baseline (`C0_BASELINE`)
@@ -71,7 +71,7 @@ Before entering any remediation stage, the parent orchestrator binds available r
 - **Zero-Issue Baseline:** If baseline analysis reveals zero active in-scope issues and all quality gates pass, bypass fix rounds `Ck` and advance to Stage `F`. Record implementing role unused (no implementation), retain distinct verification roles, and aggregate-review the verified empty remediation diff; never synthesize an implementing identity.
 
 ### 2.3 Freezing Run Context
-- Freeze target set, quality profile, quality gate metric thresholds, active status vocabulary, and path exclusions.
+- Freeze absolute roots (`installed_skill_root` or explicit source skill root, `checkout_root`, per-target `execution_root` / `service_execution_root`), `manifest_path` / `execution_manifest`, approved launcher/literal argv, target set, quality profile, quality gate metric thresholds, active status vocabulary, and path exclusions. Forward context to every delegate; revalidate containment, manifest and Git identity before each child launch with explicit `cwd: execution_root`. A service root may differ from its Git checkout root.
 - Any mid-run modification to these frozen settings invalidates comparative deltas, requires owner approval, and forces establishing a new `C0_BASELINE` without resetting previously entered rounds against `N`.
 
 ---
@@ -112,8 +112,8 @@ Before entering any remediation stage, the parent orchestrator binds available r
 ### 3.6 Scanner Lifecycle and Upload (`CK_VERIFY_IMPORT`, `CK_UPLOAD`)
 1. Verify pre-upload source checkpoint (`commit_sha`, `active_input_digest`, `generated_input_digest`). If any input or generated file drifted during build/tests, abort immediately (`Trigger: resume-checkpoint-drift`).
 2. Verify explicit upload authorization naming target server URL, project keys, and selectors.
-3. Persist and approve the per-target `CK_UPLOAD` in-flight intent in sonar-report.md per §5.1, then dispatch `evidence_actor_id` in `verify-upload` mode with selected root absolute path and marker approval. Persistence failure prohibits dispatch.
-4. Evidence actor executes approved lifecycle commands in declared order, writes `.scannerwork/`, uploads payload over TLS, and captures `ceTaskId`.
+3. Persist and approve the per-target `CK_UPLOAD` in-flight intent in sonar-report.md per §5.1, then dispatch `evidence_actor_id` in `verify-upload` mode with selected skill root, checkout root, per-target execution root/manifest absolute paths and marker approval. Persistence failure prohibits dispatch.
+4. Evidence actor executes approved lifecycle commands in declared order with explicit per-command `cwd: execution_root`, writes only discovered scanner scratch (e.g., `${project.build.directory}/sonar/` or `.scannerwork/`), uploads payload over TLS, and captures `ceTaskId`.
 
 ### 3.7 Background Task Tracking (`CK_TASK_WAIT`)
 1. Actor immediately returns verified `ceTaskId`, target/server/selector, invocation/submission time and pre-scan identity inline. Parent persists pending task metadata in sonar-report.md and acknowledges durability before actor polling or the next target upload; the next target also requires its own durable intent/approval.

@@ -207,7 +207,7 @@
     {
       "id": 19,
       "prompt": "Install the sonarqube-test-quality skill into my project located at /workspace/my-service using --target agents.",
-      "expected_output": "Execute or instruct the installer with `node bin/install.js --target agents --directory /workspace/my-service`. The skill installs into `/workspace/my-service/.agents/skills/sonarqube-test-quality` and `/workspace/my-service/.agents/skills/cmd-sonar-remediate` (17 files across two entrypoints), leaving `.claude` untouched and without creating native settings or registry entries.",
+      "expected_output": "Execute or instruct the installer with `node bin/install.js --target agents --directory /workspace/my-service`. The skill installs into `/workspace/my-service/.agents/skills/sonarqube-test-quality` and `/workspace/my-service/.agents/skills/cmd-sonar-remediate` (20 files across two entrypoints), leaving `.claude` untouched and without creating native settings or registry entries.",
       "files": [],
       "assertions": [
         "Specifies explicit `--target agents` and `--directory /workspace/my-service` project root for installation.",
@@ -218,7 +218,7 @@
     {
       "id": 20,
       "prompt": "Install the sonarqube-test-quality skill into my project located at /workspace/my-service using --target claude.",
-      "expected_output": "Execute or instruct the installer with `node bin/install.js --target claude --directory /workspace/my-service`. The skill installs into `/workspace/my-service/.claude/skills/sonarqube-test-quality` and `/workspace/my-service/.claude/skills/cmd-sonar-remediate` (17 files across two entrypoints), leaving `.agents` untouched and without creating native settings or registry entries.",
+      "expected_output": "Execute or instruct the installer with `node bin/install.js --target claude --directory /workspace/my-service`. The skill installs into `/workspace/my-service/.claude/skills/sonarqube-test-quality` and `/workspace/my-service/.claude/skills/cmd-sonar-remediate` (20 files across two entrypoints), leaving `.agents` untouched and without creating native settings or registry entries.",
       "files": [],
       "assertions": [
         "Accepts explicit `--target claude` and `--directory /workspace/my-service` project root for installation.",
@@ -229,11 +229,11 @@
     {
       "id": 21,
       "prompt": "Install the sonarqube-test-quality skill into my project located at /workspace/my-service using --target both.",
-      "expected_output": "Execute or instruct the installer with `node bin/install.js --target both --directory /workspace/my-service`. The installer installs 34 files across both `.agents` and `.claude` roots (17 files each across two entrypoints), verifying cross-root transactional integrity and without creating native settings or registry entries.",
+      "expected_output": "Execute or instruct the installer with `node bin/install.js --target both --directory /workspace/my-service`. The installer installs 40 files across both `.agents` and `.claude` roots (20 files each across two entrypoints), verifying cross-root transactional integrity and without creating native settings or registry entries.",
       "files": [],
       "assertions": [
         "Accepts explicit `--target both` and `--directory /workspace/my-service` for dual-root installation.",
-        "Installs 34 files across both `.agents` and `.claude` roots with two entrypoints per root.",
+        "Installs 40 files across both `.agents` and `.claude` roots with two entrypoints per root.",
         "Executes transactional installation without creating native settings, plugin configurations, or registry entries."
       ]
     },
@@ -714,6 +714,69 @@
         "Requires human owner review before adopting candidate remediation rules or guidelines.",
         "Evaluates candidate rules for usefulness, privacy, and applicability.",
         "Prohibits automated or unapproved promotion into repository standards."
+      ]
+    },
+    {
+      "id": 65,
+      "prompt": "A delegated subagent is dispatched to run native build and tests for module `services/billing-service` in a Maven monorepo. The subagent process current working directory is the repository checkout root `/workspace/repo`. How should the subagent invoke Maven?",
+      "expected_output": "Do not execute in the checkout root or rely on interactive terminal directory changes. Forward and use the frozen absolute `execution_root` (`/workspace/repo/services/billing-service`), invoke Maven with explicit child working directory (`cwd: /workspace/repo/services/billing-service`), and pass explicit `-f /workspace/repo/services/billing-service/pom.xml`.",
+      "files": [],
+      "assertions": [
+        "Uses frozen absolute execution root rather than relying on current working directory.",
+        "Executes native child command with explicit child working directory and manifest path."
+      ]
+    },
+    {
+      "id": 66,
+      "prompt": "In a Maven monorepo at checkout root `/workspace/repo`, we need to remediate findings in service `/workspace/repo/services/auth`. The execution root is `/workspace/repo/services/auth` where `pom.xml` exists. Can execution proceed even though `execution_root != checkout_root`?",
+      "expected_output": "Yes. An execution root is never required to equal the Git checkout root. Validate path-component containment (`services/auth` is inside `/workspace/repo`) and Git identity (`git -C /workspace/repo/services/auth rev-parse --show-toplevel` equals `/workspace/repo`). Because containment, Git top-level, and manifest regular-file checks pass, proceed with execution in `services/auth`.",
+      "files": [],
+      "assertions": [
+        "Accepts legitimate monorepo service directory without requiring execution root to equal Git checkout root.",
+        "Validates path-component containment and Git top-level alignment to the checkout root."
+      ]
+    },
+    {
+      "id": 67,
+      "prompt": "Discovery is initiated in a repository with two unmapped sibling Maven services `services/user-api/pom.xml` and `services/order-api/pom.xml` without a root reactor POM. The user provided no explicit module target and no CI configuration exists. How should discovery proceed?",
+      "expected_output": "Halt discovery immediately with outcome `blocked/incomplete`. Bounded candidate discovery finds multiple POM candidates, which is ambiguous. Do not blindly select the first discovered ancestor POM or assume a default service; prompt the user for an explicit target selection.",
+      "files": [],
+      "assertions": [
+        "Halts discovery on ambiguous candidate manifests without picking the first discovered POM.",
+        "Requires explicit user target selection when multiple candidate reactor POMs exist."
+      ]
+    },
+    {
+      "id": 68,
+      "prompt": "On Windows using PowerShell, we need to pass `-Dsonar.projectKey=com.example:service-core` and an absolute report path containing spaces (`-Dsonar.coverage.jacoco.xmlReportPaths=C:\\My Projects\\target\\jacoco.xml`) to `mvn.cmd`. How should arguments be passed?",
+      "expected_output": "Pass whole `-Dkey=value` strings in a PowerShell array (e.g., `@(\"-B\", \"-Dsonar.projectKey=com.example:service-core\", \"-Dsonar.coverage.jacoco.xmlReportPaths=C:\\My Projects\\target\\jacoco.xml\")`) and invoke using the call operator with splatting (`& $mvnCmd @args`). Avoid backtick continuations or `Invoke-Expression`. Recognize that `mvn.cmd` crosses Windows batch processing, so shell-sensitive arguments must be qualified against the approved launcher.",
+      "files": [],
+      "assertions": [
+        "Uses whole-string array elements and PowerShell argument splatting with the call operator.",
+        "Avoids backtick continuations, Invoke-Expression, or unquoted properties with spaces.",
+        "Recognizes that Windows batch scripts (mvn.cmd) cross secondary batch shell expansion."
+      ]
+    },
+    {
+      "id": 69,
+      "prompt": "During native verification on Windows, `mvn.cmd clean verify` fails with test failure exit code 1. A PowerShell script wrapper executes cleanup commands before exiting. What must the script do?",
+      "expected_output": "Capture `$savedExitCode = $LASTEXITCODE` immediately after Maven exits and before any cleanup. Wrap cleanup in a `finally` block to restore the initial directory, but ensure cleanup diagnostics never overwrite `$savedExitCode` or convert the failure into success. Abort the lifecycle immediately without executing the upload-capable scanner goal, preserving the native exit code 1.",
+      "files": [],
+      "assertions": [
+        "Captures native exit code immediately before executing cleanup or subsequent commands.",
+        "Restores working directory in finally without allowing cleanup diagnostics to overwrite the primary failure.",
+        "Aborts the lifecycle immediately without executing upload-capable scanner goals."
+      ]
+    },
+    {
+      "id": 70,
+      "prompt": "A scanner run completed upload and generated `target/sonar/report-task.txt` with `ceTaskId: AX_TASK_99`, but the runner lost network connection during task polling. On resume, should the runner re-execute `mvn sonar:sonar`?",
+      "expected_output": "No. Discover the task file from the effective scanner metadata path (`target/sonar/report-task.txt`), verify that the source checkpoint has zero drift, and resume polling existing `ceTaskId: AX_TASK_99` directly via `sonar api get /api/ce/task?id=AX_TASK_99`. Resuming a verified task does not re-upload analysis and does not increment the remediation round budget N.",
+      "files": [],
+      "assertions": [
+        "Resumes polling the verified saved task ID without re-executing scanner upload.",
+        "Discovers task metadata from the effective build directory (target/sonar/report-task.txt).",
+        "Does not consume an additional fix round from the remediation round budget N."
       ]
     }
   ]

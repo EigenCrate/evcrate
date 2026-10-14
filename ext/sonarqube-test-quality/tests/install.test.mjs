@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { executeInstallation, isSupportedNodeVersion, MIN_NODE_VERSION, planInstallation, resolveInstallTarget } from '../lib/install.js';
+import { executeInstallation, isSupportedNodeVersion, MIN_NODE_VERSION, planInstallation, resolveInstallTarget, RETIRED_ASSETS } from '../lib/install.js';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliPath = path.join(packageRoot, 'bin', 'install.js');
@@ -19,8 +20,11 @@ const EXPECTED_ASSETS = [
   { source: 'references/report-formats.md', dest: 'skills/sonarqube-test-quality/references/report-formats.md' },
   { source: 'references/worktree-remediation.md', dest: 'skills/sonarqube-test-quality/references/worktree-remediation.md' },
   { source: 'scripts/convert-sonar-report.mjs', dest: 'skills/sonarqube-test-quality/scripts/convert-sonar-report.mjs' },
-  { source: 'scripts/fetch-sonar-issues.ps1', dest: 'skills/sonarqube-test-quality/scripts/fetch-sonar-issues.ps1' },
-  { source: 'scripts/calculate-jacoco-coverage.ps1', dest: 'skills/sonarqube-test-quality/scripts/calculate-jacoco-coverage.ps1' },
+  { source: 'scripts/fetch-sonar-issues.mjs', dest: 'skills/sonarqube-test-quality/scripts/fetch-sonar-issues.mjs' },
+  { source: 'scripts/calculate-jacoco-coverage.mjs', dest: 'skills/sonarqube-test-quality/scripts/calculate-jacoco-coverage.mjs' },
+  { source: 'scripts/vendor/sax.cjs', dest: 'skills/sonarqube-test-quality/scripts/vendor/sax.cjs' },
+  { source: 'scripts/vendor/sax.LICENSE', dest: 'skills/sonarqube-test-quality/scripts/vendor/sax.LICENSE' },
+  { source: 'scripts/vendor/sax-provenance.json', dest: 'skills/sonarqube-test-quality/scripts/vendor/sax-provenance.json' },
   { source: 'references/remediation-cycles.md', dest: 'skills/sonarqube-test-quality/references/remediation-cycles.md' },
   { source: 'references/project-discovery.md', dest: 'skills/sonarqube-test-quality/references/project-discovery.md' },
   { source: 'references/local-analysis.md', dest: 'skills/sonarqube-test-quality/references/local-analysis.md' },
@@ -32,6 +36,9 @@ const EXPECTED_ASSETS = [
 
 const skillRoot = project => path.join(project, '.agents', 'skills', 'sonarqube-test-quality');
 const planFor = project => planInstallation({ sourceDir: packageRoot, target: 'agents', directory: project });
+const FIXTURES_DIR = path.join(packageRoot, 'tests', 'fixtures', 'retired');
+const HISTORICAL_FETCH_BYTES = fs.readFileSync(path.join(FIXTURES_DIR, 'historical-fetch-sonar-issues.ps1.bin'));
+const HISTORICAL_COVERAGE_BYTES = fs.readFileSync(path.join(FIXTURES_DIR, 'historical-calculate-jacoco-coverage.ps1.bin'));
 
 function assertNoRegistration(project) {
   for (const file of [
@@ -242,22 +249,56 @@ describe('SonarQube common skill installer', () => {
     assert.equal(fs.readFileSync(path.join(skillRoot(project), 'SKILL.md'), 'utf8'), 'new user evidence');
   });
 
-  test('enforces Node.js >=18.11.0 compatibility in metadata and runtime validator', () => {
+  test('enforces Node.js >=22.19.0 compatibility in metadata and runtime validator', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
-    assert.equal(pkg.engines.node, '>=18.11.0');
-    assert.equal(MIN_NODE_VERSION, '18.11.0');
+    assert.equal(pkg.engines.node, '>=22.19.0');
+    assert.equal(MIN_NODE_VERSION, '22.19.0');
     assert.equal(isSupportedNodeVersion('18.0.0'), false);
-    assert.equal(isSupportedNodeVersion('18.10.0'), false);
-    assert.equal(isSupportedNodeVersion('18.10.9'), false);
-    assert.equal(isSupportedNodeVersion('18.11.0'), true);
-    assert.equal(isSupportedNodeVersion('18.11.0-alpha.1'), true);
-    assert.equal(isSupportedNodeVersion('18.10.0-rc.1'), false);
-    assert.equal(isSupportedNodeVersion('v18.11.0'), true);
-    assert.equal(isSupportedNodeVersion('v18.10.0'), false);
-    assert.equal(isSupportedNodeVersion('18.12.0'), true);
-    assert.equal(isSupportedNodeVersion('20.0.0'), true);
+    assert.equal(isSupportedNodeVersion('18.11.0'), false);
+    assert.equal(isSupportedNodeVersion('20.0.0'), false);
+    assert.equal(isSupportedNodeVersion('21.0.0'), false);
+    assert.equal(isSupportedNodeVersion('22.0.0'), false);
+    assert.equal(isSupportedNodeVersion('22.18.0'), false);
+    assert.equal(isSupportedNodeVersion('22.18.9'), false);
+    assert.equal(isSupportedNodeVersion('22.18.9-rc.1'), false);
+    assert.equal(isSupportedNodeVersion('v22.18.0'), false);
+    assert.equal(isSupportedNodeVersion('v22.18.9'), false);
     assert.equal(isSupportedNodeVersion('22.19.0'), true);
+    assert.equal(isSupportedNodeVersion('22.19.0-alpha.1'), true);
+    assert.equal(isSupportedNodeVersion('v22.19.0'), true);
+    assert.equal(isSupportedNodeVersion('v22.19.0-rc.1'), true);
+    assert.equal(isSupportedNodeVersion('22.19.1'), true);
+    assert.equal(isSupportedNodeVersion('22.19.9'), true);
+    assert.equal(isSupportedNodeVersion('22.20.0'), true);
+    assert.equal(isSupportedNodeVersion('23.0.0'), true);
+    assert.equal(isSupportedNodeVersion('24.16.0'), true);
+    assert.equal(isSupportedNodeVersion('24.21.0'), true);
     assert.equal(isSupportedNodeVersion(), true);
+    assert.equal(isSupportedNodeVersion(null), false);
+    assert.equal(isSupportedNodeVersion(123), false);
+  });
+
+  test('installer exits status 1 with diagnostic on unsupported Node version without mutation', () => {
+    const project = path.join(tempRoot, 'project-guard');
+    const preload = path.join(tempRoot, 'mock-unsupported-node.cjs');
+    fs.writeFileSync(preload, [
+      'Object.defineProperty(process.versions, "node", { value: "22.18.9", configurable: true });',
+      'Object.defineProperty(process, "version", { value: "v22.18.9", configurable: true });'
+    ].join('\n'));
+
+    const result = spawnSync(process.execPath, [
+      '--require', preload,
+      cliPath,
+      '--target', 'agents',
+      '--directory', project
+    ], {
+      cwd: tempRoot,
+      encoding: 'utf8'
+    });
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Error: Node\.js >=22\.19\.0 is required \(current: v22\.18\.9\)\./);
+    assert.equal(fs.existsSync(project), false, 'Must perform no filesystem mutation on unsupported runtime');
   });
 
   test('exits with status 1 and leaves files untouched when interactive replacement is rejected', () => {
@@ -374,7 +415,7 @@ describe('SonarQube common skill installer', () => {
       cwd: tempRoot, encoding: 'utf8'
     });
     assert.equal(cliResult.status, 0);
-    assert.match(cliResult.stdout, /Installed 34 file\(s\)/);
+    assert.match(cliResult.stdout, /Installed 40 file\(s\)/);
     assert.match(cliResult.stdout, /\.agents\/skills.*and.*\.claude\/skills/);
     assert.doesNotMatch(cliResult.stdout, new RegExp(`${project}/skills`));
 
@@ -538,7 +579,7 @@ describe('SonarQube common skill installer', () => {
       encoding: 'utf8'
     });
     assert.equal(cliResult.status, 0);
-    assert.match(cliResult.stdout, /Installed 34 file\(s\)/);
+    assert.match(cliResult.stdout, /Installed 40 file\(s\)/);
     assert.match(cliResult.stdout, /\.agents[\\/]skills.*and.*\.claude[\\/]skills/);
     for (const root of ['.agents', '.claude']) {
       const rootPath = path.join(targetDir, root);
@@ -568,7 +609,25 @@ describe('SonarQube common skill installer', () => {
       }
     }
     countFiles(targetDir);
-    assert.equal(fileCount, EXPECTED_ASSETS.length * 2);
+    assert.equal(fileCount, EXPECTED_ASSETS.length * 2, `Expected exactly ${EXPECTED_ASSETS.length * 2} installed files, found ${fileCount}`);
+
+    // Prove parser/license/provenance and helper closure runs outside repo
+    for (const root of ['.agents', '.claude']) {
+      const installedSkill = path.join(targetDir, root, 'skills', 'sonarqube-test-quality');
+      const fetchHelper = path.join(installedSkill, 'scripts', 'fetch-sonar-issues.mjs');
+      const coverageHelper = path.join(installedSkill, 'scripts', 'calculate-jacoco-coverage.mjs');
+      assert.ok(fs.existsSync(fetchHelper), 'Installed fetch helper must exist');
+      assert.ok(fs.existsSync(coverageHelper), 'Installed coverage helper must exist');
+      assert.ok(fs.existsSync(path.join(installedSkill, 'scripts', 'vendor', 'sax.cjs')), 'Installed vendor parser must exist');
+
+      const fetchHelp = spawnSync(process.execPath, [fetchHelper, '--help'], { cwd: tempRoot, encoding: 'utf8' });
+      assert.equal(fetchHelp.status, 0);
+      assert.match(fetchHelp.stdout, /Usage: node fetch-sonar-issues\.mjs/);
+
+      const covHelp = spawnSync(process.execPath, [coverageHelper, '--help'], { cwd: tempRoot, encoding: 'utf8' });
+      assert.equal(covHelp.status, 0);
+      assert.match(covHelp.stdout, /Usage: node calculate-jacoco-coverage\.mjs/);
+    }
   });
 
   test('staging failure cleans up temporary staged files', () => {
@@ -851,7 +910,7 @@ describe('SonarQube common skill installer', () => {
       encoding: 'utf8'
     });
     assert.equal(cliResult.status, 0);
-    assert.match(cliResult.stdout, /Installed 17 file\(s\)/);
+    assert.match(cliResult.stdout, /Installed 20 file\(s\)/);
     assert.match(cliResult.stdout, /\.claude\/skills/);
     assert.ok(!fs.existsSync(path.join(project, '.agents')));
     assert.ok(fs.existsSync(path.join(project, '.claude', 'skills', 'sonarqube-test-quality', 'SKILL.md')));
@@ -889,5 +948,559 @@ describe('SonarQube common skill installer', () => {
     }), /fail fresh install/);
 
     assert.ok(!fs.existsSync(project), 'Nonexistent project root created by installer must be cleaned up on failure');
+  });
+
+  describe('Transactional retirement of legacy PowerShell helpers', () => {
+    function seedHistoricalHelpers(projectRoot, target = 'agents', { fetchBytes = HISTORICAL_FETCH_BYTES, coverageBytes = HISTORICAL_COVERAGE_BYTES } = {}) {
+      const roots = target === 'both' ? ['.agents', '.claude'] : (target === 'agents' ? ['.agents'] : ['.claude']);
+      for (const root of roots) {
+        const scriptsDir = path.join(projectRoot, root, 'skills', 'sonarqube-test-quality', 'scripts');
+        fs.mkdirSync(scriptsDir, { recursive: true });
+        if (fetchBytes !== null) {
+          fs.writeFileSync(path.join(scriptsDir, 'fetch-sonar-issues.ps1'), fetchBytes, { mode: 0o644 });
+        }
+        if (coverageBytes !== null) {
+          fs.writeFileSync(path.join(scriptsDir, 'calculate-jacoco-coverage.ps1'), coverageBytes, { mode: 0o644 });
+        }
+      }
+    }
+    test('immutable release provenance metadata matches RETIRED_ASSETS and authentic fixtures', () => {
+      const jsonPath = path.join(packageRoot, 'lib', 'retirement-provenance.json');
+      assert.ok(fs.existsSync(jsonPath), 'retirement-provenance.json must exist');
+      const provData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+      assert.equal(provData.provenanceVersion, 1);
+      assert.equal(provData.retiredAssets.length, RETIRED_ASSETS.length);
+
+      for (let i = 0; i < RETIRED_ASSETS.length; i++) {
+        const constantAsset = RETIRED_ASSETS[i];
+        const jsonAsset = provData.retiredAssets[i];
+        assert.equal(constantAsset.destination, jsonAsset.destination);
+        assert.equal(constantAsset.knownVariants.length, jsonAsset.knownVariants.length);
+        for (let v = 0; v < constantAsset.knownVariants.length; v++) {
+          const cVar = constantAsset.knownVariants[v];
+          const jVar = jsonAsset.knownVariants[v];
+          assert.equal(cVar.version, jVar.version);
+          assert.equal(cVar.release, jVar.release);
+          assert.equal(cVar.commit, jVar.commit);
+          assert.equal(cVar.length, jVar.length);
+          assert.equal(cVar.sha256, jVar.sha256);
+          assert.equal(cVar.reproductionCommand, jVar.reproductionCommand);
+        }
+      }
+
+      const fetchHash = crypto.createHash('sha256').update(HISTORICAL_FETCH_BYTES).digest('hex');
+      const covHash = crypto.createHash('sha256').update(HISTORICAL_COVERAGE_BYTES).digest('hex');
+      assert.equal(HISTORICAL_FETCH_BYTES.length, RETIRED_ASSETS[0].knownVariants[0].length);
+      assert.equal(fetchHash, RETIRED_ASSETS[0].knownVariants[0].sha256);
+      assert.equal(HISTORICAL_COVERAGE_BYTES.length, RETIRED_ASSETS[1].knownVariants[0].length);
+      assert.equal(covHash, RETIRED_ASSETS[1].knownVariants[0].sha256);
+    });
+
+
+    test('Case 1: fresh install has zero removals, reports missing paths, and leaves retired paths absent', () => {
+      const project = path.join(tempRoot, 'fresh-retirement-project');
+      const plan = planFor(project);
+      assert.equal(plan.removals.length, 0);
+      assert.equal(plan.missing.length, 2);
+      assert.equal(plan.blockers.length, 0);
+
+      const result = executeInstallation(plan);
+      assert.equal(result.committed.length, EXPECTED_ASSETS.length);
+      assert.equal(result.removals.length, 0);
+      assert.equal(result.missing.length, 2);
+
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const covPs1 = path.join(skillRoot(project), 'scripts', 'calculate-jacoco-coverage.ps1');
+      assert.ok(!fs.existsSync(fetchPs1));
+      assert.ok(!fs.existsSync(covPs1));
+
+      const bothPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: path.join(tempRoot, 'fresh-both') });
+      assert.equal(bothPlan.removals.length, 0);
+      assert.equal(bothPlan.missing.length, 4);
+    });
+
+    test('Case 2: recognized upgrade removes trusted .ps1 helpers and reports completed removals', () => {
+      const project = path.join(tempRoot, 'upgrade-agents-project');
+      seedHistoricalHelpers(project, 'agents');
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const covPs1 = path.join(skillRoot(project), 'scripts', 'calculate-jacoco-coverage.ps1');
+      assert.ok(fs.existsSync(fetchPs1));
+      assert.ok(fs.existsSync(covPs1));
+
+      const plan = planFor(project);
+      assert.equal(plan.removals.length, 2);
+      assert.equal(plan.missing.length, 0);
+      assert.equal(plan.blockers.length, 0);
+
+      const result = executeInstallation(plan);
+      assert.equal(result.committed.length, EXPECTED_ASSETS.length);
+      assert.equal(result.removals.length, 2);
+      assert.ok(!fs.existsSync(fetchPs1));
+      assert.ok(!fs.existsSync(covPs1));
+
+      // CLI presentation check
+      const cliProject = path.join(tempRoot, 'cli-upgrade-project');
+      seedHistoricalHelpers(cliProject, 'agents');
+      const cliRes = spawnSync(process.execPath, [cliPath, '--target', 'agents', '--directory', cliProject], {
+        cwd: tempRoot,
+        encoding: 'utf8'
+      });
+      assert.equal(cliRes.status, 0);
+      assert.match(cliRes.stdout, /retired 2 obsolete file\(s\)/);
+
+      // Both mode upgrade
+      const bothProject = path.join(tempRoot, 'upgrade-both-project');
+      seedHistoricalHelpers(bothProject, 'both');
+      const bothPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: bothProject });
+      assert.equal(bothPlan.removals.length, 4);
+      assert.equal(bothPlan.missing.length, 0);
+      const bothRes = executeInstallation(bothPlan);
+      assert.equal(bothRes.committed.length, EXPECTED_ASSETS.length * 2);
+      assert.equal(bothRes.removals.length, 4);
+      for (const root of ['.agents', '.claude']) {
+        assert.ok(!fs.existsSync(path.join(bothProject, root, 'skills', 'sonarqube-test-quality', 'scripts', 'fetch-sonar-issues.ps1')));
+        assert.ok(!fs.existsSync(path.join(bothProject, root, 'skills', 'sonarqube-test-quality', 'scripts', 'calculate-jacoco-coverage.ps1')));
+      }
+    });
+
+    test('Case 3: repeat upgrade is idempotent and partially missing files are handled safely', () => {
+      const project = path.join(tempRoot, 'repeat-retirement-project');
+      seedHistoricalHelpers(project, 'agents');
+      executeInstallation(planFor(project));
+
+      // Repeat execution
+      const repPlan = planFor(project);
+      assert.equal(repPlan.removals.length, 0);
+      assert.equal(repPlan.missing.length, 2);
+      const repRes = executeInstallation(repPlan);
+      assert.equal(repRes.committed.length, 0);
+      assert.equal(repRes.unchanged.length, EXPECTED_ASSETS.length);
+      assert.equal(repRes.removals.length, 0);
+      assert.equal(repRes.missing.length, 2);
+
+      // Partially missing: only fetch helper present
+      const partialProject = path.join(tempRoot, 'partial-missing-project');
+      seedHistoricalHelpers(partialProject, 'agents', { coverageBytes: null });
+      const partPlan = planFor(partialProject);
+      assert.equal(partPlan.removals.length, 1);
+      assert.equal(partPlan.missing.length, 1);
+      const partRes = executeInstallation(partPlan);
+      assert.equal(partRes.removals.length, 1);
+      assert.equal(partRes.missing.length, 1);
+      assert.ok(!fs.existsSync(path.join(skillRoot(partialProject), 'scripts', 'fetch-sonar-issues.ps1')));
+    });
+
+    test('Case 4: library and CLI dry-run surface removals and missing paths without disk changes or locks', () => {
+      const project = path.join(tempRoot, 'dry-run-retirement-project');
+      seedHistoricalHelpers(project, 'agents');
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const mtimeBefore = fs.statSync(fetchPs1).mtimeMs;
+
+      const plan = planFor(project);
+      const dryResult = executeInstallation(plan, { dryRun: true });
+      assert.equal(dryResult.dryRun, true);
+      assert.equal(dryResult.removals.length, 2);
+      assert.equal(dryResult.additions.length, EXPECTED_ASSETS.length);
+      assert.equal(dryResult.blockers.length, 0);
+      assert.ok(fs.existsSync(fetchPs1));
+      assert.equal(fs.statSync(fetchPs1).mtimeMs, mtimeBefore);
+      assert.ok(!fs.existsSync(path.join(project, '.sonarqube-test-quality.install.lock')));
+
+      // CLI dry run
+      const cliRes = spawnSync(process.execPath, [cliPath, '--target', 'agents', '--directory', project, '--dry-run'], {
+        cwd: tempRoot,
+        encoding: 'utf8'
+      });
+      assert.equal(cliRes.status, 0);
+      assert.match(cliRes.stdout, /- skills\/sonarqube-test-quality\/scripts\/fetch-sonar-issues\.ps1/);
+      assert.match(cliRes.stdout, /Dry run complete; no files were written\./);
+
+      // CLI dry run with customized blocker
+      fs.writeFileSync(fetchPs1, 'customized content');
+      const cliBlockRes = spawnSync(process.execPath, [cliPath, '--target', 'agents', '--directory', project, '--dry-run'], {
+        cwd: tempRoot,
+        encoding: 'utf8'
+      });
+      assert.equal(cliBlockRes.status, 1);
+      assert.match(cliBlockRes.stderr, /Dry run detected blockers:/);
+      assert.match(cliBlockRes.stderr, /Customized or unrecognized obsolete helper file/);
+    });
+
+    test('Case 5: unknown/customized regular old file blocks the entire plan with and without force', () => {
+      const project = path.join(tempRoot, 'customized-project');
+      seedHistoricalHelpers(project, 'agents', { fetchBytes: Buffer.from('# customized user script\nexit 0') });
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const origBytes = fs.readFileSync(fetchPs1);
+
+      const plan = planFor(project);
+      assert.equal(plan.blockers.length, 1);
+      assert.match(plan.blockers[0].reason, /Customized or unrecognized obsolete helper file/);
+
+      assert.throws(() => executeInstallation(plan), /Installation blocked/);
+      assert.throws(() => executeInstallation(plan, { force: true }), /Installation blocked/);
+      assert.throws(() => executeInstallation(plan, { force: true, yes: true }), /Installation blocked/);
+
+      // Original customized file is untouched, not deleted, not backed up
+      assert.ok(fs.existsSync(fetchPs1));
+      assert.ok(fs.readFileSync(fetchPs1).equals(origBytes));
+      assert.ok(!fs.existsSync(path.join(skillRoot(project), 'SKILL.md')), 'No active files installed when blocked');
+    });
+
+    test('Case 6: one blocked root in both mode blocks both roots before any modification', () => {
+      const project = path.join(tempRoot, 'one-blocked-both-project');
+      seedHistoricalHelpers(project, 'agents'); // trusted
+      seedHistoricalHelpers(project, 'claude', { fetchBytes: Buffer.from('unrecognized helper') }); // customized
+
+      const bothPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+      assert.equal(bothPlan.blockers.length, 1);
+      assert.match(bothPlan.blockers[0].relativePath, /\.claude/);
+
+      assert.throws(() => executeInstallation(bothPlan), /Installation blocked/);
+
+      // .agents trusted helper remains untouched on disk!
+      const agentsFetch = path.join(project, '.agents', 'skills', 'sonarqube-test-quality', 'scripts', 'fetch-sonar-issues.ps1');
+      assert.ok(fs.existsSync(agentsFetch));
+      assert.ok(fs.readFileSync(agentsFetch).equals(HISTORICAL_FETCH_BYTES));
+      assert.ok(!fs.existsSync(path.join(project, '.agents', 'skills', 'sonarqube-test-quality', 'SKILL.md')));
+      assert.ok(!fs.existsSync(path.join(project, '.claude', 'skills', 'sonarqube-test-quality', 'SKILL.md')));
+    });
+
+    test('Case 7: unsafe leaf or ancestor (symlinks, non-directories) blocks retirement without touching targets', t => {
+      const project = path.join(tempRoot, 'unsafe-leaf-project');
+      const scriptsDir = path.join(skillRoot(project), 'scripts');
+      fs.mkdirSync(scriptsDir, { recursive: true });
+
+      const outsideFile = path.join(tempRoot, 'outside-secret.txt');
+      fs.writeFileSync(outsideFile, 'secret outside file');
+
+      const symlinkLeaf = path.join(scriptsDir, 'fetch-sonar-issues.ps1');
+      try {
+        fs.symlinkSync(outsideFile, symlinkLeaf);
+      } catch (e) {
+        t.skip('symlinks unavailable');
+        return;
+      }
+
+      const plan = planFor(project);
+      assert.ok(plan.blockers.length > 0);
+      assert.match(plan.blockers[0].reason, /symbolic link/);
+      assert.throws(() => executeInstallation(plan), /Installation blocked/);
+      assert.ok(fs.existsSync(outsideFile));
+      assert.equal(fs.readFileSync(outsideFile, 'utf8'), 'secret outside file');
+      fs.unlinkSync(symlinkLeaf);
+
+      // Directory leaf where file expected
+      fs.mkdirSync(symlinkLeaf);
+      const dirPlan = planFor(project);
+      assert.ok(dirPlan.blockers.length > 0);
+      assert.match(dirPlan.blockers[0].reason, /not a regular file/);
+      assert.throws(() => executeInstallation(dirPlan), /Installation blocked/);
+      fs.rmdirSync(symlinkLeaf);
+    });
+
+    test('Case 8: post-plan drift is rejected under lock before staging or unlinking', () => {
+      const project = path.join(tempRoot, 'post-plan-drift-project');
+      seedHistoricalHelpers(project, 'agents');
+      const plan = planFor(project);
+      assert.equal(plan.removals.length, 2);
+
+      // Modify candidate after planning
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      fs.writeFileSync(fetchPs1, 'tampered bytes after planning');
+
+      assert.throws(() => executeInstallation(plan), /Retirement candidate changed after planning/);
+      assert.ok(!fs.existsSync(path.join(skillRoot(project), 'SKILL.md')));
+      assert.ok(fs.existsSync(fetchPs1));
+    });
+
+    test('Case 9: mutation-boundary drift immediately before unlink aborts safely', () => {
+      const project = path.join(tempRoot, 'immediate-drift-project');
+      seedHistoricalHelpers(project, 'agents');
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const plan = planFor(project);
+
+      assert.throws(() => executeInstallation(plan, {
+        _beforeUnlink: (rAction) => {
+          if (rAction.relativePath.includes('fetch-sonar-issues.ps1')) {
+            fs.writeFileSync(rAction.destinationPath, 'modified right before unlink');
+          }
+        }
+      }), /Retirement destination content changed immediately before removal/);
+
+      assert.ok(fs.existsSync(fetchPs1));
+      assert.equal(fs.readFileSync(fetchPs1, 'utf8'), 'modified right before unlink');
+    });
+
+    test('Case 10: failure before unlink completes leaves candidate untouched and restores prior removals', () => {
+      const project = path.join(tempRoot, 'unlink-fail-project');
+      seedHistoricalHelpers(project, 'agents');
+      const plan = planFor(project);
+
+      assert.throws(() => executeInstallation(plan, {
+        _beforeUnlink: (rAction, rIdx) => {
+          if (rIdx === 1) {
+            throw new Error('injected unlink failure on second candidate');
+          }
+        }
+      }), /injected unlink failure on second candidate/);
+
+      // First candidate was unlinked and must be restored by rollback
+      // Second candidate was never unlinked and must be untouched
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const covPs1 = path.join(skillRoot(project), 'scripts', 'calculate-jacoco-coverage.ps1');
+      assert.ok(fs.existsSync(fetchPs1), 'First candidate must be restored');
+      assert.ok(fs.existsSync(covPs1), 'Second candidate must remain present');
+      assert.ok(fs.readFileSync(fetchPs1).equals(HISTORICAL_FETCH_BYTES));
+      assert.ok(fs.readFileSync(covPs1).equals(HISTORICAL_COVERAGE_BYTES));
+    });
+
+    test('Case 11: fault after each completed removal restores all unlinked originals with exact bytes and mode', () => {
+      for (let failAt = 0; failAt < 4; failAt++) {
+        const project = path.join(tempRoot, `fault-after-removal-${failAt}`);
+        seedHistoricalHelpers(project, 'both');
+        const plan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
+        assert.equal(plan.removals.length, 4);
+
+        assert.throws(() => executeInstallation(plan, {
+          _afterUnlink: (rAction, rIdx) => {
+            if (rIdx === failAt) {
+              throw new Error(`simulated failure after removal ${failAt}`);
+            }
+          }
+        }), new RegExp(`simulated failure after removal ${failAt}`));
+
+        // All 4 files must exist with exact historical bytes
+        for (const root of ['.agents', '.claude']) {
+          const fPath = path.join(project, root, 'skills', 'sonarqube-test-quality', 'scripts', 'fetch-sonar-issues.ps1');
+          const cPath = path.join(project, root, 'skills', 'sonarqube-test-quality', 'scripts', 'calculate-jacoco-coverage.ps1');
+          assert.ok(fs.existsSync(fPath), `fetch helper in ${root} must be present`);
+          assert.ok(fs.existsSync(cPath), `coverage helper in ${root} must be present`);
+          assert.ok(fs.readFileSync(fPath).equals(HISTORICAL_FETCH_BYTES));
+          assert.ok(fs.readFileSync(cPath).equals(HISTORICAL_COVERAGE_BYTES));
+        }
+      }
+    });
+
+    test('Case 12: fault across publication and verification boundaries restores all retired files and rolls back active additions/replacements', () => {
+      const project = path.join(tempRoot, 'pub-verify-fault-project');
+      seedHistoricalHelpers(project, 'agents');
+      const plan = planFor(project);
+
+      // Fault during publication after unlinks completed
+      assert.throws(() => executeInstallation(plan, {
+        _beforePublish: (action, index) => {
+          if (index === 3) throw new Error('injected publication failure');
+        }
+      }), /injected publication failure/);
+
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const covPs1 = path.join(skillRoot(project), 'scripts', 'calculate-jacoco-coverage.ps1');
+      assert.ok(fs.existsSync(fetchPs1));
+      assert.ok(fs.existsSync(covPs1));
+      assert.ok(fs.readFileSync(fetchPs1).equals(HISTORICAL_FETCH_BYTES));
+      assert.ok(fs.readFileSync(covPs1).equals(HISTORICAL_COVERAGE_BYTES));
+      assert.ok(!fs.existsSync(path.join(skillRoot(project), 'SKILL.md')));
+
+      // Fault during verification after all active files published
+      const freshPlan = planFor(project);
+      assert.throws(() => executeInstallation(freshPlan, {
+        _beforeVerify: () => {
+          throw new Error('injected verification failure');
+        }
+      }), /injected verification failure/);
+
+      assert.ok(fs.existsSync(fetchPs1));
+      assert.ok(fs.existsSync(covPs1));
+      assert.ok(fs.readFileSync(fetchPs1).equals(HISTORICAL_FETCH_BYTES));
+      assert.ok(fs.readFileSync(covPs1).equals(HISTORICAL_COVERAGE_BYTES));
+    });
+
+    test('Case 13: explicit mode restoration under restrictive umask and tracked restoration failure', () => {
+      const project = path.join(tempRoot, 'umask-mode-project');
+      seedHistoricalHelpers(project, 'agents');
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      fs.chmodSync(fetchPs1, 0o640);
+
+      const plan = planFor(project);
+      const oldUmask = process.umask(0o077);
+      try {
+        assert.throws(() => executeInstallation(plan, {
+          _beforePublish: () => { throw new Error('fail during publication for umask test'); }
+        }), /fail during publication for umask test/);
+      } finally {
+        process.umask(oldUmask);
+      }
+
+      assert.ok(fs.existsSync(fetchPs1));
+      const restoredStat = fs.statSync(fetchPs1);
+      assert.equal(restoredStat.mode & 0o777, 0o640, 'Restored mode must match original 0640 even under umask 077');
+
+      // Tracked chmod failure during restore keeps restored bytes and reports mode restoration failure
+      const chmodFailPlan = planFor(project);
+      assert.throws(() => executeInstallation(chmodFailPlan, {
+        _beforeRestoreChmod: () => { throw new Error('permission denied on chmod'); },
+        _beforePublish: () => { throw new Error('trigger rollback'); }
+      }), /rollback partial failure: .*failed to restore mode: permission denied on chmod/);
+      assert.ok(fs.existsSync(fetchPs1), 'Restored bytes must be preserved when mode restoration fails');
+
+      // Tracked write failure during restore retains destination for inspection
+      const writeFailPlan = planFor(project);
+      assert.throws(() => executeInstallation(writeFailPlan, {
+        _beforeRestoreWrite: () => { throw new Error('simulated disk full during write'); },
+        _beforePublish: () => { throw new Error('trigger rollback'); }
+      }), /rollback partial failure: .*restoration failed; any existing destination left untouched: simulated disk full during write/);
+      assert.ok(fs.existsSync(fetchPs1), 'Destination must be retained for inspection on write failure');
+      // Also verify active replacement rollback preserves mode under restrictive umask
+      const replProject = path.join(tempRoot, 'umask-replacement-project');
+      executeInstallation(planFor(replProject));
+      const skillFile = path.join(skillRoot(replProject), 'SKILL.md');
+      fs.chmodSync(skillFile, 0o640);
+      fs.writeFileSync(skillFile, 'modified user skill file');
+      const replPlan = planFor(replProject);
+      const umask2 = process.umask(0o077);
+      try {
+        assert.throws(() => executeInstallation(replPlan, {
+          force: true, yes: true,
+          _beforeVerify: () => {
+            assert.ok(fs.readFileSync(skillFile).equals(fs.readFileSync(path.join(packageRoot, 'SKILL.md'))));
+            throw new Error('fail replacement publish under umask');
+          }
+        }), /fail replacement publish under umask/);
+      } finally {
+        process.umask(umask2);
+      }
+      assert.equal(fs.readFileSync(skillFile, 'utf8'), 'modified user skill file', 'Rollback must restore original modified user content');
+      assert.equal(fs.statSync(skillFile).mode & 0o777, 0o640, 'Replaced file mode must match original 0640 even under umask 077');
+    });
+
+    test('Case 14: concurrent rollback recreation is preserved without overwrite and reported as partial rollback', () => {
+      const project = path.join(tempRoot, 'concurrent-recreation-project');
+      seedHistoricalHelpers(project, 'agents');
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const plan = planFor(project);
+
+      assert.throws(() => executeInstallation(plan, {
+        _beforePublish: () => {
+          // Simulate external process recreating the unlinked file before rollback
+          fs.writeFileSync(fetchPs1, 'recreated by external writer');
+          throw new Error('trigger rollback with recreation');
+        }
+      }), /rollback partial failure: .* destination recreated during installation, preserving file/);
+
+      // Recreated file was preserved and NOT clobbered by rollback
+      assert.ok(fs.existsSync(fetchPs1));
+      assert.equal(fs.readFileSync(fetchPs1, 'utf8'), 'recreated by external writer');
+    });
+
+    test('Case 15: scope isolation preserves unselected roots and unrelated files across success, blocks, and rollback', () => {
+      const project = path.join(tempRoot, 'isolation-project');
+      const sentinel = path.join(project, 'sentinel.txt');
+      const unselectedFile = path.join(project, '.claude', 'user-file.txt');
+      fs.mkdirSync(path.dirname(unselectedFile), { recursive: true });
+      fs.writeFileSync(sentinel, 'project sentinel');
+      fs.writeFileSync(unselectedFile, 'claude user file');
+
+      seedHistoricalHelpers(project, 'agents');
+      const plan = planFor(project);
+
+      // Success
+      executeInstallation(plan);
+      assert.equal(fs.readFileSync(sentinel, 'utf8'), 'project sentinel');
+      assert.equal(fs.readFileSync(unselectedFile, 'utf8'), 'claude user file');
+
+      // Blocked preflight preserves all outside files
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      fs.writeFileSync(fetchPs1, 'customized blocker file');
+      const blockPlan = planFor(project);
+      assert.throws(() => executeInstallation(blockPlan), /Installation blocked/);
+      assert.equal(fs.readFileSync(sentinel, 'utf8'), 'project sentinel');
+      assert.equal(fs.readFileSync(unselectedFile, 'utf8'), 'claude user file');
+      fs.unlinkSync(fetchPs1);
+      // Rollback of actual replacement mutation preserves all outside files
+      const skillFile = path.join(skillRoot(project), 'SKILL.md');
+      fs.writeFileSync(skillFile, 'modified skill content');
+      const updatePlan = planFor(project);
+      assert.throws(() => executeInstallation(updatePlan, {
+        force: true, yes: true,
+        _beforeVerify: () => {
+          assert.ok(fs.readFileSync(skillFile).equals(fs.readFileSync(path.join(packageRoot, 'SKILL.md'))));
+          throw new Error('fail during replacement');
+        }
+      }), /fail during replacement/);
+      assert.equal(fs.readFileSync(sentinel, 'utf8'), 'project sentinel');
+      assert.equal(fs.readFileSync(unselectedFile, 'utf8'), 'claude user file');
+      assert.equal(fs.readFileSync(skillFile, 'utf8'), 'modified skill content');
+    });
+
+    test('Case 16: identity change detection protects against same-byte file swaps', () => {
+      const project = path.join(tempRoot, 'same-byte-swap-project');
+      seedHistoricalHelpers(project, 'agents');
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const plan = planFor(project);
+
+      assert.throws(() => executeInstallation(plan, {
+        _beforeUnlink: (rAction) => {
+          if (rAction.relativePath.includes('fetch-sonar-issues.ps1')) {
+            // Unlink and recreate with same bytes but new inode
+            fs.unlinkSync(fetchPs1);
+            fs.writeFileSync(fetchPs1, HISTORICAL_FETCH_BYTES);
+          }
+        }
+      }), /Retirement destination identity changed immediately before removal/);
+    });
+
+    test('Case 17: ancestor swap during publication or rollback aborts safely without corrupting outside paths', t => {
+      const project = path.join(tempRoot, 'ancestor-swap-project');
+      seedHistoricalHelpers(project, 'agents');
+      const plan = planFor(project);
+
+      const outsideDir = path.join(tempRoot, 'outside-ancestor-target');
+      fs.mkdirSync(outsideDir, { recursive: true });
+      fs.writeFileSync(path.join(outsideDir, 'outside.txt'), 'do not delete');
+
+      let symlinkCreated = false;
+      try {
+        assert.throws(() => executeInstallation(plan, {
+          _beforePublish: () => {
+            // Replace skills directory with symlink to outside directory
+            const skillsDir = path.join(project, '.agents', 'skills');
+            fs.rmSync(skillsDir, { recursive: true, force: true });
+            fs.symlinkSync(outsideDir, skillsDir, 'junction');
+            symlinkCreated = true;
+            throw new Error('trigger publication failure after ancestor swap');
+          }
+        }), /trigger publication failure after ancestor swap/);
+      } catch (err) {
+        if (!symlinkCreated) {
+          t.skip('symlinks unavailable');
+          return;
+        }
+        throw err;
+      }
+
+      // Outside directory contents must NOT be removed by rollback!
+      assert.ok(fs.existsSync(path.join(outsideDir, 'outside.txt')));
+      assert.equal(fs.readFileSync(path.join(outsideDir, 'outside.txt'), 'utf8'), 'do not delete');
+      assert.deepEqual(fs.readdirSync(outsideDir), ['outside.txt'], 'Outside directory must not contain any new or restored files');
+    });
+
+    test('Case 18: destination recreated during restoration while descriptor is held open is preserved and never deleted', () => {
+      const project = path.join(tempRoot, 'recreation-during-restore-project');
+      seedHistoricalHelpers(project, 'agents');
+      const fetchPs1 = path.join(skillRoot(project), 'scripts', 'fetch-sonar-issues.ps1');
+      const plan = planFor(project);
+
+      assert.throws(() => executeInstallation(plan, {
+        _beforeRestoreWrite: (removalRecord, fd) => {
+          fs.unlinkSync(removalRecord.destinationPath);
+          fs.writeFileSync(removalRecord.destinationPath, 'external writer replaced during restore');
+          throw new Error('trigger error after external replacement');
+        },
+        _beforePublish: () => { throw new Error('trigger rollback'); }
+      }), /restoration failed; any existing destination left untouched: trigger error after external replacement/);
+
+      assert.ok(fs.existsSync(fetchPs1));
+      assert.equal(fs.readFileSync(fetchPs1, 'utf8'), 'external writer replaced during restore');
+    });
   });
 });

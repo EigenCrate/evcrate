@@ -1,3 +1,19 @@
+## [3.1.0](https://github.com/EigenCrate/evcrate/compare/v3.0.0...v3.1.0) (2026-10-13)
+
+
+### 🚀 Features
+
+* **snyk:** general Snyk remediation cycles and bounded coordinator ([#35](https://github.com/EigenCrate/evcrate/issues/35)) ([e240f0d](https://github.com/EigenCrate/evcrate/commit/e240f0dbec76101148f79e0cfb92216e086bad2e))
+* **sonar:** general Sonar remediation cycles and dual-root installer ([#36](https://github.com/EigenCrate/evcrate/issues/36)) ([95d816d](https://github.com/EigenCrate/evcrate/commit/95d816dc39cfb07b69387efdd83c4935d98db40d))
+* **vscode:** add runtime model bindings companion extension and sidebar TreeView ([#34](https://github.com/EigenCrate/evcrate/issues/34)) ([a4fdb5f](https://github.com/EigenCrate/evcrate/commit/a4fdb5f8300a9eaa25299d202066824f8b918b14))
+
+
+### 🐞 Bug Fixes
+
+* **cli:** resolve Windows wrapper paths in VS Code companion install ([79b44a4](https://github.com/EigenCrate/evcrate/commit/79b44a43d253252ec869c6eec8edbab771b86e61))
+* **release:** normalize companion digest version and guard parity ([6fdacb8](https://github.com/EigenCrate/evcrate/commit/6fdacb83d6a266e6da405cc2a16c201634402cdc))
+* **vscode:** cut over terminal tool references to execute namespace ([#37](https://github.com/EigenCrate/evcrate/issues/37)) ([54dda1d](https://github.com/EigenCrate/evcrate/commit/54dda1dbfd04ebe12a34872bca8dfb50c9b32930))
+
 ## [3.0.0](https://github.com/EigenCrate/evcrate/compare/v2.11.0...v3.0.0) (2026-10-12)
 
 
