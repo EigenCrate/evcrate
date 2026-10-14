@@ -2,8 +2,16 @@
 
 ## Unreleased
 
-**Updated:** 2026-10-13
-**Status:** Core package release history; General Sonar remediation cycles partial offline handoff (8/8 phases offline verified; live host unexercised); General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+**Updated:** 2026-10-14
+**Status:** Core package release history; Standalone Sonar single-report simplification cutover (DONE 2026-10-14; 1 maintained private sonar-report.md, 17/root 34 both, 59 package tests, offline complete/live Sonar+LLM unexercised); General Sonar remediation cycles partial offline handoff (8/8 phases offline verified; live host unexercised); General Snyk remediation cycles Phase 08 documentation and closeout (DONE 2026-10-13T00:57:00+07:00), Phase 07 operational qualification index delivered (BLOCKED on operator prerequisites / 0% operational), Phase 06 local integration review and corrections (DONE 2026-10-12T23:41:05+07:00), Phase 05 delivery and acceptance scenarios (DONE 2026-10-12T22:54:45+07:00), Phase 04 main-owned command and correction loop (DONE 2026-10-12T22:20:46+07:00), Phase 03 specialist and skill cutover (DONE 2026-10-12T22:02:47+07:00), Phase 02 procedure and ledger contracts (DONE 2026-10-12T21:39:21+07:00), Advisor subsystem retirement with inline `/evc-cmd-advise`, VS Code `evc` plugin identity and container-local `cmd-*` command mapping, VS Code subagent frontmatter tool-reference correction, Unified evc-* naming and AGENTS.md instructions across all harnesses, Hook Materialization Scope Distribution, and Windows release qualification milestones recorded below. Dated entries describe their original candidates, not current runtime qualification.
+
+### 2026-10-14 — feat(sonar): cut over standalone extension to single-report architecture
+
+- **Single maintained report:** Standalone `ext/sonarqube-test-quality/` now maintains one private `sonar-report.md` across remediation cycles instead of mandatory raw JSON bundles, `resume-checkpoint.json`, YAML mirrors, actor reports and a separate guidance report. API JSON is transient input by default; existing JSON exports remain valid converter inputs. The parent is the sole writer, merging local progress and historical findings; cycle/analysis-tagged coverage observations retain prior values. Unmanaged files from older installations are preserved.
+- **Resume and durability:** Persist budget before edits, a small in-flight intent before upload dispatch, and verified task identity immediately after upload; batch other updates. An interrupted intent without a task ID requires verified native task provenance or blocks without resubmission. Native logs, coverage and scanner scratch remain tool outputs.
+- **Template and delivery:** Template reduced from 204 to 49 lines, with six issue columns, five coverage columns and six history columns. Installer delivers 17 files per selected root / 34 for `both` (previously 18/36); tarball contains 22 files. Packed installation from unrelated CWD verified all 34 asset hashes and repeat no-op behavior. Converter smoke verified one created report, overwrite refusal, partial-capture exit 2 and hostile table-text escaping; POSIX permission tests verified mode `0600`.
+- **Verification:** `npm test` in the extension passed 59/59 tests across two suites plus the top-level catalog check: 36 installer, 22 converter (`tests/report-format.test.mjs`), one catalog. Removed 66 prose/mock leaf tests that did not qualify live workflow behavior. The 64 authored evaluation scenarios are structurally validated, not model-executed. Independent reviews: converter 9/10, workflow 8.5/10; zero critical issues after fixing missing-coverage file omission and pre-upload crash-window state.
+- **Scope and qualification boundaries:** Implemented strictly in standalone `ext/sonarqube-test-quality/` per inline user request (no plan path, separate from root helper milestone `plans/261014-0414-sonar-cross-platform-helpers/` Phase 01); core distribution manifests and canonical core harness require no regeneration. Node `>=18.11.0` extension engine baseline in `ext/sonarqube-test-quality/package.json` unchanged (distinct from root package and helper milestone Node `>=22.19.0`). Offline implementation and package checks complete; live SonarQube server qualification and live model execution traces remain unexercised boundaries.
 
 ### 2026-10-13 — fix(release): normalize release version in companion input digests and guard manifest parity
 
@@ -747,29 +755,9 @@
   archive **5/5**, root isolation **1/1**, and companion DamHopper lifecycle
   **8/8**. Standalone viewer retirement remains gated on E05/D06 G4.
 
-### 2026-09-19 — feat(viewer): complete packaging, CSP, preview, and release inventory (Phase 08)
+### 2026-09-19 — feat(viewer): historical packaging, CSP, preview, and release inventory (Phase 08)
 
-**Status:** Phase 08 DONE (2026-09-19; 100%); **39/39 focused tests passed**.
-**Plan:** [Phase 08 plan](../plans/260917-2308-advisor-visual-metrics/phase-08-packaging-csp-preview-and-release-inventory.md)
-**Evidence:** `tests/viewer/package-inventory.test.mjs`; `tests/distribution/private-release-artifacts.test.mjs`
-
-- Added the viewer TypeScript, Vite, and Playwright boundaries: strict ES2020
-  browser typechecking, relative static assets, no sourcemaps, and one Chromium
-  project served from the built preview.
-- Added `build:viewer`, `build:all`, `viewer:preview`, and
-  `test:advisor-viewer`; release preparation now builds the root and viewer
-  together before collecting package inventory.
-- Preview binds strictly to loopback `127.0.0.1:4173` and emits the exact HTTP
-  CSP: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'
-  data:; connect-src 'none'; object-src 'none'; base-uri 'none';
-  frame-ancestors 'none'`.
-- Package inventory includes only built `viewer/dist/**` viewer assets; source,
-  configs, tests, maps, and `node_modules` remain excluded. The measured bundle
-  is **298.5 kB <= 5 MiB**.
-- Exact-seven top-level release assets and the exact 33-file controller closure
-  remain unchanged. The viewer is packed inside platform archives, never added
-  as a release asset.
-- Handoff: **Phase 09 — Focused qualification and performance benchmark**.
+- Added viewer TypeScript/Vite/Playwright boundaries, loopback-only CSP, and package inventory under 5 MiB (39/39 tests passed). Historical plan path not retained in this checkout. Detailed records preserved in [changelog archive](./project-changelog-archive.md#2026-09-19--featviewer-complete-packaging-csp-preview-and-release-inventory-phase-08).
 
 ### 2026-09-19 — feat(viewer): historical React Explorer and view architecture (Phase 07)
 

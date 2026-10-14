@@ -27,7 +27,6 @@ const EXPECTED_ASSETS = [
   { source: 'references/run-guidance.md', dest: 'skills/sonarqube-test-quality/references/run-guidance.md' },
   { source: 'agents/sonar-evidence.md', dest: 'skills/sonarqube-test-quality/agents/sonar-evidence.md' },
   { source: 'templates/remediation-cycle-report.md', dest: 'skills/sonarqube-test-quality/templates/remediation-cycle-report.md' },
-  { source: 'templates/run-guidance-report.md', dest: 'skills/sonarqube-test-quality/templates/run-guidance-report.md' },
   { source: 'commands/cmd-sonar-remediate/SKILL.md', dest: 'skills/cmd-sonar-remediate/SKILL.md' }
 ];
 
@@ -64,6 +63,7 @@ describe('SonarQube common skill installer', () => {
     for (const asset of EXPECTED_ASSETS) {
       assert.ok(fs.readFileSync(path.join(project, '.agents', asset.dest)).equals(fs.readFileSync(path.join(packageRoot, asset.source))));
     }
+    assert.deepEqual(fs.readdirSync(path.join(skillRoot(project), 'templates')), ['remediation-cycle-report.md']);
     const repeated = executeInstallation(planFor(project));
     assert.equal(repeated.committed.length, 0);
     assert.equal(repeated.unchanged.length, EXPECTED_ASSETS.length);
@@ -73,39 +73,43 @@ describe('SonarQube common skill installer', () => {
     assertNoRegistration(project);
   });
 
-  test('CLI installs a standalone converter preserving nested reports outside the source tree', () => {
+  test('CLI installs a standalone converter consuming Sonar evidence outside the source tree', () => {
     const project = path.join(tempRoot, 'project');
     execFileSync(process.execPath, [cliPath, '--target', 'agents', '--directory', project], { cwd: tempRoot, encoding: 'utf8' });
     const converter = path.join(skillRoot(project), 'scripts', 'convert-sonar-report.mjs');
     assert.ok(!fs.existsSync(path.join(skillRoot(project), 'lib')));
     const evidence = {
-      project: { key: 'demo-project', branch: 'feature-report', pullRequest: '73', revision: 'abcdef0123456789' },
-      paging: { pageIndex: 2, pageSize: 2, total: 21 },
-      issues: [
-        { key: 'finding-first', severity: 'MAJOR', flows: [{ locations: [
-          { component: 'demo-project:src/example.js', textRange: { startLine: 17 }, msg: 'Nested finding evidence' }
-        ] }], tags: ['coverage', 'coverage'] },
-        { key: 'finding-second', severity: 'MINOR', message: 'Second finding evidence', unknown: { active: false, extra: null } }
-      ],
-      errors: [{ msg: 'Partial page evidence' }],
-      unknown: { emptyArray: [], emptyObject: {} }
+      run: { target: 'demo-project', branch: 'feature-report', revision: 'abcdef0123456789' },
+      issues: [{
+        paging: { pageIndex: 1, pageSize: 2, total: 2 },
+        issues: [
+          { key: 'finding-first', component: 'demo-project:src/example.js', rule: 'javascript:S3776',
+            message: 'First finding evidence', severity: 'MAJOR',
+            impacts: [{ softwareQuality: 'MAINTAINABILITY', severity: 'HIGH' }],
+            textRange: { startLine: 17, endLine: 19 }, flows: [{ locations: [
+              { component: 'demo-project:src/helper.js', textRange: { startLine: 7 }, msg: 'Nested finding evidence' }
+            ] }] },
+          { key: 'finding-second', component: 'demo-project:src/other.js', severity: 'MINOR',
+            message: 'Second finding evidence' }
+        ]
+      }],
+      hotspots: [{ paging: { pageIndex: 1, pageSize: 2, total: 0 }, hotspots: [] }],
+      measures: [{ component: { key: 'demo-project', measures: [
+        { metric: 'coverage', value: '98' }, { metric: 'uncovered_lines', value: '0' }
+      ] } }]
     };
-    const runConverter = format => execFileSync(process.execPath, [converter, '--input', '-', '--format', format], {
-      cwd: tempRoot, input: JSON.stringify(evidence, null, 2), encoding: 'utf8'
+    const input = JSON.stringify(evidence);
+    const json = execFileSync(process.execPath, [converter, '--input', '-', '--format', 'json'], {
+      cwd: tempRoot, input, encoding: 'utf8'
     });
-    const json = runConverter('json');
-    assert.equal(json.trimEnd(), JSON.stringify(evidence));
     assert.deepEqual(JSON.parse(json), evidence);
-    const markdown = runConverter('markdown');
+    const markdown = execFileSync(process.execPath, [converter, '--input', '-'], { cwd: tempRoot, input, encoding: 'utf8' });
     for (const value of [
-      'project', 'branch', 'pullRequest', 'revision', 'paging', 'pageIndex', 'pageSize', 'total',
-      'demo-project', 'feature-report', '73', 'abcdef0123456789', 'issues', 'finding-first',
-      'finding-second', 'MAJOR', 'MINOR', 'flows', 'locations', 'textRange', 'startLine',
-      '17', 'Nested finding evidence', 'Second finding evidence', 'Partial page evidence',
-      'unknown', 'active', 'false', 'extra', 'null', 'emptyArray', 'emptyObject'
-    ]) assert.ok(markdown.includes(value), `Markdown preserves ${value}`);
-    assert.ok(markdown.indexOf('finding-first') < markdown.indexOf('finding-second'));
-    assert.equal(markdown.split('coverage').length - 1, 2);
+      'demo-project', 'feature-report', 'abcdef0123456789', 'finding-first', 'finding-second',
+      'src/example.js', 'src/helper.js', 'javascript:S3776', 'MAINTAINABILITY', 'HIGH',
+      'First finding evidence', 'Nested finding evidence', 'Second finding evidence',
+      'coverage', '98', 'uncovered_lines'
+    ]) assert.ok(markdown.includes(value), `Installed converter retains evidence: ${value}`);
     assertNoRegistration(project);
   });
 
@@ -128,10 +132,12 @@ describe('SonarQube common skill installer', () => {
     const destination = path.join(skillRoot(project), 'SKILL.md');
     const unrelated = path.join(skillRoot(project), 'user-notes.txt');
     const existingInstallation = path.join(project, '.claude', 'skills', 'user-skill', 'SKILL.md');
+    const retiredReport = path.join(skillRoot(project), 'templates', 'run-guidance-report.md');
     fs.writeFileSync(destination, 'user-owned change');
     fs.writeFileSync(unrelated, 'unrelated evidence');
     fs.mkdirSync(path.dirname(existingInstallation), { recursive: true });
     fs.writeFileSync(existingInstallation, 'pre-existing user installation');
+    fs.writeFileSync(retiredReport, 'unmanaged prior-install report');
     const plan = planFor(project);
     assert.equal(plan.replacements.length, 1);
     assert.throws(() => executeInstallation(plan), /Destination files differ/);
@@ -143,6 +149,7 @@ describe('SonarQube common skill installer', () => {
     assert.equal(fs.readFileSync(destination, 'utf8'), fs.readFileSync(path.join(packageRoot, 'SKILL.md'), 'utf8'));
     assert.equal(fs.readFileSync(unrelated, 'utf8'), 'unrelated evidence');
     assert.equal(fs.readFileSync(existingInstallation, 'utf8'), 'pre-existing user installation');
+    assert.equal(fs.readFileSync(retiredReport, 'utf8'), 'unmanaged prior-install report');
   });
 
   test('rejects removed or missing targets and missing project roots without writing', () => {
@@ -356,18 +363,18 @@ describe('SonarQube common skill installer', () => {
     assert.equal(repeated.unchanged.length, EXPECTED_ASSETS.length);
   });
 
-  test('installs both targets with 36 destinations and dual discovery messaging', () => {
+  test('installs both targets with the full payload and dual discovery messaging', () => {
     const project = path.join(tempRoot, 'both-project');
     const plan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
     assert.equal(plan.installationRoot, project);
-    assert.equal(plan.actions.length, 36);
-    assert.equal(plan.additions.length, 36);
+    assert.equal(plan.actions.length, EXPECTED_ASSETS.length * 2);
+    assert.equal(plan.additions.length, EXPECTED_ASSETS.length * 2);
 
     const cliResult = spawnSync(process.execPath, [cliPath, '--target', 'both', '--directory', project], {
       cwd: tempRoot, encoding: 'utf8'
     });
     assert.equal(cliResult.status, 0);
-    assert.match(cliResult.stdout, /Installed 36 file\(s\)/);
+    assert.match(cliResult.stdout, /Installed 34 file\(s\)/);
     assert.match(cliResult.stdout, /\.agents\/skills.*and.*\.claude\/skills/);
     assert.doesNotMatch(cliResult.stdout, new RegExp(`${project}/skills`));
 
@@ -377,10 +384,10 @@ describe('SonarQube common skill installer', () => {
     }
 
     const repeatedPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
-    assert.equal(repeatedPlan.unchanged.length, 36);
+    assert.equal(repeatedPlan.unchanged.length, EXPECTED_ASSETS.length * 2);
     const repeated = executeInstallation(repeatedPlan);
     assert.equal(repeated.committed.length, 0);
-    assert.equal(repeated.unchanged.length, 36);
+    assert.equal(repeated.unchanged.length, EXPECTED_ASSETS.length * 2);
   });
 
   test('enforces locking hierarchy: shared project lock and legacy agents lock', () => {
@@ -401,7 +408,7 @@ describe('SonarQube common skill installer', () => {
 
     const claudePlan = planInstallation({ sourceDir: packageRoot, target: 'claude', directory: project });
     const claudeRes = executeInstallation(claudePlan);
-    assert.equal(claudeRes.committed.length, 18);
+    assert.equal(claudeRes.committed.length, EXPECTED_ASSETS.length);
 
     const agentsPlan = planInstallation({ sourceDir: packageRoot, target: 'agents', directory: project });
     assert.throws(() => executeInstallation(agentsPlan), /Installation locked by another process/);
@@ -531,7 +538,7 @@ describe('SonarQube common skill installer', () => {
       encoding: 'utf8'
     });
     assert.equal(cliResult.status, 0);
-    assert.match(cliResult.stdout, /Installed 36 file\(s\)/);
+    assert.match(cliResult.stdout, /Installed 34 file\(s\)/);
     assert.match(cliResult.stdout, /\.agents[\\/]skills.*and.*\.claude[\\/]skills/);
     for (const root of ['.agents', '.claude']) {
       const rootPath = path.join(targetDir, root);
@@ -561,7 +568,7 @@ describe('SonarQube common skill installer', () => {
       }
     }
     countFiles(targetDir);
-    assert.equal(fileCount, 36, `Expected exactly 36 installed files, found ${fileCount}`);
+    assert.equal(fileCount, EXPECTED_ASSETS.length * 2);
   });
 
   test('staging failure cleans up temporary staged files', () => {
@@ -809,14 +816,14 @@ describe('SonarQube common skill installer', () => {
     fs.writeFileSync(claudeSkill, 'user edit in claude');
 
     const bothPlan = planInstallation({ sourceDir: packageRoot, target: 'both', directory: project });
-    assert.equal(bothPlan.additions.length, 18);
+    assert.equal(bothPlan.additions.length, EXPECTED_ASSETS.length);
     assert.equal(bothPlan.replacements.length, 1);
-    assert.equal(bothPlan.unchanged.length, 17);
+    assert.equal(bothPlan.unchanged.length, EXPECTED_ASSETS.length - 1);
 
     assert.throws(() => executeInstallation(bothPlan), /Destination files differ/);
     const result = executeInstallation(bothPlan, { force: true, yes: true });
-    assert.equal(result.committed.length, 19);
-    assert.equal(result.unchanged.length, 17);
+    assert.equal(result.committed.length, EXPECTED_ASSETS.length + 1);
+    assert.equal(result.unchanged.length, EXPECTED_ASSETS.length - 1);
   });
 
   test('concurrent user-created file survives in both mode', () => {
@@ -832,7 +839,7 @@ describe('SonarQube common skill installer', () => {
         }
       }
     });
-    assert.equal(result.committed.length, 36);
+    assert.equal(result.committed.length, EXPECTED_ASSETS.length * 2);
     assert.ok(fs.existsSync(userFile));
     assert.equal(fs.readFileSync(userFile, 'utf8'), 'user created file');
   });
@@ -844,7 +851,7 @@ describe('SonarQube common skill installer', () => {
       encoding: 'utf8'
     });
     assert.equal(cliResult.status, 0);
-    assert.match(cliResult.stdout, /Installed 18 file\(s\)/);
+    assert.match(cliResult.stdout, /Installed 17 file\(s\)/);
     assert.match(cliResult.stdout, /\.claude\/skills/);
     assert.ok(!fs.existsSync(path.join(project, '.agents')));
     assert.ok(fs.existsSync(path.join(project, '.claude', 'skills', 'sonarqube-test-quality', 'SKILL.md')));

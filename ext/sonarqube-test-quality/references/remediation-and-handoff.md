@@ -17,36 +17,27 @@
 
 ## Result record
 
-For each coherent batch, record truthful execution evidence reflecting the active execution model:
+Use the same private approved `<evidence-destination>/sonar-report.md` for each coherent batch; initialize once from [the report template](../templates/remediation-cycle-report.md). Parent alone writes; other roles return evidence inline.
 
-```text
-Date:
-Execution checkout / mode: [Default checkout | Optional worktree]
-Repository root / branch / SHA:
-Sonar project / branch / PR selector:
-Fix worktree path / branch / base SHA: [if worktree opted in; omit if default checkout]
-Findings and root causes:
-Changed files (in execution checkout):
-Focused command and result (tests executed / failures):
-Clean-suite command and result:
-Fresh coverage report and included scope:
-Quality-gate / issue-query result:
-Blocked or unverified checks:
-Follow-up:
-```
+- Run/resume: source/execution checkout, branch/PR and SHA, digests, scope and approvals. For ordinary local fixes, N and cycle-role fields are `not-applicable`; do not acquire Sonar credentials merely to edit from a saved report.
+- Issues and hotspots: merge by `(target, finding ID)` into `Issue | File | Detail | Local status | Server status | Next action`. Preserve root causes, local changes, tests/review receipts and historical rows; retain explicit causation/owner disposition in Detail/Next action and all transitions by ID in Cycle history. Hotspot next action includes human owner review.
+- Coverage and checks: `Target / file | Metric / check | Value | Requirement | Status / next action`; append cycle/analysis-tagged observations, retaining baseline/prior values, focused/clean-suite commands, actual test counts/results, fresh coverage/scope and gate/query results. Missing/failed remote evidence never implies zero issues.
+- Cycle history and Blockers: retain batch result, checkpoint, task/certified and pre/post capture analysis IDs/gate, all finding transitions, incomplete paging/consistency and next action. Ordinary local results never certify server success.
 
-## Iterative cycles and durable ledger
+Batch once per stage/batch result, except bounded-cycle pre-edit accounting, pre-dispatch upload intents and immediate task-ID durability. API JSON is transient; no raw bundle, separate checkpoint, YAML mirror, actor summary, guidance document or file per cycle. Native logs/coverage/scanner scratch remain tool outputs.
 
-For multi-round, budget-governed iterative remediation workflows across local scanner lifecycles or polyglot targets:
-- Consult [Remediation cycles](remediation-cycles.md) for global budget `N` accounting, stage transitions, entered-round counting, one-correction batches, and server-verified success contracts.
-- Use [Remediation cycle report template](../templates/remediation-cycle-report.md) for full run headers, state persistence/resume, finding matrices, and per-target submission tracking.
-- Emit sanitized candidate lessons using [Run guidance](run-guidance.md) and [Run guidance report template](../templates/run-guidance-report.md).
+## Iterative cycles and resume
 
-**Ordinary local fix preservation:** Standard single-batch local fixes performed directly from saved report files continue to use the lightweight result record above. Ordinary local remediation does not impose a fix budget `N`, Sonar server authentication, independent child subagents, or server-side qualification.
+For multi-round, budget-governed remediation across local scanner lifecycles or polyglot targets:
+- Consult [Remediation cycles](remediation-cycles.md) for N accounting, the 17 stages, one-correction limit, independent roles, resume and final success contract.
+- Use the same sonar-report.md and [template](../templates/remediation-cycle-report.md). Persist budget/correction accounting before edits, per-target in-flight intent before any C0/CK/F upload-capable dispatch, and verified task ID immediately after upload; parent acknowledges durability before actor polling/next target. Resume known tasks read-only; an intent without verified fresh native task-file provenance blocks submission-unverified, never resubmits. Revalidate source/frozen context.
+- Optional useful failure/recovery notes belong inline under [privacy rules](run-guidance.md), not a mandatory guidance/promotions catalog.
+
+**Ordinary local fix preservation:** Single-batch local fixes from saved reports remain lightweight: no required N, Sonar authentication, independent child roles, scanner upload or server qualification.
 
 ## Handoff and cleanup boundaries
 
 - Do not implicitly commit, merge into the source branch, or assign upstream tracking (`git push -u`).
 - Source branch push-to-scan authorizations never transfer to a separate fix branch or worktree; pushing requires explicit user authorization naming the target remote and branch.
 - When an optional worktree is used, retain it for user review. Safe cleanup requires explicit user authorization after delivery; never use `git worktree remove --force`.
-- Do not include secrets, tokens, customer data, or raw credential-bearing output. A failed or unavailable remote check is not evidence that no issues remain. Update a project handoff file only when one exists or the user requests durable tracking; otherwise summarize in the response.
+- Do not include secrets, tokens, customer data or raw credential-bearing output. A failed or unavailable remote check is not evidence that no issues remain. Keep durable evidence in the one private sonar-report.md; do not create an extra handoff file. Public response contains only the needed sanitized summary; sharing any excerpt requires owner permission.

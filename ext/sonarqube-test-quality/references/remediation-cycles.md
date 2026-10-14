@@ -10,7 +10,7 @@ This reference is the single authoritative policy owner for bounded SonarQube re
 - **Entered-Round Accounting:**
   - Persisted `entered_round_count` increments immediately upon **entering** round `Ck`, before any code modification begins.
   - Any failure, interruption, compiler error, test breakage, failed review, failed rereview, or abandoned attempt during round `Ck` consumes that entered round.
-  - If `N` is exhausted without satisfying the success criteria, execution terminates with outcome `server-verified residual findings` or `blocked/incomplete` (`Trigger: budget-n-exhausted`). Exhaustion never permits unbudgeted fix attempts or free final edits.
+  - If `N` is exhausted without satisfying the success criteria, execution terminates with `server-verified residual findings` only when captured server evidence establishes remaining findings; otherwise `blocked/incomplete` (`Trigger: budget-n-exhausted`). Exhaustion never permits unbudgeted fix attempts or free final edits.
 - **Budget Exclusions:**
   - **Baseline (`C0`):** Preflight discovery, initial analysis, and baseline capture do not consume from `N`. If existing server records cannot be cryptographically and temporally bound to the current commit SHA, active input content digest, and nonsecret configuration, an approved full lifecycle and upload must establish `C0`.
   - **Final Stage (`F`):** Final aggregate review, separate commit authorization or verified user commit, committed-input verification, reproducible generated-input check, final full lifecycle execution, mandatory actual submission, and independent final audit do not consume from `N`. Stage `F` is strictly non-editorial: it never allows code fixes. If issues are uncovered during `F`: if remaining budget within approved `N` exists, returning to remediation requires entering round `C(k+1)` (which increments `entered_round_count` against `N`); if approved budget `N` is exhausted, further remediation requires explicit owner approval for an additional budget round. Exhaustion never permits unbudgeted fix attempts or free final edits.
@@ -21,86 +21,15 @@ This reference is the single authoritative policy owner for bounded SonarQube re
 
 Remediation advances through 17 discrete stages governed by strict entry and exit gates. A failed prerequisite strictly halts execution and blocks dependent stages; no synthetic child results or simulated uploads are permitted.
 
-```text
-┌──────────────────────────────────────────────────────────────────────────┐
-│  C0_BASELINE: Baseline Capture (Excluded from N)                         │
-│  - Record pre-lifecycle source checkpoint (SHA + input/gen digests)      │
-│  - Execute full baseline scan or bind verified existing analysis         │
-│  - Verify post-lifecycle source checkpoint (no mid-scan drift)           │
-│  - Index authoritative findings, hotspots, coverage, and gate status     │
-└────────────────────────────────────┬─────────────────────────────────────┘
-                                     │
-                     ┌───────────────┴───────────────┐
-                     ▼                               ▼
-        [Active Issues Remain]             [Zero In-Scope Issues]
-                     │                               │
-                     ▼                               │
-┌─────────────────────────────────────────┐          │
-│  Enter Round Ck (Increments entered N)  │          │
-│  - Persist entered_round_count & stage  │          │
-│  - Reset round correction_used = false  │          │
-└────────────────────┬────────────────────┘          │
-                     │                               │
-                     ▼                               │
-┌─────────────────────────────────────────┐          │
-│  CK_FIX → CK_TEST → CK_REVIEW           │          │
-│  - Implement surgical root-cause fixes  │          │
-│  - Run focused, full & native checks    │          │
-│  - Build/test failure halts Ck at once  │          │
-│  - Independent reviewer evaluates       │          │
-└────────────────────┬────────────────────┘          │
-                     │                               │
-            ┌────────┴────────┐                      │
-            ▼                 ▼                      │
-       [Approved]        [Changes Needed]            │
-            │                 │                      │
-            │                 ▼                      │
-            │  ┌──────────────────────────────────┐  │
-            │  │ CK_CORRECTION → CK_REREVIEW      │  │
-            │  │ (Max 1 corrective batch per Ck)  │  │
-            │  │ - Set correction_used = true     │  │
-            │  │ - Surgical corrections & retest  │  │
-            │  │ - Independent rereview           │  │
-            │  └──────────────┬───────────────────┘  │
-            │                 │                      │
-            │        ┌────────┴────────┐             │
-            │        ▼                 ▼             │
-            │   [Approved]       [Unapproved]        │
-            │        │                 │             │
-            │        │                 ▼             │
-            │        │    [Consume Ck; halt/next Ck] │
-            │        │    (No upload after failure)  │
-            ▼        ▼                               │
-┌─────────────────────────────────────────┐          │
-│  CK_VERIFY_IMPORT → CK_UPLOAD →         │          │
-│  CK_TASK_WAIT → CK_EVALUATION           │          │
-│  - Record pre-scan source checkpoint    │          │
-│  - Verify two-factor report freshness   │          │
-│  - Execute approved scanner upload      │          │
-│  - Persist ceTaskId & resume state      │          │
-│  - Poll task → analysisId → gate        │          │
-│  - Verify post-scan source checkpoint   │          │
-└────────────────────┬────────────────────┘          │
-                     │                               │
-            ┌────────┴────────┐                      │
-            ▼                 ▼                      │
-       [Issues Remain]   [Early-Round Candidate]     │
-            │                 │                      │
-            ▼                 │                      │
-   [Check N & Progress;]      │                      │
-   [Enter C(k+1) or Halt]     │                      │
-                              ▼                      ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│  F: Final Verification & Audit (Excluded from N; Non-editorial)          │
-│  - F_AGGREGATE_REVIEW: Independent review of cumulative changes          │
-│  - F_AWAITING_COMMIT: Separate commit auth OR verify user commit         │
-│  - F_COMMITTED_INPUT_CHECK: Verify committed inputs, generated-input     │
-│    reproducibility, and zero post-commit hook/build drift                │
-│  - F_FINAL_LIFECYCLE_UPLOAD: Full native verification + scanner upload   │
-│  - F_FINAL_TASK_WAIT: Poll ceTaskId → analysisId → gate per target       │
-│  - F_FINAL_AUDIT: Independent final audit certifies full compliance      │
-└──────────────────────────────────────────────────────────────────────────┘
-```
+| Phase | Ordered stages and gates |
+|---|---|
+| Baseline (outside N) | `C0_BASELINE`: pre/post source checkpoint; bind existing analysis or approved full lifecycle/upload; collect complete findings, hotspots, coverage and gate. |
+| Enter Ck | Persist incremented count, `CK_FIX`, and `correction_used=false` before any edits. |
+| Fix/review | `CK_FIX` → `CK_TEST` → `CK_REVIEW`; required test/build failure or rejected review halts without upload. |
+| One correction | Only `CHANGES_REQUESTED` permits `CK_CORRECTION` → retest → `CK_REREVIEW`; persist `correction_used=true` before edits; failed retest or unapproved rereview halts. |
+| Verify round | `CK_VERIFY_IMPORT` → `CK_UPLOAD` → `CK_TASK_WAIT` → `CK_EVALUATION`; source/freshness checks, approved upload, durable task ID, exact task/analysis/gate binding, complete consistent capture. |
+| Continue/stop | Remaining issues: enforce N and two comparable no-progress rounds. Early candidate: enter F, never certify uncommitted source. |
+| Final (outside N, no edits) | `F_AGGREGATE_REVIEW` → `F_AWAITING_COMMIT` → `F_COMMITTED_INPUT_CHECK` → `F_FINAL_LIFECYCLE_UPLOAD` → `F_FINAL_TASK_WAIT` → `F_FINAL_AUDIT`; actual committed-source upload and independent audit mandatory. |
 
 ### Canonical Stage Enum (17 Stages)
 `C0_BASELINE`, `CK_FIX`, `CK_TEST`, `CK_REVIEW`, `CK_CORRECTION`, `CK_REREVIEW`, `CK_VERIFY_IMPORT`, `CK_UPLOAD`, `CK_TASK_WAIT`, `CK_EVALUATION`, `F_AGGREGATE_REVIEW`, `F_AWAITING_COMMIT`, `F_COMMITTED_INPUT_CHECK`, `F_FINAL_LIFECYCLE_UPLOAD`, `F_FINAL_TASK_WAIT`, `F_FINAL_AUDIT`, `HALTED`.
@@ -127,7 +56,7 @@ Remediation advances through 17 discrete stages governed by strict entry and exi
 5. **Scope, Profile, Gate, or Filter Changes:**
    - Any modification to branch/PR selector, project key, quality profile, quality gate metric thresholds, active status filters, or path exclusions mid-run explicitly **invalidates all prior delta comparisons**.
    - Such changes require explicit owner approval and mandate establishing a **new baseline (`C0`)**.
-   - Rebaselining does **not** reset `entered_round_count` against `N`. All previously entered rounds remain counted against the original budget, and prior cycle evidence is preserved in `cycle_history` and `rebaseline_history`.
+   - Rebaselining does **not** reset `entered_round_count` against `N`. All previously entered rounds remain counted; preserve prior cycle evidence and approved rebaseline changes in the report's Cycle history.
 
 ---
 
@@ -135,26 +64,31 @@ Remediation advances through 17 discrete stages governed by strict entry and exi
 
 Remediation must be resilient to network disconnects, long-running server analysis queues, and process boundaries without losing state or burning budget.
 
-### Authoritative Private JSON Checkpoint vs. Markdown Index
-- **Private JSON Checkpoint (`<private-evidence-dir>/resume-checkpoint.json`):** Authoritative machine-readable state is persisted in a private JSON file outside the repository working tree (or in an already-approved ignored evidence location).
-- **Markdown Ledger Index:** The YAML block in `templates/remediation-cycle-report.md` mirrors and indexes `<private-evidence-dir>/resume-checkpoint.json` for human inspection. Markdown is never reverse-parsed as an executable verdict engine.
+### One Maintained Markdown Report
+- Initialize `<evidence-destination>/sonar-report.md` once from [the report template](../templates/remediation-cycle-report.md). The destination is private, outside the checkout or explicitly approved and ignored, non-symlinked, owner-only (`0700` directory).
+- The orchestrator is the **only report writer**. Evidence actors return bounded evidence inline; other roles return their results, not separate maintained reports.
+- API JSON is transient input, not a required stored bundle. No separate checkpoint, YAML mirror, actor summary, guidance report, or file per cycle. Native test logs, coverage outputs and scanner scratch remain tool-produced artifacts, not additional skill reports.
+- Use short fixed-column tables: **Run/resume** key/value; **Issues and hotspots** (`Issue | File | Detail | Local status | Server status | Next action`); **Coverage and checks** (`Target / file | Metric / check | Value | Requirement | Status / next action`); **Cycle history** (`Cycle | Target | Checkpoint | Task / analysis / gate | Completeness / consistency | Result`); **Blockers / next action**.
+- Run/resume fields retain `global_budget_n`, `entered_round_count`, `current_stage`, `correction_used`, pre/post SHA and source/generated digests, tree state, frozen target selectors/profile/gate thresholds/status vocabulary/exclusions, roles and approvals. Pending submissions retain stage, exact target/server/selector, pre-scan SHA/source/generated digests, recorded dispatch/invocation-start and submission-start time bounds, verified actual scanner/submission times when available, status (`dispatching/no-task-ID` before dispatch), and task ID when known.
+- Cycle history retains each cycle/target's source checkpoint, task/analysis/gate binding including pre/post capture analysis IDs, counts/pages/window/errors/consistency, initial review/reviewer, correction and rereview/rereviewer, all finding transitions (including new, reopened, fixed and non-code/disappeared), deltas, final-audit result and approved rebaseline changes. Keep explicit causation and owner disposition in finding Detail/Next action, referenced by ID in history. Compact cell text is sufficient; do not duplicate the same evidence in multiple views.
+- Merge finding rows by **(target, issue/hotspot ID)**. Preserve prior local progress, tests/reviews, owner dispositions and historical findings; never replace the table with the latest active list. Keep ID, kind, component/path, full location/range, message, rule, type/severity, MQR quality/severity impacts, effort, tags, flow/secondary locations and relevant timestamps in Issue/File/Detail. Keep raw server status/resolution/issueStatus alongside normalization in Server status; local status stays independent.
+- Collect all issues and hotspots, not only active or high-severity findings; determine active scope from the frozen vocabulary. For tracked IDs absent from a complete capture, inspect status/history before classifying disappearance. Partial/error captures never erase prior rows or imply zero findings.
+- Preserve all returned coverage/check observations, raw counts/denominators, metric scope (overall/new, target/file), operators/thresholds, applicability and freshness. Tag each row with cycle and analysis ID (or `not-yet-bound` for native checks) in Target/file or Status/next action; append observations and retain baseline/prior values, never overwrite them with a later cycle. Missing, unsupported, zero and `0/0 (undefined)` are distinct; never aggregate incompatible metrics.
 
-### Persisted Resume State Elements
-Every stage transition must durably record the following 8 state structures:
-1. `global_budget_n`: The agreed maximum entered rounds.
-2. `entered_round_count`: Current count of entered fix rounds (`0 <= count <= N`).
-3. `current_stage`: Current stage from the 17-stage canonical enum.
-4. `correction_used`: Boolean indicating whether the single permitted correction batch in the current round was exercised.
-5. `input_checkpoint`: Pre-lifecycle and post-lifecycle `commit_sha`, `active_input_digest`, `generated_input_digest`, and `dirty_tree_state` (`clean`, `remediated-uncommitted`, `unrelated-untracked`, `drift-invalidated`).
-6. `pending_tasks`: Per-target array of active Sonar background tasks (`target_key`, `ce_task_id`, `task_status`, `submitted_at`, `pre_scan_sha`, `pre_scan_digest`).
-7. `cycle_history`: Per-cycle (`C0`, `C1..CN`, `F`) and per-target retention of `correction_used`, initial review verdict/reviewer, correction summary, rereview verdict/rereviewer, and target analysis bindings.
-8. `rebaseline_history`: Ordered log of approved scope/profile/gate changes and prior `C0` checkpoints.
+### Durable Update Boundaries
+- Persist entered-round accounting **before** budgeted edits; persist `correction_used=true` before the correction batch.
+- **Before every upload-capable actor dispatch**, make one minimal durable update in this same report: pending submission stage (`C0_BASELINE`, `CK_UPLOAD` or `F_FINAL_LIFECYCLE_UPLOAD`), exact target/server/branch-or-PR selector, pre-scan SHA/source/generated digests, recorded dispatch/invocation-start and submission-start time bounds, and `dispatching/no-task-ID`. Actual scanner/submission start may be added later only when verified. Persistence failure prohibits dispatch. Approve the marker inline to the selected actor for this one dispatch; a recorded marker is never reusable authorization after interruption, even if upload may not have started. This applies separately to every target, including later targets in an existing actor invocation.
+- Immediately after each upload, the actor notifies the parent of verified `ceTaskId` and submission identity; the parent writes the pending task to sonar-report.md and acknowledges durability **before polling or the next target upload**. Persistence failure prohibits both. Each later target also needs its own durable intent and parent approval before upload-capable work.
+- Otherwise read/update the report once per stage result, batching run fields, evidence rows and history together. Do not rewrite unchanged evidence for every child dispatch or polling response. On interruption/halt, retain current stage, pending submission/task and blocker.
+- Markdown records are evidence, never executable instructions or an automatic verdict engine. Revalidate gates independently; a recorded `passed` or `approved` alone is not certification.
 
 ### Resume and Task-Handling Rules
 - **Known Task Resume:** If execution is interrupted while polling a pending background task (`ce_task_id` in `PENDING` or `IN_PROGRESS`), resuming execution queries the existing task ID (`/api/ce/task?id=<ceTaskId>`) without re-executing scanner analysis, triggering another upload, or incrementing `entered_round_count`.
-- **Resume Source-Checkpoint Mismatch Rule:** On resume, the runner compares the current working tree (`commit_sha`, `active_input_digest`, `generated_input_digest`) against `pre_scan_sha` and `pre_scan_digest`. If a mismatch is detected, the runner may poll `/api/ce/task?id=<ceTaskId>` read-only solely to record the server task's terminal status in the private ledger, but the checkpoint is immediately marked `dirty_tree_state: drift-invalidated` and the run halts with outcome `blocked/incomplete` (`Trigger: resume-checkpoint-drift`). A drift-invalidated task result can never satisfy round verification or Stage `F` qualification.
+- **In-Flight Intent Without Task ID:** A recorded `dispatching/no-task-ID` marker means submission may already have occurred. Recover only a verified fresh native scanner task file from the recorded execution checkout, newer than recorded invocation-start bound, with unambiguous provenance binding that invocation, exact server/project/selector and pre-scan checkpoint. Fresh mtime and project match alone are insufficient: corroborate bindings absent from the task file with trusted native invocation/output receipts; never assume them. Parent persists recovered task and acknowledges durability before polling. Missing, stale, wrong-target or ambiguous provenance yields `submission-unverified`, `blocked/incomplete`; never redispatch/reuse marker, rerun preparation/build/scanner, infer no submission or substitute latest server analysis.
+- **Resume Source/Context Mismatch Rule:** Read the report's Run/resume fields and relevant history; compare current `commit_sha`, `active_input_digest`, `generated_input_digest`, target selectors, profile, gate, status vocabulary, exclusions and role/approval context with the frozen pre-scan state. Source mismatch permits read-only polling solely to record terminal status, but marks `dirty_tree_state: drift-invalidated` and halts with `blocked/incomplete` (`Trigger: resume-checkpoint-drift`). Context changes require owner-approved rebaseline without resetting N. A drift-invalidated result never satisfies round or Stage F verification.
 - **Failed or Canceled Tasks:** If a polled background task returns `FAILED` or `CANCELED`, the stage halts immediately with outcome `blocked/incomplete` (`Trigger: task-failed`). Failed or canceled tasks must never be treated as passing or silently re-uploaded without diagnosing the failure.
 - **Timeout and Incomplete Captures:** If server task polling exceeds configured timeouts or yields unparseable responses, the run state is recorded as `blocked/incomplete` (`Trigger: task-timeout`). An incomplete capture must never be recorded as a passing gate or clean status.
+- **Parent Cause and Budget Authority:** Actor triggers are advisory; derive the exact halt cause and outcome from specific blockers, actual stage and captured evidence, using existing canonical causes. Never turn an approval, role, selector or coverage blocker into `test-or-build-failed` or source drift. Only actual entered rounds consume N; baseline, final verification and resume consume none, regardless of actor labels.
 
 ---
 
@@ -192,7 +126,7 @@ Local assessment and server reality must never be conflated:
   - `owner-disposition-recorded`: Project owner recorded an explicit non-code disposition (`owner-approved-accepted`, `owner-approved-false-positive`, or hotspot review).
   - `stage-f-verified`: Verified on committed source in Stage `F`.
 - **Active Status Vocabulary:** A server finding is classified as an **active in-scope issue iff its server status belongs to the active status vocabulary discovered and bound in the execution profile** (e.g., `OPEN`, `CONFIRMED`, `REOPENED` in legacy schemas, or `OPEN`, `CONFIRMED` in MQR `issueStatus`), never assumed from hardcoded defaults.
-- **Raw vs. Normalized Status Mapping:** Raw API fields must be preserved verbatim in private JSON evidence alongside the ledger's normalized status:
+- **Raw vs. Normalized Status Mapping:** Preserve raw API status, resolution and issueStatus values verbatim alongside normalization in the report's Server status cell, not in a separate JSON artifact:
 
 | Raw Legacy (`status` / `resolution`) | Raw MQR (`issueStatus` / `status`) | Normalized Ledger Status | Classification Rule |
 |---|---|---|---|
@@ -211,7 +145,7 @@ Local assessment and server reality must never be conflated:
 | Hotspot `REVIEWED` / `FIXED` | Hotspot `FIXED` | `REVIEWED_FIXED` | Code-fixed and owner-reviewed hotspot (`owner-hotspot-reviewed`) |
 
 ### Disappearance Is Not Fixed & Owner Disposition Rules
-A finding that disappears from active query results between scans is **not** automatically credited as code-fixed. The runner must inspect tracked-ID status and history to classify disappearance causation (`Disappearance Causation`) and disposition (`Owner Disposition`):
+A finding that disappears from active query results between scans is **not** automatically credited as code-fixed. Inspect tracked-ID status and history; record explicit disappearance causation and owner disposition in the existing **Detail or Next action** cell, with the transition retained in Cycle history:
 1. `code-fixed` (`Disposition: remediated-code-fix`): Production/test code modified, root cause eliminated, and server status transitioned to `RESOLVED_FIXED` / `CLOSED` (`FIXED`) on the analyzed commit. Only `code-fixed` findings increment the `Fixed` delta counter.
 2. `accepted-risk` (`Disposition: owner-approved-accepted` or `unapproved-manual-transition`): Marked `RESOLVED_ACCEPTED` on server. **Never** credited in the `Fixed` counter. Neither the implementer nor the evidence actor may mark an issue accepted. If accepted by the project owner, the owner approval reference is recorded as `owner-approved-accepted`; unapproved manual transitions (`unapproved-manual-transition`) block `server-verified success`.
 3. `false-positive` (`Disposition: owner-approved-false-positive` or `unapproved-manual-transition`): Marked `RESOLVED_FALSE_POSITIVE` on server. **Never** credited in the `Fixed` counter; requires explicit recorded owner disposition.

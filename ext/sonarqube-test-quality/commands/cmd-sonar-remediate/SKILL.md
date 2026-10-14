@@ -22,7 +22,7 @@ The command accepts structured or interactive inputs without executable CLI flag
 | `target_context` | String / Object | Optional | Project path, target selector (branch or pull request, never both), or target set. Defaults to active checkout. |
 | `max_rounds_n` (`N`) | Integer (> 0) | **Mandatory** | Agreed maximum global ceiling on entered fix rounds. If omitted or invalid (<= 0, non-integer), **prompt the user immediately**. Never infer, assume, or default `N`. |
 | `scope` | Object | Optional | Explicit module boundaries, file patterns, or issue keys. Modifications to scope mid-run require owner approval and rebaselining. |
-| `evidence_destination` | String (Path) | Optional | Directory for authoritative private JSON checkpoints and raw artifacts. Must be outside the repository or in an approved ignored directory (mode `0700`). |
+| `evidence_destination` | String (Path) | Required before capture | Reuse a private destination already approved in local run context; otherwise request the missing path/approval before capture. Store only `sonar-report.md`, outside the repository or explicitly approved and ignored, non-symlinked, owner-only (`0700`). |
 
 ### 1.3 Installed Sibling Resolution
 Assets resolve strictly within the **loaded installed skill root** containing this command:
@@ -34,7 +34,7 @@ Assets resolve strictly within the **loaded installed skill root** containing th
   - Templates: `<installed-root>/skills/sonarqube-test-quality/templates/`
 - **Development Checkout Fallback:**
   - When invoked from source checkout `ext/sonarqube-test-quality/commands/cmd-sonar-remediate/SKILL.md`, resolve domain assets relative to the command file's own directory (`../../`).
-- **Portability Invariant:** Never fall back to arbitrary current working directory (`process.cwd()`), a presumed parent repository, or an unselected competing installation root.
+- **Portability Invariant:** Resolve and pass the selected root's absolute path in every actor dispatch; if the loaded root cannot be determined, halt before dispatch. Never fall back to arbitrary current working directory (`process.cwd()`), a presumed parent repository, or an unselected competing installation root.
 
 ### 1.4 Role Binding and Independence Enforcement
 Before entering any remediation stage, the parent orchestrator binds available real host subagents to operational roles. Roles require pairwise distinctness to guarantee independent verification:
@@ -51,8 +51,8 @@ Before entering any remediation stage, the parent orchestrator binds available r
 - **Independence Rules:**
   - Initial review: `reviewer_id != implementer_id`.
   - Corrective rereview: `rereviewer_id != implementer_id`.
-  - Evidence actor: `evidence_actor_id != implementer_id`.
-  - Final Stage `F`: `implementer_id`, `reviewer_id`, `rereviewer_id`, `auditor_id`, and `evidence_actor_id` must be **pairwise distinct** (`implementer_id != reviewer_id != rereviewer_id != auditor_id != evidence_actor_id`).
+  - Evidence actor: distinct from implementer, reviewer, rereviewer and auditor at every applicable stage.
+  - Final Stage `F`: implementer, reviewer, rereviewer, auditor and evidence actor are **all pairwise distinct** real host identities. If no source edits occurred, record `implementer_id: unused (no implementation)` rather than inventing an implementer; the remaining verification identities must still be distinct.
 - **Evidence Actor Role:** The evidence actor prompt (`skills/sonarqube-test-quality/agents/sonar-evidence.md`) is loaded into a generic subagent (`evidence_actor_id`). The actor has no source-editing authority and cannot certify the final audit.
 - **Fail Closed:** If the host runtime cannot supply distinct independent roles or role independence is violated, the orchestrated route halts immediately with outcome `blocked/incomplete` (`blockers: ["role-independence-violation"]`, `Trigger: role-independence-violation`). Ordinary direct local triage routes remain available.
 ---
@@ -63,12 +63,12 @@ Before entering any remediation stage, the parent orchestrator binds available r
 1. Load sibling discovery policy: `skills/sonarqube-test-quality/references/project-discovery.md`.
 2. Determine repository root, current commit SHA, target selector (`branch` XOR `pull_request`), and nonsecret scanner configuration. Redact all secret tokens (`sonar.token`, passwords, auth headers).
 3. Discover toolchain capabilities, test commands, coverage report paths, and requirement contracts (`required`, `optional`, or justified `not-applicable`).
-4. Validate that `evidence_destination` is outside the git tree or ignored, regular directory, mode `0700`. Authoritative private checkpoint JSON must never contain tokens, passwords, or authentication headers.
+4. Validate that `evidence_destination` is outside the git tree or explicitly approved and ignored, a regular non-symlinked directory, mode `0700`. Initialize `sonar-report.md` once from the sibling report template. Never store tokens, passwords, authentication headers or environment dumps.
 ### 2.2 Establishing Baseline (`C0_BASELINE`)
 - **Budget Rule:** Baseline capture **does not consume from budget `N`**.
   - An existing server analysis qualifies as `C0` **only if** it is cryptographically and temporally bound to the current commit SHA, active input content digest, and nonsecret configuration.
-  - If existing analysis cannot be bound, obtain owner upload authorization and invoke the evidence actor in mode `verify-upload` at stage `C0_BASELINE` to execute the approved scanner lifecycle and establish baseline evidence.
-- **Zero-Issue Baseline:** If baseline analysis reveals zero active in-scope issues and all quality gates pass, bypass fix rounds `Ck` and advance directly to Stage `F` for committed-source final qualification.
+  - If existing analysis cannot be bound, obtain owner upload authorization, persist/approve the per-target `C0_BASELINE` in-flight intent per §5.1, then dispatch `verify-upload` to establish baseline. Failed intent persistence prohibits dispatch.
+- **Zero-Issue Baseline:** If baseline analysis reveals zero active in-scope issues and all quality gates pass, bypass fix rounds `Ck` and advance to Stage `F`. Record implementing role unused (no implementation), retain distinct verification roles, and aggregate-review the verified empty remediation diff; never synthesize an implementing identity.
 
 ### 2.3 Freezing Run Context
 - Freeze target set, quality profile, quality gate metric thresholds, active status vocabulary, and path exclusions.
@@ -79,10 +79,10 @@ Before entering any remediation stage, the parent orchestrator binds available r
 ## 3. Bounded Fix Rounds (`Ck`, `k = 1..N`)
 
 ### 3.1 Entering Round `Ck` (Accounting Against `N`)
-1. Check budget ceiling: if `entered_round_count >= N`, halt immediately with outcome `server-verified residual findings` (`Trigger: budget-n-exhausted`). Never permit unbudgeted fix attempts or free edits.
+1. Check budget ceiling: if `entered_round_count >= N`, halt (`Trigger: budget-n-exhausted`), with `server-verified residual findings` only when captured server evidence establishes residual findings; otherwise `blocked/incomplete`. Never permit unbudgeted fix attempts or free edits.
 2. Increment persisted `entered_round_count` immediately upon entering `Ck`, before dispatching any source modification.
 3. Reset round flag: `correction_used = false`.
-4. Persist updated stage `CK_FIX` and round count in `<evidence-destination>/resume-checkpoint.json`.
+4. Persist updated stage `CK_FIX`, count and correction flag in `<evidence-destination>/sonar-report.md` before dispatching edits.
 
 ### 3.2 Fix Implementation (`CK_FIX`)
 1. Dispatch `implementer_id` with prioritized root causes from baseline or prior round.
@@ -103,7 +103,7 @@ Before entering any remediation stage, the parent orchestrator binds available r
    - `REJECTED`: Halt round `Ck` with outcome `blocked/incomplete` (`Trigger: failed-review`), consuming the round without uploading.
 
 ### 3.5 Single Correction Batch (`CK_CORRECTION` and `CK_REREVIEW`)
-1. Permitted strictly **once** per round (`correction_used` set to `true`).
+1. Permitted strictly **once** per round; persist `correction_used=true` in the report before corrective edits.
 2. Dispatch `implementer_id` to perform surgical corrections addressing reviewer feedback.
 3. Dispatch `tester_id` to rerun affected tests and full suite. If retest fails, halt `Ck` immediately (`Trigger: test-or-build-failed`), consuming the round without uploading.
 4. Dispatch independent `rereviewer_id` (`rereviewer_id != implementer_id`).
@@ -112,22 +112,22 @@ Before entering any remediation stage, the parent orchestrator binds available r
 ### 3.6 Scanner Lifecycle and Upload (`CK_VERIFY_IMPORT`, `CK_UPLOAD`)
 1. Verify pre-upload source checkpoint (`commit_sha`, `active_input_digest`, `generated_input_digest`). If any input or generated file drifted during build/tests, abort immediately (`Trigger: resume-checkpoint-drift`).
 2. Verify explicit upload authorization naming target server URL, project keys, and selectors.
-3. Dispatch `evidence_actor_id` in mode `verify-upload` at stage `CK_UPLOAD`.
+3. Persist and approve the per-target `CK_UPLOAD` in-flight intent in sonar-report.md per §5.1, then dispatch `evidence_actor_id` in `verify-upload` mode with selected root absolute path and marker approval. Persistence failure prohibits dispatch.
 4. Evidence actor executes approved lifecycle commands in declared order, writes `.scannerwork/`, uploads payload over TLS, and captures `ceTaskId`.
 
 ### 3.7 Background Task Tracking (`CK_TASK_WAIT`)
-1. Persist `ceTaskId` and submission metadata to `resume-checkpoint.json` before polling.
-2. Poll server `api/ce/task?id=<ceTaskId>`.
+1. Actor immediately returns verified `ceTaskId`, target/server/selector, invocation/submission time and pre-scan identity inline. Parent persists pending task metadata in sonar-report.md and acknowledges durability before actor polling or the next target upload; the next target also requires its own durable intent/approval.
+2. Evidence actor polls server `api/ce/task?id=<ceTaskId>` only after acknowledgement; if messaging is unavailable, parent writes then redispatches the same task for read-only continuation.
 3. Terminal task status:
    - `SUCCESS`: Retrieve returned `analysisId`.
    - `FAILED` / `CANCELED`: Halt immediately with outcome `blocked/incomplete` (`Trigger: task-failed`).
    - Timeout: Persist task wait state; halt with `blocked/incomplete` (`Trigger: task-timeout`). Resuming queries existing `ceTaskId` without re-uploading or consuming a new round.
 
 ### 3.8 Evidence Evaluation and Progress Check (`CK_EVALUATION`)
-1. Query exact analysis-bound quality gate: `api/qualitygates/project_status?analysisId=<analysisId>`. Never fall back to latest project gate.
-2. Fetch full issue and hotspot pages. Verify both pre-capture and post-capture server `analysisId` match the certified `analysisId`.
-3. Check mutable snapshot consistency: if manual status transition detection is unsupported, record `consistency: unknown` (`Trigger: consistency-unknown`), blocking success.
-4. Categorize findings using canonical local stages (`identified`, `in-progress`, `locally-fixed`, `retest-passed`, `review-approved`, `stage-f-verified`). Disappearance alone is not fixed; verify `Disappearance Causation` and `Owner Disposition`. Hotspots require recorded owner review (`owner-hotspot-reviewed`).
+1. Evidence actor queries exact analysis-bound quality gate: `api/qualitygates/project_status?analysisId=<analysisId>`. Never fall back to latest project gate.
+2. Actor fetches full issue/hotspot pages and verifies both pre/post capture `analysisId` equal the certified ID; returns evidence inline, never writes the report. Parent evaluates the result and decides next stage/outcome.
+3. Check mutable snapshot consistency: if manual transition detection is unsupported, record `consistency: unknown` (`Trigger: consistency-unknown`), blocking success. Parent derives exact causes from specific blockers and actual stage, never a lossy actor trigger; only entered rounds consume N.
+4. Categorize findings using canonical local stages. Disappearance alone is not fixed: record explicit causation and owner disposition in **Detail or Next action**, retaining all transitions by ID and pre/post analysis IDs in Cycle history. Hotspots require recorded owner review (`owner-hotspot-reviewed`). Append cycle/analysis-tagged coverage/check observations, retaining baseline and prior values.
 5. **Branching Decision:**
    - **Early-Round Candidate:** If zero active in-scope issues remain, all hotspots cleared, and gate passes across all targets, advance to **Stage `F`**. (Note: an early candidate on an uncommitted tree is `locally remediated` / `awaiting commit`, never final `server-verified success`).
    - **Issues Remain:**
@@ -143,7 +143,7 @@ Stage `F` is strictly non-editorial and does not consume from budget `N`. Zero s
 
 | Stage Name | Mandatory Operational Action |
 |---|---|
-| `F_AGGREGATE_REVIEW` | Independent review of cumulative changes. If rejected or changes requested: Stage F is non-editorial; if budget N remains, enter `C(k+1)` (incrementing `entered_round_count`); if N is exhausted, halt with outcome `server-verified residual findings` (`Trigger: aggregate-review-rejected` / `budget-n-exhausted`). |
+| `F_AGGREGATE_REVIEW` | Independent cumulative review (verified empty remediation diff if no implementation). Rejection/changes: if N remains, enter counted `C(k+1)`; if exhausted, halt with `server-verified residual findings` only with actual captured residual server evidence, otherwise `blocked/incomplete` (`Trigger: aggregate-review-rejected` / `budget-n-exhausted`). F permits no edits. |
 | `F_AWAITING_COMMIT` | Separate commit authorization or verify user-created commit. NO auto-push. |
 | `F_COMMITTED_INPUT_CHECK` | Verify committed inputs, reproducibility, and zero post-commit hook drift |
 | `F_FINAL_LIFECYCLE_UPLOAD` | Mandatory actual scanner lifecycle & upload on committed SHA for all targets (requires explicit upload authorization) |
@@ -166,13 +166,13 @@ Dispatch independent reviewer to assess the cumulative diff across all remediati
 
 ### 4.4 Mandatory Actual Final Submission (`F_FINAL_LIFECYCLE_UPLOAD`)
 1. Verify explicit upload authorization naming target server URL, project keys, and selectors for `verify-final` upload per `agents/sonar-evidence.md §3.1`.
-2. Dispatch `evidence_actor_id` in mode `verify-final`.
+2. Persist/approve per-target `F_FINAL_LIFECYCLE_UPLOAD` in-flight intent per §5.1, then dispatch `evidence_actor_id` in `verify-final` mode with selected root absolute path and marker approval. No dispatch if persistence fails; later targets each require a new durable intent/approval.
 3. Execute full uninstrumented native verification and scanner lifecycle on the committed SHA for all configured project targets serially.
 4. Capture new terminal `ceTaskId` per target. Early-round scans or historical uploads cannot substitute for this mandatory final submission.
 ### 4.5 Task Wait and Binding (`F_FINAL_TASK_WAIT`)
-1. Poll `ceTaskId` to `SUCCESS`.
-2. Retrieve certified `analysisId` and exact analysis-bound quality gate per target.
-3. Complete full paging of issues and hotspots. Confirm pre/post `analysisId` matches the certified `analysisId` and `consistency: verified`.
+1. Actor returns each verified final `ceTaskId`/submission identity inline; parent persists and acknowledges durability before actor polling to `SUCCESS` or uploading the next target.
+2. Actor retrieves certified `analysisId` and exact analysis-bound quality gate per target.
+3. Actor completes issue/hotspot paging, verifies pre/post `analysisId` match the certified ID and `consistency: verified`, and returns evidence inline. Parent alone evaluates stage completion/outcome and writes the same report.
 
 ### 4.6 Independent Final Audit (`F_FINAL_AUDIT`)
 1. Dispatch independent auditor (`auditor_id`), distinct from implementer, reviewers, and evidence actor.
@@ -196,33 +196,19 @@ Dispatch independent reviewer to assess the cumulative diff across all remediati
 
 ---
 
-## 5. Persistence, State Resumption, and Guided Exit
+## 5. One Report, Resume, and Exit
 
-### 5.1 Durable Private Checkpoint
-On every stage transition, write authoritative JSON to `<evidence-destination>/resume-checkpoint.json`:
-- `global_budget_n`: Integer N.
-- `entered_round_count`: Current count of entered fix rounds.
-- `current_stage`: Canonical 17-stage enum name.
-- `correction_used`: Boolean.
-- `input_checkpoint`: SHA, active input digest, generated digest, tree state.
-- `pending_tasks`: Active `ceTaskId` per target.
-- `cycle_history`: Per-round review verdicts, deltas, and analysis bindings.
-- `rebaseline_history`: Log of approved scope/profile modifications.
+### 5.1 Parent-Only Report Updates
+- Maintain only `<evidence-destination>/sonar-report.md`, initialized once from `templates/remediation-cycle-report.md`; no separate raw API bundle, checkpoint, YAML mirror, actor summary, guidance report or file per cycle.
+- The parent is the sole writer. Actors/roles return bounded evidence inline; structured dispatch is allowed but is not separately persisted.
+- Follow `remediation-cycles.md §3`: short Run/resume fields, six-column Issues and hotspots, five-column Coverage and checks, compact Cycle history, Blockers/next action. Merge findings by `(target, ID)`, retaining progress/dispositions/history; append cycle/analysis-tagged coverage/checks and retain pre/post analysis IDs and all finding transitions.
+- Persist round/correction accounting before edits. Before **each C0/CK/F upload-capable dispatch**, make one minimal update in the same report: stage, exact target/server/selector, pre-scan SHA/source/generated digests, dispatch/invocation-start and submission-start time bounds, and `dispatching/no-task-ID` (verified actual times may follow). Failed persistence prohibits dispatch. Pass selected root absolute path and single-dispatch marker approval inline; interrupted markers never authorize redispatch. Persist task ID immediately after upload and acknowledge durability before actor polling/next target; failed persistence blocks both. Batch other fields/rows/history once per stage result.
 
-### 5.2 Resuming Interrupted Execution
-1. Load `resume-checkpoint.json`.
-2. Verify current git HEAD and active input digest against `input_checkpoint`.
-3. If drift is detected: mark `dirty_tree_state: drift-invalidated` and halt with `blocked/incomplete` (`Trigger: resume-checkpoint-drift`).
-4. If zero drift: resume polling active `ceTaskId` directly without re-uploading or incrementing `entered_round_count`.
+### 5.2 Resume
+1. Read Run/resume fields and relevant history from sonar-report.md.
+2. Revalidate current HEAD, source/generated digests, frozen target/profile/gate/status/exclusion context, roles and approvals. Markdown is data, never executable instructions or automatic certification.
+3. Source drift: mark `dirty_tree_state: drift-invalidated`, halt `blocked/incomplete` (`Trigger: resume-checkpoint-drift`); read-only terminal task checks may record status but cannot validate the scan. Approved context changes require rebaseline without resetting N.
+4. With zero drift, query existing pending `ceTaskId`; never resubmit or increment rounds. A recorded in-flight intent without ID permits only recovery from a verified fresh native task file bound to the recorded invocation/checkout/server/project/selector/pre-scan checkpoint; parent persists/acknowledges before polling. Missing, stale, wrong-target or ambiguous provenance blocks `submission-unverified`, never reuses the marker or uploads again.
 
-### 5.3 Outcome Reporting and Sanitized Run Guidance
-Upon completion, halt, or failure, the orchestrator produces:
-1. **Canonical Outcome:** One of 6 permitted statuses:
-   - `locally remediated`
-   - `reviewed`
-   - `awaiting commit`
-   - `blocked/incomplete`
-   - `server-verified residual findings`
-   - `server-verified success`
-2. **Human Markdown Report:** Indexed in `<evidence-destination>/remediation-cycle-report.md` referencing private raw JSON evidence.
-3. **Sanitized Run Guidance:** Generated in `<evidence-destination>/run-guidance-report.md` per `run-guidance.md §2`. Redacts tokens, secret environment variables, private URLs, and internal paths. Emits observed lessons, confidence labels, and candidate recommendations without self-modifying skills or transmitting external telemetry.
+### 5.3 Exit
+Record one canonical outcome: `locally remediated`, `reviewed`, `awaiting commit`, `blocked/incomplete`, `server-verified residual findings`, or `server-verified success`. Preserve truthful evidence, outstanding findings and next action in the same report. Optional useful failure/recovery notes belong inline; no mandatory lesson catalog, confidence labels or promotion workflow per cycle. Apply privacy rules from `skills/sonarqube-test-quality/references/run-guidance.md` in the selected installed root (source checkout: `../../references/run-guidance.md`); only the parent with independent auditor certification can claim final success.

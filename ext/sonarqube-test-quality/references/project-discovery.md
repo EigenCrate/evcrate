@@ -83,7 +83,3 @@ These scenario traces demonstrate policy compliance without requiring live netwo
 - **Context:** Project lacks local Sonar scanner binary; scanning only occurs in Jenkins CI.
 - **Behavior:** Discovery marks local scanner as `unavailable`. Local remediation stops before submission and hands off to the separately authorized CI route. It does not auto-push to Git.
 
-## 6. Implementation Scope and Releasability Boundary
-
-This reference delivers authoring domain policy within the extension source tree. Standalone installer manifests (`lib/install.js`) and tests retain the legacy 10-asset payload until Phase 06 updates the inventory to the planned 18-asset dual-root payload. Phase 02 artifacts are source-tree references and must not be published or released as an installed package prior to Phase 06.
-

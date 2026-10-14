@@ -37,7 +37,6 @@ export const ASSET_INVENTORY = [
   { source: 'references/run-guidance.md', destination: 'skills/sonarqube-test-quality/references/run-guidance.md' },
   { source: 'agents/sonar-evidence.md', destination: 'skills/sonarqube-test-quality/agents/sonar-evidence.md' },
   { source: 'templates/remediation-cycle-report.md', destination: 'skills/sonarqube-test-quality/templates/remediation-cycle-report.md' },
-  { source: 'templates/run-guidance-report.md', destination: 'skills/sonarqube-test-quality/templates/run-guidance-report.md' },
   { source: 'commands/cmd-sonar-remediate/SKILL.md', destination: 'skills/cmd-sonar-remediate/SKILL.md' }
 ];
 
