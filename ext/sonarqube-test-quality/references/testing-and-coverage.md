@@ -31,7 +31,14 @@ Coverage verification requires strict mathematical, temporal, and contractual in
 3. **Counter and denominator rules:**
    - **Zero denominator:** If total executable lines or branches are zero (`0/0`), the result is undefined/empty; never treat a zero denominator as 100%.
    - **Unsupported metrics:** If a language toolchain does not report branch coverage, treat branch coverage as `unsupported`, not implicitly satisfied or N/A.
-
+4. **Granular coverage work items and verification separation:**
+   - Distinguish high-level gate metrics (`Coverage summary and checks`) from actionable line and branch gaps (`Coverage work items`).
+   - Ground precise gaps in the agent's fresh native coverage reports together with source code inspection; Sonar aggregate counts cannot infer exact line ranges, branch condition paths, or new-code scope. The offline converter provides no automated native parser (e.g. JaCoCo XML or LCOV parser) or gap inference; supplied work items observe evidence directly.
+   - Work items carry a stable parent-assigned identifier (`id`) that tracks across cycles and line moves without conflating target scopes; no Sonar finding issue ID is assigned to coverage.
+   - Behavior gaps and required assertions are recorded in Detail and Test to add; metadata (id, scope, cycle, analysisId, provenance) stays in Detail without extra columns.
+   - Passing local tests do not establish improved coverage without fresh coverage measurements.
+   - Server aggregate metrics or quality gate passes do not certify specific branch tasks without fresh matching granular evidence; when unverified, retain explicit unverified or unavailable state.
+   - Missing or empty work items represent unavailable evidence, never proof that zero coverage gaps remain.
 ## 3. Optional Java and JaCoCo Recipes
 
 For Java repositories using Maven and JaCoCo, apply these established recipes:

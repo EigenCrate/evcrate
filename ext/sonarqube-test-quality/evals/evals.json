@@ -425,7 +425,7 @@
       "assertions": [
         "Permits zero tests only for a justified not-applicable requirement explicitly approved during preflight.",
         "Requires explicit preflight approval and rationale, not an invented independent-reviewer exemption gate.",
-        "Documents explicit justified N/A in the Coverage and checks table of sonar-report.md."
+        "Documents explicit justified N/A in the Coverage summary and checks table of sonar-report.md."
       ]
     },
     {

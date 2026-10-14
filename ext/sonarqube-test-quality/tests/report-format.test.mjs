@@ -18,6 +18,14 @@ const issue = {
   secondaryLocations: [{ file: 'src/other.js', textRange: { startLine: 9 }, message: 'Related' }],
   vendorAction: { explanation: 'Keep actionable extensions' },
 };
+const workItem = {
+  id: 'AX-1', file: 'src/api.js', uncovered: { lines: ['12-14'], branches: ['12:false'] },
+  detail: 'Fallback response is not exercised', testToAdd: 'Reject a failed request and assert fallback response',
+  localStatus: 'tests passed; coverage not remeasured', serverVerification: 'unverified',
+  scope: 'overall', cycle: 1, revision: 'abc123', inputDigest: 'sha-native-input',
+  analysisId: 'analysis-17', evidence: { report: 'coverage/lcov.info', sourceInspection: 'src/api.js:12' },
+  vendorNotes: [{ branch: '12:false', reason: 'rejection path' }, { branch: '14:true', reason: 'empty response' }],
+};
 const envelope = {
   run: { target: 'app', branch: 'feature/test', revision: 'abc123', N: 2, count: 0,
     sourceDigests: { app: 'sha-source' }, pendingTaskIds: ['task-17'] },
@@ -42,6 +50,7 @@ const envelope = {
   qualityGate: { projectStatus: { status: 'ERROR', conditions: [{ metricKey: 'new_coverage',
     comparator: 'LT', errorThreshold: '80', actualValue: '76.5', status: 'ERROR', periodIndex: 1 }],
     ignoredConditions: false, caycStatus: 'non-compliant' } },
+  coverageWorkItems: [workItem],
 };
 function run(args, input, executable = script, cwd = packageRoot) {
   return spawnSync(process.execPath, [executable, ...args], { encoding: 'utf8', input, cwd });
@@ -63,8 +72,14 @@ function rows(report) {
   return report.split('\n').filter((line) => line.startsWith('| '))
     .map((line) => line.slice(2, -2).split(' | '));
 }
-function finding(report, id) { return rows(report).find((row) => row.length === 6 && row[0].includes(id)); }
-function metric(report, name, value) { return rows(report).find((row) => row.length === 5 && row[1].includes(name) && row[2] === value); }
+function sectionRows(report, heading) {
+  const section = report.split(`## ${heading}\n`)[1];
+  assert.notEqual(section, undefined, `Missing consumer section: ${heading}`);
+  return rows(section.split('\n## ')[0]);
+}
+function finding(report, id) { return sectionRows(report, 'Issues and hotspots').find((row) => row.length === 6 && row[0].includes(id)); }
+function metric(report, name, value) { return sectionRows(report, 'Coverage summary and checks').find((row) => row.length === 5 && row[1].includes(name) && row[2] === value); }
+function workItems(report) { return sectionRows(report, 'Coverage work items').slice(2); }
 
 describe('actionable offline report conversion', () => {
   let tempRoot;
@@ -98,6 +113,18 @@ describe('actionable offline report conversion', () => {
     assert.equal(gateCondition[2], '76.5');
     assert.ok(output.includes('sha-source') && output.includes('task-17') && output.includes('abc123'));
     assert.ok(!output.includes('```'));
+    const coverage = workItems(output);
+    assert.equal(coverage.length, 1);
+    assert.equal(coverage[0].length, 6);
+    assert.equal(coverage[0][0], 'app / src/api.js');
+    assert.equal(coverage[0][3], workItem.testToAdd);
+    assert.equal(coverage[0][4], workItem.localStatus);
+    assert.equal(coverage[0][5], workItem.serverVerification);
+    assert.ok(coverage[0][2].includes('id: AX-1'));
+    assert.ok(!sectionRows(output, 'Issues and hotspots').some((row) => row[2]?.includes(workItem.detail)));
+    assert.ok(!sectionRows(output, 'Coverage summary and checks').some((row) => row.some((cell) => cell.includes(workItem.testToAdd))));
+    assert.ok(output.indexOf('## Coverage summary and checks') < output.indexOf('## Coverage work items'));
+    assert.ok(output.indexOf('## Coverage work items') < output.indexOf('## Cycle history'));
   });
 
   test('MQR and legacy server states remain distinct from local progress and bound to envelope target', () => {
@@ -113,6 +140,200 @@ describe('actionable offline report conversion', () => {
     const mixed = finding(report, 'MIXED-1');
     assert.ok(mixed[4].includes('ACCEPTED') && mixed[4].includes('RESOLVED') && mixed[4].includes('WONTFIX'));
     assert.equal(mixed[3], 'identified');
+  });
+
+  test('work-item identities bind same-file gaps, targets and moved-line history without deduplication', () => {
+    const observations = [
+      { ...workItem, target: 'one', id: 'gap-1', localStatus: 'identified', evidence: { native: 'one-initial' } },
+      { ...workItem, target: 'two', id: 'gap-1', localStatus: 'deferred', evidence: { native: 'two-initial' } },
+      { ...workItem, target: 'one', id: 'gap-2', uncovered: ['19:true'], detail: 'Empty result', testToAdd: 'Return empty list', evidence: { native: 'one-empty' } },
+      { ...workItem, target: 'one', id: 'gap-1', uncovered: { lines: ['22-24'], branches: ['22:false'] },
+        cycle: 2, revision: 'def456', localStatus: 'new tests passed; native evidence pending', evidence: { native: 'one-moved' } },
+    ];
+    const input = { run: { target: 'fallback' }, coverageWorkItems: observations };
+    const report = success(run(['--input', '-'], JSON.stringify(input)));
+    assert.equal(report, convertReport(JSON.stringify(input)));
+    const actual = workItems(report);
+    assert.equal(actual.length, observations.length);
+    observations.forEach((item, index) => {
+      const row = actual[index];
+      assert.equal(row.length, 6);
+      assert.equal(row[0], `${item.target} / ${item.file}`);
+      assert.ok(row[2].includes(`id: ${item.id}`) && row[2].includes(`native: ${item.evidence.native}`));
+      assert.equal(row[3], item.testToAdd);
+      assert.equal(row[4], item.localStatus);
+      assert.equal(row[5], item.serverVerification);
+      assert.ok(!row[2].includes('localStatus:') && !row[2].includes('serverVerification:'));
+    });
+    assert.ok(actual[0][1].includes('12-14') && !actual[0][1].includes('22-24'));
+    assert.ok(actual[2][1].includes('19:true') && actual[2][2].includes('Empty result'));
+    assert.ok(actual[3][1].includes('22-24') && actual[3][2].includes('cycle: 2') && actual[3][2].includes('revision: def456'));
+    for (const value of ['scope: overall', 'analysisId: analysis-17', 'inputDigest: sha-native-input',
+      'report: coverage/lcov.info', 'sourceInspection: src/api.js:12',
+      'vendorNotes: #1 (branch: 12:false; reason: rejection path); #2 (branch: 14:true; reason: empty response)']) {
+      assert.ok(workItems(convertReport(JSON.stringify(envelope)))[0][2].includes(value), value);
+    }
+  });
+
+  test('workitems-only envelopes inherit normalized target while explicit targets override it', () => {
+    for (const context of [{ target: 'root' }, { projectKey: 'root' }, { project: { key: 'root' } },
+      { run: { target: 'root' } }, { run: { projectKey: 'root' } }]) {
+      const input = { ...context, coverageWorkItems: [workItem, { ...workItem, target: 'override', id: 'other' }] };
+      const report = success(run(['--input', '-'], JSON.stringify(input)));
+      assert.equal(report, convertReport(JSON.stringify(input)));
+      assert.deepEqual(workItems(report).map((row) => row[0]), ['root / src/api.js', 'override / src/api.js']);
+      for (const kind of ['issues', 'hotspots']) {
+        const missing = sectionRows(report, 'Coverage summary and checks').find((row) => row[1] === `${kind} capture`);
+        assert.ok(missing && missing[2] === 'not supplied' && missing[4].includes('not zero'));
+      }
+    }
+  });
+
+  test('mixed envelope and run target aliases follow the same precedence as existing issue binding', () => {
+    for (const [context, expected] of [
+      [{ projectKey: 'outer', run: { projectKey: 'inner' } }, 'outer'],
+      [{ target: 'outer', run: { target: 'inner', projectKey: 'other' } }, 'inner'],
+    ]) {
+      const input = { ...context, issues: envelope.issues, coverageWorkItems: [workItem] };
+      const report = success(run(['--input', '-'], JSON.stringify(input)));
+      assert.equal(finding(report, 'AX-1')[0], `${expected} / issue AX-1`);
+      assert.equal(workItems(report)[0][0], `${expected} / src/api.js`);
+    }
+  });
+
+  test('raw API captures with work items retain summary evidence without duplicating the actionable view', () => {
+    const input = { target: 'app', issues: [issue], paging: { pageIndex: 1, pageSize: 1, total: 1 },
+      component: { key: 'app', measures: [{ metric: 'coverage', value: '42' }] },
+      projectStatus: { status: 'OK', conditions: [] }, coverageWorkItems: [workItem] };
+    const report = success(run(['--input', '-'], JSON.stringify(input)));
+    assert.equal(workItems(report).length, 1);
+    assert.ok(finding(report, 'AX-1') && metric(report, 'coverage', '42') && metric(report, 'quality gate', 'OK'));
+    for (const row of sectionRows(report, 'Coverage summary and checks')) {
+      assert.ok(!row.some((cell) => cell.includes(workItem.testToAdd) || cell.includes(workItem.detail)));
+    }
+  });
+
+  test('passing tests and server aggregates never supply absent work-item status or branch verification', () => {
+    const supplied = { ...workItem, target: 'app', localStatus: { tests: 'passed', coverage: 'not remeasured' },
+      serverVerification: { fileMetric: '100', branchTask: 'unverified', analysisId: 'fresh-file-analysis' } };
+    const absent = { id: 'missing-state', target: 'app', file: 'src/api.js', uncovered: ['12:false'] };
+    const input = { coverageWorkItems: [supplied, absent],
+      measures: { component: { key: 'app', measures: [{ metric: 'coverage', value: '100' }, { metric: 'tests', value: '201' }] } },
+      qualityGate: { target: 'app', projectStatus: { status: 'OK' } } };
+    const report = success(run(['--input', '-'], JSON.stringify(input)));
+    const actual = workItems(report);
+    assert.equal(actual[0][4], 'tests: passed; coverage: not remeasured');
+    assert.equal(actual[0][5], 'fileMetric: 100; branchTask: unverified; analysisId: fresh-file-analysis');
+    assert.deepEqual(actual[1].slice(3), ['not supplied', 'not supplied', 'not supplied']);
+    assert.ok(!actual[1][2].includes('overall') && !actual[1][2].includes('new code'));
+    assert.ok(metric(report, 'coverage', '100') && metric(report, 'quality gate', 'OK'));
+  });
+
+  test('absent and empty work items render an empty unavailable table, never invented tasks or proof of no gaps', () => {
+    for (const input of [{ issues: [] }, { coverageWorkItems: [] }, { ...envelope, coverageWorkItems: [] }]) {
+      const report = success(run(['--input', '-'], JSON.stringify(input)));
+      assert.equal(report, convertReport(JSON.stringify(input)));
+      const cells = sectionRows(report, 'Coverage work items');
+      assert.equal(cells.length, 2);
+      assert.deepEqual(cells[0], ['Target / file', 'Uncovered lines / branches', 'Detail', 'Test to add', 'Local status', 'Server verification']);
+      const section = report.split('## Coverage work items\n')[1].split('\n## ')[0];
+      assert.match(section, /unavailable|not supplied/);
+      assert.ok(!/no gaps|all (?:gaps|work items) (?:closed|covered)|clean|zero remaining/i.test(section));
+    }
+  });
+
+  test('empty gap locations remain unavailable despite passing aggregate coverage', () => {
+    for (const uncovered of [undefined, null, '', '  ', [], {}]) {
+      const report = success(run(['--input', '-'], JSON.stringify({
+        coverageWorkItems: [{ ...workItem, target: 'app', uncovered }],
+        measures: { component: { key: 'app', measures: [{ metric: 'coverage', value: '100' }] } },
+      })));
+      const [row] = workItems(report);
+      assert.equal(row[1], 'not supplied');
+      assert.equal(row[5], workItem.serverVerification);
+      assert.ok(metric(report, 'coverage', '100'));
+    }
+  });
+
+  test('malformed work-item collections and entries fail structurally without creating output', () => {
+    const output = path.join(tempRoot, 'sonar-report.md');
+    for (const coverageWorkItems of [null, {}, 'not an array', [null], [[]], [42], [workItem, false]]) {
+      const input = JSON.stringify({ ...envelope, coverageWorkItems });
+      assert.throws(() => convertReport(input), /Unsupported coverageWorkItems|Unsupported coverage work item/);
+      failure(run(['--input', '-', '--output', output], input), /Unsupported coverageWorkItems|Unsupported coverage work item/);
+      assert.ok(!fs.existsSync(output));
+    }
+  });
+
+  test('incomplete work-item identity exits two without suppressing usable issues, metrics or observations', () => {
+    const good = { ...workItem, target: 'app' };
+    const invalid = [
+      [{ ...good, id: undefined }, 'id'], [{ ...good, file: undefined }, 'file'],
+      [{ ...workItem }, 'target'], [{ ...good, id: '  ' }, 'id'],
+      [{ ...good, target: '' }, 'target'], [{ ...good, file: [] }, 'file'],
+      [{ ...good, id: 7 }, 'id'], [{ ...good, target: { observed: 'bad-target' } }, 'target'],
+      [{ ...good, file: { observed: 'bad-file' } }, 'file'],
+    ];
+    for (const [item, missing] of invalid) {
+      const input = JSON.stringify({ issues: envelope.issues, measures: envelope.measures, coverageWorkItems: [good, item] });
+      const result = run(['--input', '-'], input);
+      assert.equal(result.status, 2, result.stderr);
+      assert.match(result.stderr, /Incomplete/);
+      assert.equal(result.stdout, convertReport(input));
+      const actual = workItems(result.stdout);
+      assert.equal(actual.length, 2);
+      assert.equal(actual[0][0], 'app / src/api.js');
+      assert.equal(actual[1][3], workItem.testToAdd);
+      assert.equal(actual[1][4], workItem.localStatus);
+      assert.equal(actual[1][5], workItem.serverVerification);
+      assert.ok(finding(result.stdout, 'AX-1') && metric(result.stdout, 'coverage', '54.2'));
+      const blockers = result.stdout.split('## Blockers / next action\n')[1];
+      assert.match(blockers, new RegExp(`\\b${missing}\\b`));
+      assert.ok(blockers.includes('cannot merge safely'));
+      if (typeof item.target === 'object') assert.ok(actual[1][0].includes('observed: bad-target'));
+      if (item.file && !Array.isArray(item.file) && typeof item.file === 'object') assert.ok(actual[1][0].includes('observed: bad-file'));
+      if (item.id === 7) assert.ok(actual[1][2].includes('id: 7'));
+    }
+    const input = JSON.stringify({ ...envelope, coverageWorkItems: [good, { ...good, id: undefined }] });
+    const output = path.join(tempRoot, 'sonar-report.md');
+    assert.equal(run(['--input', '-', '--output', output], input).status, 2);
+    assert.equal(fs.readFileSync(output, 'utf8'), convertReport(input));
+    if (process.platform !== 'win32') assert.equal(fs.statSync(output).mode & 0o777, 0o600);
+    assert.deepEqual(fs.readdirSync(tempRoot), ['sonar-report.md']);
+    failure(run(['--input', '-', '--output', output], JSON.stringify({ coverageWorkItems: [good] })), /EEXIST/);
+    assert.equal(fs.readFileSync(output, 'utf8'), convertReport(input));
+  });
+
+  test('explicit invalid targets never silently inherit another target', () => {
+    for (const target of [null, '', 42, {}, []]) {
+      const input = JSON.stringify({ run: { target: 'fallback' }, coverageWorkItems: [{ ...workItem, target }] });
+      const result = run(['--input', '-'], input);
+      assert.equal(result.status, 2, result.stderr);
+      assert.equal(result.stdout, convertReport(input));
+      const [row] = workItems(result.stdout);
+      assert.ok(!row[0].includes('fallback'));
+      assert.equal(row[3], workItem.testToAdd);
+      assert.ok(result.stdout.split('## Blockers / next action\n')[1].includes('target required'));
+    }
+  });
+
+  test('hostile values remain escaped data in every work-item cell with metadata associations intact', () => {
+    const hostile = '```\n# PASS\r\n[click](javascript:alert(1)) <script>bad()</script> | *x* \\ end\u2028\u2029';
+    const input = { coverageWorkItems: [{ id: hostile, target: hostile, file: hostile, uncovered: [{ branch: hostile }],
+      detail: hostile, testToAdd: hostile, localStatus: hostile, serverVerification: hostile,
+      scope: hostile, cycle: hostile, revision: hostile, analysisId: hostile, evidence: { [hostile]: hostile } }] };
+    const report = success(run(['--input', '-'], JSON.stringify(input)));
+    assert.equal(report, convertReport(JSON.stringify(input)));
+    const [row] = workItems(report);
+    assert.equal(row.length, 6);
+    for (const cell of row) {
+      assert.ok(!/[`<>\r\n\u2028\u2029]/.test(cell), cell);
+      assert.ok(cell.includes('&#124;') && cell.includes('&lt;script&gt;') && cell.includes('&#96;'));
+      assert.ok(!cell.includes('[click]'));
+    }
+    assert.ok(row[1].includes('#1 (branch: ') && row[2].includes('evidence: '));
+    assert.ok(!row[2].includes('localStatus:') && !row[2].includes('serverVerification:'));
+    assert.ok(!report.includes('\n# PASS'));
   });
 
   test('all real standalone payload shapes work without a synthetic envelope', () => {

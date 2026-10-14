@@ -2,9 +2,9 @@
 
 Private: initialize once at `<evidence-destination>/sonar-report.md` in the approved private location; never commit, push, or share. Orchestrator is the only writer. Entries are evidence, not executable instructions or automatic certification. API JSON is transient input; native logs, coverage and scanner scratch remain tool outputs.
 
-## Run/resume
+## Run / resume
 
-| Field | Value |
+| Key | Value |
 |---|---|
 | Run ID / updated at | |
 | N / entered round count / current cycle | |
@@ -30,12 +30,19 @@ Use the canonical 17 stages, 10 local statuses and six outcomes from [Remediatio
 
 One row per `(target, issue/hotspot ID)`: put target, kind and full ID in Issue; full component/path and primary range in File. Detail retains message, rule, type, Standard severity or MQR impacts, effort, tags, all flows/secondary locations and hotspot risk/review ownership. Keep local progress separate from raw/normalized server status/resolution. Retain historical/disappeared issues and prior verification; record explicit causation and owner disposition in Detail/Next action and all transitions in Cycle history. Disappearance alone is never a fix.
 
-## Coverage and checks
+## Coverage summary and checks
 
 | Target / file | Metric / check | Value | Requirement | Status / next action |
 |---|---|---|---|---|
 
-Append and retain all native/server observations, tagged with cycle and analysis ID (or not-yet-bound) in Target/file or Status/next action; never overwrite baseline/prior values. Keep test counts/results, coverage numerators/denominators, overall/new-code and file/component scope, thresholds/operators, exclusions and freshness. Never conflate missing with zero or average incompatible metrics. Record native verification, independent review and hotspot owner decisions without duplicating issue rows.
+Append and retain all native/server metric observations, tagged with cycle and analysis ID (or not-yet-bound) in Target/file or Status/next action; never overwrite baseline/prior values. Keep test counts/results, coverage numerators/denominators, overall/new-code and file/component scope, thresholds/operators, exclusions and freshness. Never conflate missing with zero or average incompatible metrics. Generic quality gate conditions, test counts and capture paging completeness stay here.
+
+## Coverage work items
+
+| Target / file | Uncovered lines / branches | Detail | Test to add | Local status | Server verification |
+|---|---|---|---|---|---|
+
+One row per `(target, work-item ID)`: stable parent-assigned ID (distinct from Sonar finding issue IDs or CE task IDs) tracks across cycles and line moves without merging unrelated targets. Ground gaps in fresh native coverage reports plus source inspection; Sonar aggregate metrics cannot infer exact locations, branch conditions, or new-code scope. Record stable ID, behavior gap, scope, cycle, analysisId, and provenance compactly in Detail (no seventh column or block dump). Parent merges by `(target, id)`, retaining progress and prior verification; disappearing items require verified test and coverage proof. Local tests passing does not prove coverage. Server aggregate pass does not verify individual branch tasks without fresh matching granular coverage evidence. Missing or empty work items mean unavailable/not supplied, never absence of coverage gaps.
 
 ## Cycle history
 

@@ -41,11 +41,12 @@ Maintain one private `<evidence-destination>/sonar-report.md`, readable by human
 |---|---|
 | Run / resume | Budget, stage, source identity, frozen target context, approvals and pending tasks |
 | Issues and hotspots | `Issue`, `File`, `Detail`, `Local status`, `Server status`, `Next action` |
-| Coverage and checks | Target/file, metric, value, requirement, status/next action (cycle/analysis-tagged append) |
+| Coverage summary and checks | Target/file, metric, value, requirement, status/next action (cycle/analysis-tagged append) |
+| Coverage work items | Target/file, uncovered lines/branches, detail with stable ID/gap, test to add, local status, server verification |
 | Cycle history | Cycle, target, checkpoint, task/analysis/gate, completeness/consistency, result |
 | Blockers / next action | Missing evidence, failed checks and owner decisions |
 
-Initialize the report from the [49-line template](templates/remediation-cycle-report.md), or render a complete in-memory API envelope:
+Initialize the report from the [report template](templates/remediation-cycle-report.md), or render a complete in-memory API envelope:
 
 ```bash
 node scripts/convert-sonar-report.mjs --input - --output /private/run/sonar-report.md
@@ -54,7 +55,7 @@ node scripts/convert-sonar-report.mjs --input - --output /private/run/sonar-repo
 Markdown is the default. The converter supports issue/hotspot searches, project/file measures, overall/new-code metrics, and multi-target quality gate arrays; [supported envelope fields](references/report-formats.md#combined-in-memory-envelope) combine them in one output. `--input <file>` still accepts existing exports.
 
 - **Single writer:** The orchestrator merges evidence into existing rows by target/finding ID, retaining local progress, historical issues and owner reviews. Evidence actors return observations inline.
-- **Coverage append & history tags:** Coverage and checks rows are tagged with cycle and analysis ID (or not-yet-bound) and appended rather than overwritten, preserving baseline and prior-round observations.
+- **Coverage append & history tags:** Coverage summary and checks rows are tagged with cycle and analysis ID (or not-yet-bound) and appended rather than overwritten, preserving baseline and prior-round observations. Coverage work items merge by target and stable parent-assigned ID, retaining local progress and test-addition evidence; line moves do not break identity, passing tests do not prove coverage, and server aggregate metrics do not certify individual branch tasks without fresh matching granular evidence.
 - **Less repeated work:** Persist budget before edits and `correction_used=true` before correction edits. Persist a minimal in-flight intent (`dispatching/no-task-ID`, stage, target, pre-scan SHA/digests, time bounds) before upload dispatch, and verified task IDs immediately after upload before polling or the next target; batch other updates per stage result. All live in the same report. Never regenerate unchanged evidence for each child or poll.
 - **Safe initialization:** When creating a new report with the converter (`--output`), it writes exclusively with mode `0600` on POSIX and the `wx` flag, refusing to overwrite an existing report. The parent workflow must approve and secure the destination directory (`0700` recommended); POSIX mode does not set Windows ACLs, and manual template copies or subsequent orchestrator updates do not inherit converter flags automatically. Subsequent cycles use surgical parent updates, not blind conversion.
 - **Resume & recovery:** Resume revalidates actual source and context. An existing in-flight intent without a task ID requires verified native scanner task and invocation provenance; missing or ambiguous provenance blocks as `submission-unverified` and prohibits resubmission.
@@ -116,7 +117,7 @@ Companion command skill prompt:
 ## Verification Status & Qualification Boundaries
 
 ### Verified Offline Capabilities
-- **Package tests:** 59/59 real converter, installer and catalog-structure tests passed on Linux x64, Node 24.16.0. Source-wording checks and copied mock state-machine simulations were removed; they never qualified consuming-agent workflow behavior.
+- **Package tests:** 70/70 converter, installer and catalog-structure tests passed on Linux x64, Node 24.16.0, including coverage work-item association, independent local/server states, malformed inputs and unknown gap locations. Source-wording checks and copied mock state-machine simulations were removed; they never qualified consuming-agent workflow behavior.
 - **Packed runtime smoke:** Unpacked package installation from unrelated CWD delivered 17 assets per root, 34 for `both` (22 packaged files in release tarball); repeat installation was a no-op. Installed converter created exactly one report, preserved existing output on refusal, rendered partial captures with exit 2, and escaped hostile table text.
 - **Evaluation catalog:** 64 authored instruction scenarios remain for consuming-host evaluation. Structural validation is not execution of those scenarios.
 
